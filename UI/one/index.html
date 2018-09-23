@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+
+  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
+
+  <link rel="stylesheet" href="assets/jquery.mobile-1.4.5.min.css" />
+  <link rel="stylesheet" href="assets/animate.css" />
+  <script src="assets/jquery-1.8.min.js"></script>
+  <script src="assets/jquery.mobile-1.4.5.min.js"></script>
+  <script src="assets/dotize.js"></script>
+  <script src="assets/sweetalert2.js"></script>
+
+  <link rel="stylesheet" type="text/css" href="css/style.css" />
+
+</head>
+
+
+<body onload="onLoad()">
+
+    <div class="coverpicdiv"><img src="assets/images/heart.png" class="coverpic"></div>
+
+    <div data-role="page" data-theme="b">
+      <div data-role="header">
+        <div id="notifications_div"><img id="notifications_img" src="assets/images/notification_icon_off.png"/ width="32px"></div>
+        <h1 id="title">dingsda</h1>
+      </div>
+
+
+      <div data-role="popup" id="popupMenu">
+        <ul data-role="listview" data-inset="true" data-icon="false" style="min-width:210px;">
+          <li data-role="list-divider">search only by</li>
+            <li><a href="javascript:btn_find('_id');$('#popupMenu').popup('close');">id</a></li>
+            <li><a href="javascript:btn_find('name');$('#popupMenu').popup('close');">name</a></li>
+            <li><a href="javascript:btn_find('location');$('#popupMenu').popup('close');">location</a></li>
+            <li><a href="javascript:btn_find('owners');$('#popupMenu').popup('close');">owners</a></li>
+            <li><a href="javascript:btn_find('other.barcode');$('#popupMenu').popup('close');">barcode</a></li>
+            <li><a href="javascript:btn_find('other.visibility');$('#popupMenu').popup('close');">visibility</a></li>
+            <!--<li><a href="javascript:btn_find('other.borrowable');$('#popupMenu').popup('close');">borrowable</a></li>
+            <li><a href="javascript:btn_find('other.borrowby');$('#popupMenu').popup('close');">borrowby</a></li>-->
+        </ul>
+      </div>
+
+      <div data-role="main" class="ui-content" align="left" data-theme="b">
+
+            <input type="text" id="_id" placeholder="no unique id so far" onfocus="javascript:setLastFocus(this);">
+            name of item(s):
+            <input type="text" id="name" placeholder="name of the item" onfocus="javascript:setLastFocus(this);" />
+            location:
+            <input type="text" id="location" placeholder="location of the item e.g. /ChelseasHome/Office/Box33" onfocus="javascript:setLastFocus(this);"/>
+            barcode:
+            <input type="text" id="other.barcode" placeholder="EAN, ISBN or UPC" onfocus="javascript:setLastFocus(this);"/>
+
+            <button id="btn_scan" onclick="javascript:getLastFocus();" data-mini="false">scan</button>
+
+            owners:
+            <input type="text" id="owners" placeholder="owned by..." onfocus="javascript:setLastFocus(this);"/>
+
+            <div data-role="collapsible" data-mini="true" data-collapsed-icon="heart">
+              <h3>Show & Love (Visibility Options)</h3>
+                <select name="visibility" class="mediumfont" id="other.visibility">
+                  <option value="not">visible only to owners</option>
+                  <option value="friends" selected>visible to friends</option>
+                  <option value="friends2nd">visible to friends of friends</option>
+                  <option value="public">visible to friends in spe (public)</option>
+                </select>
+
+                <!--
+                <select name="borrowable" class="mediumfont" id="other.borrowable" onChange="javascript:showKarma(this)">
+                  <option value="not">not borrowable</option>
+                  <option value="friends">friends can borrow it</option>
+                  <option value="friends2nd">friends of friends can borrow</option>
+                  <option value="public">friends in spe (everyone) can borrow</option>
+                </select>
+              -->
+
+            </div>
+
+
+            <table width="100%" id="buttonsbottom">
+              <td width="50%" class="buttoncol">
+            <button id="btn_find" onclick="javascript:btn_find()">find<br><span class="smallfont">(hold for options)</span></button>
+              </td>
+              <td>
+            <button id="btn_add" onclick="javascript:btn_add_update()">add / update<br>&nbsp;</button>
+          </td>
+            <button id="btn_del" onclick="javascript:btn_del(false)">clear<br><span class="smallfont">(hold to delete)</span></button>
+              </td>
+
+            </table>
+
+      </div>
+    </div>
+
+
+</body>
+
+<script type="text/javascript" src="js/app.js"></script>
+
+</html>

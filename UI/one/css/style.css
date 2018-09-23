@@ -1,0 +1,134 @@
+
+* {
+    -webkit-tap-highlight-color: rgba(0,0,0,0); /* make transparent link selection, adjust last value opacity 0 to 1.0 */
+}
+
+
+    .ui-flipswitch .ui-btn.ui-flipswitch-on {text-indent: -4em;}
+    .ui-flipswitch .ui-flipswitch-off {text-indent: 0.4em;}
+    .smallfont {font-size: 6px;line-height: 50%}
+    .mediumfont {font-size: 12px;line-height: 100%}
+    .tightline {line-height: 50%;}
+    .coverpicdiv {position:fixed; margin:auto; margin-left: 25%; margin-top: 60%; width: 50%; opacity: 0.3; pointer-events:none; overflow: hidden}
+    .coverpic {width: 100%;}
+    .ui-page {background: transparent;}
+    .ui-content{background: transparent;opacity: 0.8;}
+
+
+body {
+    -webkit-touch-callout: none;                /* prevent callout to copy image, etc when tap to hold */
+    -webkit-text-size-adjust: none;             /* prevent webkit from resizing text to fit */
+    -webkit-user-select: none;                  /* prevent copy paste, to allow, change 'none' to 'text' */
+    );
+    background-attachment:fixed;
+    margin:0px;
+    padding:0px;
+}
+
+/* Portrait layout (default) */
+.app {
+    background:url(../img/logo.png) no-repeat center top; /* 170px x 200px */
+    position:absolute;             /* position in the center of the screen */
+    left:50%;
+    top:50%;
+    height:50px;                   /* text area height */
+    width:225px;                   /* text area width */
+    text-align:center;
+    padding:180px 0px 0px 0px;     /* image height is 200px (bottom 20px are overlapped with text) */
+    margin:-115px 0px 0px -112px;  /* offset vertical: half of image height and text area height */
+                                   /* offset horizontal: half of text area width */
+}
+
+/* Landscape layout (with min-width) */
+@media screen and (min-aspect-ratio: 1/1) and (min-width:400px) {
+    .app {
+        background-position:left center;
+        padding:75px 0px 75px 170px;  /* padding-top + padding-bottom + text area = image height */
+        margin:-90px 0px 0px -198px;  /* offset vertical: half of image height */
+                                      /* offset horizontal: half of image width and text area width */
+    }
+}
+
+h1 {
+    font-size:23px;
+    font-weight:normal;
+    margin:0px;
+    overflow:visible;
+    padding:0px;
+    text-align:center;
+}
+
+@keyframes fade {
+    from { opacity: 1.0; }
+    50% { opacity: 0.4; }
+    to { opacity: 1.0; }
+}
+
+@-webkit-keyframes fade {
+    from { opacity: 1.0; }
+    50% { opacity: 0.4; }
+    to { opacity: 1.0; }
+}
+
+
+#title {
+  margin-bottom: 0;
+}
+
+#_id{
+  margin: 0;
+  height: 10px;
+}
+
+#notifications_div {
+  float: left;
+  position: fixed;
+  margin-left: 32px;
+  margin-top: 4px;
+}
+
+.itemfromlist {
+  background-color: rgba(40,130,200,0.8);
+  color: rgba(240,240,240,1);
+  width: 90%;
+  border-radius: 20vw;
+  border-color:rgba(0,0,0,0);
+  padding: 0.4em;
+  margin-top: 0.2em;
+}
+
+.itemfromlist:hover {
+  background-color: rgba(40,30,40,0.6);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.err {
+  color: red
+}
+
+.ui-btn {
+  /*font-size: px;*/
+  line-height: 60%;
+  margin-top: 0;
+
+}
+
+#buttonsbottom {
+  margin-top: 0;
+  padding:0;
+}
+
+.buttoncol {
+  margin: 0;
+  padding: 0;
+}
+
+.tologin {
+  text-decoration: underline;
+  color: blue;
+}
+
+.registerlink {
+  text-decoration: underline;
+  color: blue;
+}
