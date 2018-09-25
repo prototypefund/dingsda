@@ -13,13 +13,12 @@
 // stuff for config later
 var lastFocus = "name";
 var inputs = ['name','location'];
-var clearFormsAfterUpdate = true; // add also an option for 
+var clearFormsAfterUpdate = true; // add also an option for
 var clearFormsAfterAdd = false;
 const API_BASE_URL = "http://localhost:3000/api/v1/";
 
 let glb_username = ""; // fill in first session!!!1
 
-let _rev = "0";
 
 //$('#id').prop("disabled", true); // uncomment if id should not be editable
 //$('#id').val("456");$('#name').val("Arnold"); //< for testing only
@@ -65,7 +64,7 @@ function onLoad() {
             if (res.username)
             {
               glb_username = res.username;
-              console.log("you are logged in already as "+glb_username);
+              console.log("you are logged in already as "+ glb_username);
             }
           },
           error: function(err){
@@ -189,12 +188,12 @@ function btn_add_update()
     if (basicout._id != undefined && basicout._id != "")
     {
       console.log("ID provided.\nErgo: item will be updated if it exists");
-      updateit(basicout).then(function(){
+      updateit(basicout)/*.then(function(){
         if (clearFormsAfterUpdate)
         {
           clearForm();
         }
-      })
+      })*/
 
     }
     else
@@ -207,6 +206,7 @@ function btn_add_update()
           //fillForm(basicout);
           addit(basicout, function(res){
             basicout._id = res.id;
+
             fillForm(basicout);
 
             //  config will give option to clear forms after every add or keep
@@ -294,7 +294,6 @@ function fillForm(object)
   $('#location').val(object.location);
   $('#owners').val(object.owners);
 
-  _rev = object._rev // IMPORTANT FOR COUCHDB VERSION CONTROL! and a good idea anyhow
 };
 
 function clearForm()
@@ -661,24 +660,13 @@ function read(searchTerm,callback)
             },
        callback: function(result){
         console.log("show results:");
+        console.log(result);
         console.log(result.docs);
         callback(JSON.stringify(result.docs))
       }
 
   });
-    /*searchDB(makeMango(searchTerm))
-    .then(function(result)
-    {
-      console.log("show results:");
-      console.log(result);
-      callback(JSON.stringify(result))
 
-    }).catch(function(err)
-    {
-      swal.close()
-      swal({text:err})
-      return err
-    })*/
 }
 
 /////////////////////////////////////////////
@@ -708,26 +696,48 @@ function addit(obj,callback=console.log)
       }
 
   });
-  /*
-  return remoteDB.put(obj).then(function(res)
-  {
-    console.log(res);
-    _rev =res.rev;
-  })
-  .catch(function(err){console.log(err);})
-  */
+
 }
 
 
-function updateit(obj)
+function updateit(obj,callback=console.log)
 {
-  obj._rev = _rev;
-  return remoteDB.put(obj)
-  .then(swal("updated successfully!"))
-  .catch(function(err){
-          console.log(err); swal({title:"something went wrong",
-          text:JSON.stringify(err)})
-        })
+  console.log("trying to fetch originalObject from DB");
+
+  getAPI({
+    path:glb_username+"/"+obj._id,
+    data:{
+      "data":[{
+        "type":"fetch"
+      }]
+    },
+    callback: function(res){
+
+      console.log(res);
+      console.log("merging oldObj and formContents");
+      let newObj = Object.assign({}, res, obj);
+      console.log(newObj);
+      console.log("attempting update of object");
+
+      postAPI({
+          path:glb_username+"/"+obj._id,
+          data:{
+              "data":[{
+                "type":"update",
+                "doc":newObj
+                //"doc":{_id:"33","other.visibility":["friends"]}
+              }]
+            },
+            callback: function(result){
+            callback(result)
+            console.log("updated successfully");
+            console.log(result);
+          }
+
+      });
+    }
+  })
+
 }
 
 
@@ -742,7 +752,6 @@ function postAPI({path="", data =null, callback=console.log, error=function(err)
     success: callback,
     xhrFields: { withCredentials: true }, // to make AuthCookie ok
     error: error
-    //,dataType: "application/json"
     ,contentType:"application/json"
   });
 

@@ -264,6 +264,10 @@ if (req.body.data.location == undefined)
   });
 }
 
+
+//  Works. NICE TO HAVE: check if fields in old doc are deleted by Update
+// and presever them unless otherwise specified (atm a client might not care
+// about certain fields and therefore just send update requests not including them)
 function update(req,res)
 {
   //console.log(req.targets);
@@ -275,6 +279,8 @@ function update(req,res)
   // validation of Edit Rights are atm done by CouchDB server via doc_validate_update)
     let db = couch_getUserDB(req);
     let nanoUser = db[0]; let dbUser = db[1];
+    req.body.data.doc.lastedited = Date.now();
+    req.body.data.doc.lasteditedBy = req.username;
     //console.log(req.body.data.doc);
     return dbUser.insert(req.body.data.doc).then((DBres) => {
         return res.send(DBres)
