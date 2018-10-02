@@ -13,6 +13,8 @@ const cookieParser = require('cookie-parser');
 const uuidv5 = require('uuid/v5'); // npm install uuid
 const cors = require('cors')
 
+const whitelist = ["http://localhost:8080","http://192.168.178.128:8080","http://10.0.2.2:8080"]
+
 const instanceUrl ="http://dingsda.org/";
 const databaseUrl = "http://localhost:5984/";
 const API_PORT = 3000;
@@ -34,7 +36,13 @@ const app = express()
 
 //  gotta find out how to make webapps work here later without breaking security
 // credentials:true needed to allow AuthCookies
-app.use(cors({origin: 'http://localhost:8080',credentials: true}))
+app.use(cors({origin: function (origin, callback) {
+    if (whitelist.indexOf(origin) !== -1) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },credentials: true}))
 
 app.use(express.json()); // after this req.body should contain json
 

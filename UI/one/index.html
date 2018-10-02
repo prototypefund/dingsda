@@ -13,8 +13,12 @@
   <script src="assets/jquery.mobile-1.4.5.min.js"></script>
   <script src="assets/dotize.js"></script>
   <script src="assets/sweetalert2.js"></script>
+  <script src="assets/bootstrap-tagsinput.js"></script>
+  <script src="assets/quagga.min.js"></script>
 
+  <link rel="stylesheet" type="text/css" href="assets/bootstrap-tagsinput.css" />
   <link rel="stylesheet" type="text/css" href="css/style.css" />
+
 
 </head>
 
@@ -44,7 +48,11 @@
         </ul>
       </div>
 
-      <div data-role="main" class="ui-content" align="left" data-theme="b">
+      <div id="barcodeviewport"><br><br><br><button id="scan_cancel">cancel scan</button></div>
+
+      <div data-role="main" class="ui-content" align="left" data-theme="b" id="main">
+
+
 
             <input type="text" id="_id" placeholder="no unique id so far" onfocus="javascript:setLastFocus(this);">
             name of item(s):
@@ -53,8 +61,14 @@
             <input type="text" id="location" placeholder="location of the item e.g. /ChelseasHome/Office/Box33" onfocus="javascript:setLastFocus(this);"/>
             barcode:
             <input type="text" id="other.barcode" placeholder="EAN, ISBN or UPC" onfocus="javascript:setLastFocus(this);"/>
-
-            <button id="btn_scan" onclick="javascript:getLastFocus();" data-mini="false">scan</button>
+            weight per item:
+            <input type="text" id="other.weight" placeholder="don't forget to include the unit (e.g. kg)" onfocus="javascript:setLastFocus(this);"/>
+            value per item:
+            <input type="text" id="other.value" placeholder="EUR? USD? CHF?" onfocus="javascript:setLastFocus(this);"/>
+            count / number of pieces:
+            <input type="text" id="other.count" placeholder="how many items are summerized in this entry?" onfocus="javascript:setLastFocus(this);"/>
+            country of origin::
+            <input type="text" id="other.madein" placeholder="made in..." onfocus="javascript:setLastFocus(this);"/>
 
             owners:
             <input type="text" id="owners" placeholder="owned by..." onfocus="javascript:setLastFocus(this);"/>
@@ -79,25 +93,37 @@
 
             </div>
 
+            tags / keywords:
+            <input id="other.tags" type="text" placeholder="type tag and hit enter" data-role="tagsinput" />
 
-            <table width="100%" id="buttonsbottom">
-              <td width="50%" class="buttoncol">
-            <button id="btn_find" onclick="javascript:btn_find()">find<br><span class="smallfont">(hold for options)</span></button>
-              </td>
-              <td>
-            <button id="btn_add" onclick="javascript:btn_add_update()">add / update<br>&nbsp;</button>
-          </td>
-            <button id="btn_del" onclick="javascript:btn_del(false)">clear<br><span class="smallfont">(hold to delete)</span></button>
-              </td>
-
-            </table>
 
       </div>
+      <table width="100%" id="buttonsbottom">
+      <tr>
+      <td colspan="2">
+          <button id="btn_scan" onclick="javascript:getLastFocus();" data-mini="false">scan</button>
+      </td>
+      </tr>
+      <tr>
+      <td width="50%" class="buttoncol">
+        <button id="btn_find" onclick="javascript:btn_find()">find<br><span class="smallfont">(hold for options)</span></button>
+      </td>
+      <td>
+          <button id="btn_add" onclick="javascript:btn_add_update()">add / update<br>&nbsp;</button>
+      </td>
+      </tr>
+      <tr>
+      <td colspan="2">
+        <button id="btn_del" onclick="javascript:btn_del(false)">clear<br><span class="smallfont">(hold to delete)</span></button>
+      </td>
+      </tr>
+      </table>
     </div>
 
 
 </body>
 
+<script type="text/javascript" src="js/barcode.js"></script>
 <script type="text/javascript" src="js/app.js"></script>
 
 </html>

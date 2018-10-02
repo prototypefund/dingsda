@@ -11,11 +11,13 @@
 // TO DO: how to target friends databases?
 
 // stuff for config later
-var lastFocus = "name";
+var lastFocus = "other\\.barcode";
 var inputs = ['name','location'];
 var clearFormsAfterUpdate = true; // add also an option for
 var clearFormsAfterAdd = false;
-const API_BASE_URL = "http://localhost:3000/api/v1/";
+const API_BASE_URL = "http://192.168.178.128:3000/api/v1/";
+//const API_BASE_URL = "http://localhost:3000/api/v1/";
+const includeVisiblityInSearch = false;
 
 let glb_username = ""; // fill in first session!!!1
 
@@ -43,7 +45,14 @@ $("#btn_find").bind("taphold",tapholdHandler);
 /////////////////////////////////////////////
 
 function onLoad() {
+
         document.addEventListener("deviceready", onDeviceReady, false);
+        document.addEventListener("barcodeScanned",barcodeListender);
+        document.getElementById("scan_cancel").addEventListener("click",
+        function(){
+          stopBarcode();
+          $("#barcodeviewport").hide();
+        });
 
         //testing login only:
         //getAPI({ data:{name:"jan",password:"apple" }});
@@ -81,10 +90,12 @@ function onDeviceReady() {
 }
 
 function scan(){
-  //  to DO: read result.type and check if EAN or UPC, if so, check EAN db and
+  //  to DO: read barcodeScanned Events detail.type
+  // and check if EAN or UPC, if so, check EAN db and
   // propose autofill for user
   console.log("scan clicked");
-  // to Do: implement FOSS barcode camera system
+  $("#barcodeviewport").show();
+  startBarcode();
  }
 
 function getFocus(){
@@ -413,6 +424,7 @@ function getAllInputs()
       {
         output=output.substring(0, output.length - 1);
       }
+      console.log(output);
       output='{'+output+'}';
       output= JSON.parse(output);
     }
@@ -431,6 +443,11 @@ function getAllInputs()
       let newArray = output.other.visibility.replace(/ /g,'').split(",");
       output.other.visibility = [];
       output.other.visibility = newArray;
+    }
+    if (output.other.tags){
+      let newArray = output.other.tags.replace(/ /g,'').split(",");
+      output.other.tags = [];
+      output.other.tags = newArray;
     }
     console.log(output);
     return output;
@@ -788,3 +805,21 @@ $("#notifications_div").click(function(){
   $("#notifications_div").removeClass("blink");
   // SHOW NOTIFICATIONS
 })
+
+// Barcode Scanner Eventlistener (happens if barcodescanner has detected barcode)
+
+function barcodeListender(event)
+{
+  console.log(event.detail.barcode);
+  console.log(lastFocus);
+  $("#"+lastFocus).val(event.detail.barcode)
+  stopBarcode();
+  $("#barcodeviewport").hide();
+
+  /*
+   MAYBE: here if form empty:
+  check for EAN/UPC on the web
+  OR SEARCH dingdaDBs for things with that barcode
+  ?????
+  */
+}

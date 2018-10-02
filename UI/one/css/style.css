@@ -3,7 +3,6 @@
     -webkit-tap-highlight-color: rgba(0,0,0,0); /* make transparent link selection, adjust last value opacity 0 to 1.0 */
 }
 
-
     .ui-flipswitch .ui-btn.ui-flipswitch-on {text-indent: -4em;}
     .ui-flipswitch .ui-flipswitch-off {text-indent: 0.4em;}
     .smallfont {font-size: 6px;line-height: 50%}
@@ -13,7 +12,14 @@
     .coverpic {width: 100%;}
     .ui-page {background: transparent;}
     .ui-content{background: transparent;opacity: 0.8;}
+    .ui-btn {
+      margin: 0;
+    }
 
+    .bootstrap-tagsinput .tag {border: 1px solid rgba(200,200,250,0.3);
+      border-radius: 15%;padding:3px; background-color: rgba(250,250,250,0.2); }
+    .bootstrap-tagsinput {color: white;background-color: rgba(0,0,0,0);border: 0px solid black;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075); width: 100%}
 
 body {
     -webkit-touch-callout: none;                /* prevent callout to copy image, etc when tap to hold */
@@ -49,6 +55,8 @@ body {
     }
 }
 
+
+
 h1 {
     font-size:23px;
     font-weight:normal;
@@ -70,6 +78,34 @@ h1 {
     to { opacity: 1.0; }
 }
 
+/* barcode scanner */
+
+#barcodeviewport {
+  display: none;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 100;
+  position: fixed;
+}
+
+#barcodeviewport canvas, video {
+  float: left;
+  width: 640px;
+  height: 480px;
+}
+
+#barcodeviewport canvas.drawingBuffer, video.drawingBuffer {
+  margin-left: -640px;
+  position: fixed;
+  z-index: 99;
+}
+
+/* end barcode scanner */
+
+#main {
+  height: 70vh;
+}
 
 #title {
   margin-bottom: 0;
@@ -113,8 +149,18 @@ h1 {
 
 }
 
+.spaceholder {
+  height: 15vh;
+}
+
 #buttonsbottom {
-  margin-top: 0;
+  /*making them float*/
+  /*z-index:99;*/
+  position: fixed;
+  bottom:0;
+  width:95%;
+
+  margin: 0;
   padding:0;
 }
 
