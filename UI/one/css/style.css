@@ -138,6 +138,21 @@ h1 {
   border-color: rgba(255,255,255,0.1);
 }
 
+.listbutton {
+  border: 0;
+  border-radius: 0.25em;
+  background: initial;
+  background-color: rgba(50,150,200,1);
+  color: #fff;
+  font-size: 1.0625em;
+  margin: 5px;
+}
+
+.listbutton:hover {
+  background-color: rgba(40,30,40,0.6);
+  border-color: rgba(255,255,255,0.1);
+}
+
 .err {
   color: red
 }

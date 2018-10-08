@@ -5,6 +5,8 @@
     ALSO: have to exclude all private things on find() unless in own DB !!!!!
 
     ALSO: issue with instance Level if / is missing at end of url. (try it!)
+
+    - to do: api/access to design/view Carnet
 */
 
 const express = require('express')
@@ -13,7 +15,7 @@ const cookieParser = require('cookie-parser');
 const uuidv5 = require('uuid/v5'); // npm install uuid
 const cors = require('cors')
 
-const whitelist = ["http://localhost:8080","http://192.168.178.128:8080","http://10.0.2.2:8080"]
+const whitelist = ["*","http://localhost:8080","http://192.168.178.128:8080","http://10.0.2.2:8080"]
 
 const instanceUrl ="http://dingsda.org/";
 const databaseUrl = "http://localhost:5984/";
@@ -34,8 +36,10 @@ const nanoAdmin = require('nano')('http://admin:demopassword@localhost:5984');
 
 const app = express()
 
+//app.use(cors());
 //  gotta find out how to make webapps work here later without breaking security
 // credentials:true needed to allow AuthCookies
+///*
 app.use(cors({origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true)
@@ -43,6 +47,7 @@ app.use(cors({origin: function (origin, callback) {
       callback(new Error('Not allowed by CORS'))
     }
   },credentials: true}))
+//*/
 
 app.use(express.json()); // after this req.body should contain json
 
@@ -165,6 +170,9 @@ function DBCommander(req,res)
               break;
           case "requestitem":
               requestItems(req,res);
+              break;
+          case "getcarnet":
+              getCarnet(req,res);
               break;
           default:
               res.statusCode = 400;
@@ -377,6 +385,85 @@ function requestItems(req,res)
 {
   res.statusCode = 400;
   return res.send('"requestItems does not yet exist"')
+}
+
+function getCarnet(req,res)
+{
+  let db = couch_getUserDB(req);
+  let nanoUser = db[0]; let dbUser = db[1];
+  let params = {};
+  let viewname = "carnetATAjson"
+
+  if (req.body.data != undefined){
+
+    if (req.body.data.ids != undefined)
+    {
+      params.keys = req.body.data.ids;
+    }
+    if (req.body.data.filetype == undefined)
+    {req.body.data.filetype = "json"}
+
+    if (req.body.data.filetype == "csv"){
+          viewname = "carnetATA";
+
+          dbUser.view("app",viewname,params,function(err,body){
+            if (!err) {
+              //console.log("CSV!!!!");
+              //console.log(body);
+              let output = "";
+              body.rows.forEach(function(doc,ind) {
+                output = output + doc.value+"\n";
+              });
+              return res.send(output)
+            }
+            else {
+              return res.send(err)
+            }
+          })
+    }
+    else if (req.body.data.filetype == "pdf")
+    {
+      //viewname = "carnetATA";
+      // first get array
+      dbUser.view("app",viewname,params,function(err, body) {
+        if (!err) {
+          let output = [];
+          body.rows.forEach(function(doc,ind) {
+            output.push(doc.value);
+          });
+          //  then ADD HERE!!! build HTML with jspdf and include
+          // json as databasis to render pdf from
+
+
+          return res.send(output)
+        }
+        else {
+          return res.send(err)
+        }
+      });
+    }
+    else {
+      console.log("request for json output");
+      dbUser.view("app",viewname,params,function(err, body) {
+        if (!err) {
+          let output = [];
+          body.rows.forEach(function(doc,ind) {
+            output.push(doc.value);
+          });
+          return res.send(output)
+        }
+        else {
+          return res.send(err)
+        }
+      });
+
+
+    }
+
+  }
+
+
+  //return res.send("CARNET")
 }
 
 

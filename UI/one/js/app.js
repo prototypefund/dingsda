@@ -15,8 +15,9 @@ var lastFocus = "other\\.barcode";
 var inputs = ['name','location'];
 var clearFormsAfterUpdate = true; // add also an option for
 var clearFormsAfterAdd = false;
-const API_BASE_URL = "http://192.168.178.128:3000/api/v1/";
-//const API_BASE_URL = "http://localhost:3000/api/v1/";
+//const API_BASE_URL = "http://192.168.178.128:3000/api/v1/";
+const app_BASE_URL = "http://localhost:8080/";
+const API_BASE_URL = "http://localhost:3000/api/v1/";
 const includeVisiblityInSearch = false;
 
 let glb_username = ""; // fill in first session!!!1
@@ -74,6 +75,9 @@ function onLoad() {
             {
               glb_username = res.username;
               console.log("you are logged in already as "+ glb_username);
+
+              // testing only:
+              //openCarnetPDF(["1706c955-675d-5cba-bca0-75f1fb60f54d"]);
             }
           },
           error: function(err){
@@ -620,7 +624,7 @@ function choosePopup(inputlist, callback)
 {
   if (typeof inputlist != "object"){inputlist = JSON.parse(inputlist)}
 
-  let listOfItems = 'dingsder found '+inputlist.length+' dingsdas<br><br>';
+  let listOfItems = '';
   for (item in inputlist)
   {
     let thing = inputlist[item];
@@ -628,6 +632,9 @@ function choosePopup(inputlist, callback)
      "<button class='itemfromlist' listnumber='"+item+"'><b>"+thing.name+
      "</b> in <i>"+thing.location+"</i></button><br>"
   }
+  listOfItems = 'dingsder found '+inputlist.length+' dingsdas<br><br>'+
+  '<button id="ToCarnetPDF" class="listbutton">download PDF</button>'+
+  '<br><button id="ToCSV" class="listbutton">download CSV</button>'+listOfItems;
 
   swal({
     title: '',
@@ -638,6 +645,13 @@ function choosePopup(inputlist, callback)
     confirmButtonText:
       'damn. let me try again!'
   })
+
+  document.getElementById("ToCarnetPDF").addEventListener("click",function(){
+    downloadCarnetClicked(inputlist,true);
+  });
+  document.getElementById("ToCSV").addEventListener("click",function(){
+    downloadCarnetClicked(inputlist,false);
+  });
 
   $(".itemfromlist").click(function()
   {
@@ -822,4 +836,80 @@ function barcodeListender(event)
   OR SEARCH dingdaDBs for things with that barcode
   ?????
   */
+}
+
+
+
+function downloadCarnetClicked(items, pdf=false){
+  console.log(items);
+  let carnetArray = [];
+  for (i in items){
+    carnetArray.push(items[i]._id);
+  }
+  console.log(carnetArray);
+  if (pdf){
+      openCarnetPDF(carnetArray)
+  }
+  else {
+    postAPI({
+        path:glb_username,
+        data:{
+                "data":[{
+                  "type":"getCarnet",
+                  "filetype":"csv",
+                  "ids":carnetArray
+                }]
+              },
+         callback: function(result){
+          //console.log(result[0]);
+          let myblob = new Blob([result],{type:'text/csv;charset=utf-8;'});
+          if (navigator.msSaveBlob) { //IE10
+              navigator.msSaveBlob(myblob, "carnetATA.csv");
+          } else {
+              let l = document.createElement("a");
+              if (l.download !== undefined) {
+                  let uri = URL.createObjectURL(myblob);
+                  l.setAttribute("href", uri);
+                  l.setAttribute("download", "carnetATA.csv");
+                  l.style.visibility = 'hidden';
+                  document.body.appendChild(l);
+                  l.click();
+                  document.body.removeChild(l);
+              }
+          }
+
+        }
+
+    });
+  }
+
+}
+
+
+function openCarnetPDF(ids=undefined)
+{
+  postAPI({
+      path:glb_username,
+      data:{
+            	"data":[{
+            		"type":"getCarnet",
+            		"filetype":"json",
+                "ids":ids
+
+            	}]
+            },
+       callback: function(result){
+        console.log("show results of getCarnet:");
+        console.log(result);
+
+        let pdfviewStart = '<html><head><style>*{font-family: Ubuntu, Futura, Helvetica;}#containerleft{float:left; width: 100%; margin-left: 0%;}#containerright{float:right; width: 100%;}</style></head><body> <iframe id="iframe" width="100%" height="100%"></iframe>';
+        let pdfviewEnd = '<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.1/jspdf.debug.js"></script><script src="'+app_BASE_URL+'js/carnet.js"></script></body></html>';
+
+        let pdfviewDyn = '<script>let carnetArray = '+JSON.stringify(result)+'</script>';
+
+        let win = window.open();
+        win.document.open().write(pdfviewStart+pdfviewDyn+pdfviewEnd);
+      }
+
+  });
 }
