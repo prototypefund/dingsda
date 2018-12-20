@@ -1,0 +1,115 @@
+<div data-role="page" id="borrow">
+
+  <style>
+
+
+    #borrow {
+      background-color: #fff2cd;
+    }
+
+    #btn_send_item_request {
+      background-color: #abcecc;
+      text-shadow: none;
+    }
+
+    .borrow_footer {
+      margin-left: -1em;
+      padding: 10px;
+      bottom: 0px;
+      position: fixed;
+      z-index: 99;
+      background-color: #ff004c;
+      color: #fff2cd !important;
+      text-shadow: none;
+    }
+
+    .borrow_header {
+      background-color: #abcecc;
+      width: 100vw;
+      padding: 5px;
+      margin-left: -1em;
+      margin-top: -1em;
+    }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+      <div class="borrow_header">
+        <h2 align="center">CONTACT OWNERS OF ITEM</h2>
+        <div align="center">
+          You want to borrow the items below <br>
+        </div>
+      </div>
+      <br>
+      <b>from:</b>
+      <input type="date" name="date" id="from" value=""  />
+      <br>
+      <b>till:</b>
+      <input type="date" name="date" id="till" value=""  />
+      <div class="borrow_footer">
+        <hr>
+        <span>
+        <b>ATTENTION: If you send a BORROW request to its owners your contact details will be
+        forwarded to the owner!</b> <br>(You can change these details anytime in the config menu)
+        </span>
+        <br>
+
+        <button id="btn_send_item_request">SEND BORROW REQUEST</button>
+        <hr>
+      </div>
+
+
+  </div>
+  <!-- END CONTENT -->
+</div>
+
+
+<script>
+
+$( document ).on( "pageshow", "#borrow", function(e,ui) {
+    console.log(window.location.search);
+    console.log("just loaded borrow");
+    console.log(ui.prevPage);
+
+    $("#handover .ui-content li").remove()
+
+    for(value of collection.bulk)
+    {
+      $("#borrow .ui-content").append("<li>"+value.name)
+    }
+})
+
+$("#btn_send_item_request").click(function(){
+
+  let dataOut = {
+    "data":
+          [{
+            "type":"borrow_request",
+            "ref":collection.bulk[0].name,
+            "from":$("#from").val(),
+            "till":$("#till").val(),
+            "contact_details":config.contact_details
+          }]
+  }
+  let dbOwner = collection.bulk[0].hyperlink.split("/");
+  dbOwner = dbOwner[dbOwner.length-2];
+  console.log(dataOut);
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+dbOwner, //testing only
+    data: JSON.stringify(dataOut),
+    success: function(r){ console.log(r) },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  });
+
+})
+
+
+</script>

@@ -1,0 +1,114 @@
+<div data-role="page" id="handover">
+
+  <style>
+
+    iframe {
+      left: -10px;
+      height: 100vh;
+      width: 95vw;
+    }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+    To whom do you want to hand these items over to ?
+    <br>
+    <input id="newPossessor" type="text"></input>
+
+  <div id="btn_handover_items" class="btn_request ui-btn"
+    style="height:10vh;width:100%;left:-1em;bottom:-1em;background-color:#ff004c!important;
+    color:#fff2cd;z-index:3;position:fixed">
+    HANDOVER ITEMS</div>
+
+  </div>
+
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+$( document ).on( "pageshow", "#handover", function(e,ui) {
+    console.log(window.location.search);
+    console.log("just loaded handover");
+    console.log(ui.prevPage);
+
+    $("#handover .ui-content li").remove()
+
+    for(value of collection.bulk)
+    {
+      $("#handover .ui-content").append("<li>"+value.name)
+    }
+})
+
+$("#btn_handover_items").click(function(){
+  let newPossessor = $("#newPossessor").val();
+
+  if (newPossessor !== undefined)
+  {
+    console.log("items will be handed over to new possesor:");
+    console.log(newPossessor);
+
+    for(value of collection.bulk)
+    {
+      value.inPossessionOf = newPossessor;
+      //updateItem(value);
+      handoverItem(value,function(res){
+        if (!res.ok){
+          console.log("item could not be announced for handover. probably already in process or race condition");
+        }
+        else {
+          updateNotificationsBatch();
+          $.mobile.pageContainer.pagecontainer("change", "#notifications",
+                     {allowSamePageTransition:true,transition: "slidefade" });
+        }
+      })
+    }
+
+    showToast("items will be handed over",800);
+    // TO DO:
+    // - update notifications
+    // -
+
+  }
+
+})
+
+function handoverItem(obj, callback=console.log)
+{
+  console.log("trying to send handover announcement");
+
+  let path = API_BASE_URL+glb_username+"/"+obj._id;
+  if (obj.hyperlink !== undefined && obj.hyperlink != "")
+  { path = obj.hyperlink }
+  let thingsdatabaseowner = obj.hyperlink.split("/");
+  thingsdatabaseowner = thingsdatabaseowner[thingsdatabaseowner.length-2];
+  let isReturnToOwner = (thingsdatabaseowner === obj.inPossessionOf)
+  let dataOut = {
+    "data":
+          [{
+            "type":"handover_announce",
+            "username":obj.inPossessionOf,
+            "isReturn":isReturnToOwner
+          }]
+    }
+
+  $.ajax({
+    type: "POST",
+    url: path,
+    data: JSON.stringify(dataOut),
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: callback,
+    contentType:"application/json"
+  });
+}
+
+
+</script>

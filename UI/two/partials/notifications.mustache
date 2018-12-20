@@ -1,0 +1,277 @@
+<div data-role="page" id="notifications">
+
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+      <p>notifications from {{name}}</p>
+      <ul data-role="listview" data-split-icon="gear" data-split-theme="d"></ul>
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+$( document ).on( "pageshow", "#notifications", function(e,ui) {
+    console.log(window.location.search);
+    console.log("just loaded notifications");
+    console.log(ui.prevPage);
+
+    console.log("fetching notifications from DB");
+
+    $("#notifications .ui-content ul").html("");
+    getNotificationsFlat(function(res){
+      for(value of res)
+      {
+        console.log(value);
+        addNotification(value);
+      }
+    })
+
+})
+
+function showNotifications(){
+  $.mobile.pageContainer.pagecontainer("change", "#notifications",
+             {allowSamePageTransition:true/*,transition: "slidefade"*/});
+  updateNotificationsBatch();
+}
+
+function removeNotification(notification, e)
+{
+  console.log("deleting simple notification"+notification.ref);
+  $(e.srcElement).parent().parent().remove(); // remove notification div
+  $.ajax({
+    type: "GET",
+    url: API_BASE_URL+glb_username+"/&notifications",
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json",
+    success: function(res){
+      delete res.pending.info[notification.ref]
+      let dataOut = {
+        "data":
+              [{
+                "type":"update",
+                "doc":res
+              }]
+      }
+      $.ajax({
+        type: "POST",
+        url: API_BASE_URL+glb_username+"/&notifications",
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        error: console.log,
+        data: JSON.stringify(dataOut),
+        contentType:"application/json",
+        success: function(res){
+          console.log(res);
+          updateNotificationsBatch();
+        }
+      });
+    }
+  });
+}
+
+function cancelHandover(notification,e)
+{
+  console.log("canceling pending handover"+notification.ref);
+  $(e.srcElement).parent().parent().remove(); // remove notification div
+  // send to users DB API: handover confirmation
+  let dataOut = {
+    "data":
+          [{
+            "type":"handover_cancel",
+            "ref":notification.ref,
+            "to":notification.to,
+          }]
+  }
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    data: JSON.stringify(dataOut),
+    success: function(r){
+      showNotifications();
+      console.log(r)
+    },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  });
+}
+
+function confirmHandover(notification, confirmed, e)
+{
+  console.log(notification);
+  if (confirmed)
+  {
+    console.log("confirming handover of "+notification.ref);
+    $(e.srcElement).parent().parent().remove(); // remove notification div
+    // send to users DB API: handover confirmation
+    let dataOut = {
+      "data":
+            [{
+              "type":"handover",
+              "ref":notification.ref,
+              "from":notification.from
+            }]
+    }
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL+glb_username,
+      data: JSON.stringify(dataOut),
+      success: function(r){
+        showNotifications();
+        console.log(r)
+      },
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: console.log,
+      contentType:"application/json"
+    });
+  }
+  else {
+    console.log("denying handover of "+notification.ref);
+    $(e.srcElement).parent().parent().remove(); // remove notification div
+    let dataOut = {
+      "data":
+            [{
+              "type":"handover_deny",
+              "ref":notification.ref,
+              "from":notification.from
+            }]
+    }
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL+glb_username,
+      data: JSON.stringify(dataOut),
+      success: function(r){showNotifications();console.log(r)},
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: console.log,
+      contentType:"application/json"
+    });
+    // to do: backend: send info notification to lender
+  }
+
+}
+
+function addNotification(noti)
+{
+  listitem = "";
+  switch(noti.type) {
+      case "handover_await":
+        listitem = makeNotification({
+            text:"<br>awaiting handover confirmation from "+noti.to,
+            cb_cancel:function(e){cancelHandover(noti,e);},
+          })
+        break;
+      case "handover_confirm":
+        listitem = makeNotification({
+            text:"<br>did you receive "+noti.ref+" from "+noti.from+"?",
+            wording_cancel:"no",
+            wording_confirm:"yes, i did!",
+            cb_confirm:function(e){confirmHandover(noti,true,e);},
+            cb_cancel:function(e){confirmHandover(noti,false,e);}
+          })
+        break;
+      case "info":
+      listitem = makeNotification({
+          text:"<br>"+noti.text,
+          wording_confirm:"OK",
+          cb_confirm:function(e){removeNotification(noti,e);
+            updateNotificationsBatch();showNotifications()}
+        })
+        break;
+      default:
+        break;
+  }
+  $("#notifications .ui-content ul").append(listitem)
+  //$("#notifications .ui-content ul").append("<li>"+JSON.stringify(noti) )
+}
+
+function makeNotification({text="",cb_confirm=null,cb_cancel=null,
+                      wording_confirm="confirm",wording_cancel="cancel"}={})
+{
+
+  let notification = document.createElement("li");
+  notification.classList.add("ui-btn");
+  notification.setAttribute("data-corners",false)
+  notification.style.maxWidth = "100vw";
+  notification.style.display = "flex";
+  notification.style.flexDirection = "column";
+  notification.style.justifyContent = "space-between";
+  notification.style.backgroundColor = "#fff2cd";
+
+  let notiText = document.createElement("div")
+  notiText.style.width = "100%";
+  notiText.style.minHeight = "50px";
+  notiText.style.whiteSpace = "normal";
+  notiText.innerHTML=text;
+
+  notification.appendChild(notiText)
+
+  let buttonContainer = document.createElement("div");
+  buttonContainer.style.width = "100%";
+  buttonContainer.style.display = "flex";
+  buttonContainer.style.flexDirection = "row";
+  buttonContainer.style.justifyContent = "space-between";
+
+  notification.appendChild(buttonContainer);
+
+  if (cb_confirm)
+  {
+    console.log("building confirm button");
+    let confirm_btn = document.createElement("div");
+    confirm_btn.classList.add("ui-btn");
+    confirm_btn.style.width = "100%";
+    confirm_btn.style.textShadow = "none";
+    confirm_btn.style.backgroundColor = "#abcecc";
+    confirm_btn.innerHTML = wording_confirm;
+    confirm_btn.addEventListener("click",function(e){cb_confirm(e)})
+
+    buttonContainer.appendChild(confirm_btn)
+  }
+  if (cb_cancel)
+  {
+    console.log("building confirm button");
+    let cancel_btn = document.createElement("div");
+    cancel_btn.classList.add("ui-btn");
+    cancel_btn.style.width = "100%";
+    cancel_btn.style.textShadow = "none";
+    cancel_btn.style.backgroundColor = "#ff004cc7";
+    cancel_btn.style.color = "#fff2cd";
+    cancel_btn.innerHTML = wording_cancel;
+    cancel_btn.addEventListener("click",function(e){cb_cancel(e)})
+
+    buttonContainer.appendChild(cancel_btn)
+  }
+
+  return notification
+}
+
+function getNotificationsFlat(callback=console.log)
+{
+  getSingleItem("&notifications",function(notifications){
+    // get number of total notifications (items 2nd step down the object tree:)
+    let items = [];
+    for (let i = 0; i < getObjectLength(notifications.pending); i++)
+    {
+      let obj = notifications.pending[Object.keys(notifications.pending)[i]]
+
+      for (item in obj){
+        let row = obj[item]
+        row.ref = item
+        row.type = Object.keys(notifications.pending)[i];
+        items.push(row);
+        //console.log(item + JSON.stringify(obj[item]));
+      }
+
+    }
+    callback(items);
+
+  })
+}
+
+</script>

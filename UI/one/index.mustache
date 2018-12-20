@@ -1,0 +1,181 @@
+{{{warning}}}
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="UI/manifest.json">
+  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
+
+  <link rel="stylesheet" href="../assets/jquery.mobile-1.4.5.min.css" />
+  <link rel="stylesheet" href="../assets/animate.css" />
+  <script src="../assets/jquery-1.8.min.js"></script>
+  <script src="../assets/jquery.mobile-1.4.5.min.js"></script>
+  <script src="../assets/dotize.js"></script>
+  <script src="../assets/sweetalert2.js"></script>
+  <script src="../assets/bootstrap-tagsinput.js"></script>
+  <script src="../assets/quagga.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.0/jspdf.debug.js"></script>
+  <script src="https://rawgit.com/sphilee/jsPDF-CustomFonts-support/master/dist/jspdf.customfonts.debug.js"></script>
+  <script src="https://rawgit.com/sphilee/jsPDF-CustomFonts-support/master/dist/default_vfs.js"></script>
+
+
+  {{> header_maps}}
+
+  <link rel="stylesheet" type="text/css" href="../assets/bootstrap-tagsinput.css" />
+  <link rel="stylesheet" type="text/css" href="../css/style.css" />
+
+
+</head>
+
+
+<body onload="onLoad()">
+
+    <div class="coverpicdiv"><img src="../assets/images/heart.png" class="coverpic"></div>
+
+    <div data-role="page" data-theme="b" id="page">
+
+      <div data-role="header" id="header">
+        <!--<img class="notifications_img" src="../assets/images/notification_icon_off.png"/ width="32px">-->
+        <img id="btn_config" class="notifications_img" src="../assets/images/config_icon.png"/>
+
+        <h1 id="title">dingsda</h1>
+
+        <img id="fullscreenToggle" class="notifications_img" src="../assets/images/fullscreen_icon.png"/ >
+      </div>
+
+
+      <div data-role="popup" id="popupMenu">
+        <ul data-role="listview" data-inset="true" data-icon="false" style="min-width:210px;">
+          <li data-role="list-divider">search my friends' collections:</li>
+          <li><a href='javascript:btn_find(undefined,false,"public");'>SEARCH PUBLIC items</a></li>
+          <li data-role="list-divider">search in my collection but only:</li>
+            <li><a href="javascript:choosen('_id');">id</a></li>
+            <li><a href="javascript:choosen('name');">name</a></li>
+            <li><a href="javascript:choosen('address');">address</a></li>
+            <li><a href="javascript:choosen('geodata');">geodata</a></li>
+            <li><a href="javascript:choosen('owners');">owners</a></li>
+            <li><a href="javascript:choosen('other.barcode');">barcode</a></li>
+            <li><a href="javascript:choosen('other.visibility');">visibility</a></li>
+            <li><a href="javascript:choosen('other.tags');">tags/keywords</a></li>
+            <!--<li><a href="javascript:btn_find('other.borrowable');$('#popupMenu').popup('close');">borrowable</a></li>
+            <li><a href="javascript:btn_find('other.borrowby');$('#popupMenu').popup('close');">borrowby</a></li>-->
+        </ul>
+      </div>
+
+      <div id="barcodeviewport"><br><br><br>
+        <button id="scan_cancel">cancel scan</button>
+      </div>
+
+      <div data-role="main" class="ui-content" align="left" data-theme="b" id="main">
+
+
+            name of item(s):
+            <input type="text" id="name" placeholder="name of the item" onfocus="javascript:setLastFocus(this);" />
+            owners:
+            <input type="text" id="owners" placeholder="owned by..." onfocus="javascript:setLastFocus(this);"/>
+{{> location}}
+            <!--location:
+            <input type="text" id="location" placeholder="location of the item e.g. /ChelseasHome/Office/Box33" onfocus="javascript:setLastFocus(this);">
+            -->
+            <div id="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true" hidden>
+            <h3>contains:</h3>
+            <span class="mediumfont" id="other.containerOf"></span>
+            </div>
+
+            <div id="photo_collapsible_div" data-role="collapsible" data-mini="true" data-collapsed-icon="eye" data-expanded-icon="arrow-u" data-collapsed="true">
+                <h3 id="photo_collapsible">pictures</h3>
+                <img id="preview_photo" src="" oldsource=""></img>
+                <label class="fileContainer ui-btn">
+                  take/upload picture
+                  <input type="file" accept="image/jpeg" id="photo_upload" multiple data-role="none"/>
+              </label>
+            </div>
+
+            description:
+            <input id="other.description" type="text" placeholder="describe the item"/>
+
+            tags / keywords:
+            <input id="other.tags" type="text" placeholder="type tag and hit enter" data-role="tagsinput" />
+
+            <div data-role="collapsible" data-mini="true" data-collapsed-icon="info" data-expanded-icon="arrow-u" data-collapsed="true">
+              <h3>Specs (for customs etc)</h3>
+
+              barcode:
+              <input type="text" id="other.barcode" placeholder="EAN, ISBN or UPC" onfocus="javascript:setLastFocus(this);"/>
+
+              count / number of pieces:
+              <input type="text" id="other.count" placeholder="how many items are summerized in this entry?" onfocus="javascript:setLastFocus(this);"/>
+              weight per item:
+              <input type="text" id="other.weight" placeholder="don't forget to include the unit (e.g. kg)" onfocus="javascript:setLastFocus(this);"/>
+              value per item:
+              <input type="text" id="other.value" placeholder="EUR? USD? CHF?" onfocus="javascript:setLastFocus(this);"/>
+              country of origin:
+              <input type="text" id="other.madein" placeholder="made in..." onfocus="javascript:setLastFocus(this);"/>
+            </div>
+
+            <div data-role="collapsible" data-mini="true" data-collapsed-icon="heart">
+              <h3>Show & Love (Visibility Options)</h3>
+                <select name="visibility" class="mediumfont" id="other.visibility">
+                  <option value="not">visible only to owners</option>
+                  <option value="friends" selected>visible to friends</option>
+                  <option value="friends2nd">visible to friends of friends</option>
+                  <option value="public">visible to friends in spe (public)</option>
+                </select>
+
+                <!--
+                <select name="borrowable" class="mediumfont" id="other.borrowable" onChange="javascript:showKarma(this)">
+                  <option value="not">not borrowable</option>
+                  <option value="friends">friends can borrow it</option>
+                  <option value="friends2nd">friends of friends can borrow</option>
+                  <option value="public">friends in spe (everyone) can borrow</option>
+                </select>
+              -->
+
+            </div>
+<br>
+            unique id:
+            <input type="text" id="_id" placeholder="no unique id so far" onfocus="javascript:setLastFocus(this);">
+            <div id="hyperlink" hidden></div>
+
+      </div>
+      <table width="100%" id="buttonsbottom">
+      <tr>
+      <td colspan="2">
+          <button id="btn_scan" onclick="javascript:scan();" data-mini="false">scan</button>
+      </td>
+      </tr>
+      <tr>
+      <td width="50%" class="buttoncol">
+        <button id="btn_find" onclick="javascript:btn_find()">find<br><span class="smallfont">(hold for options)</span></button>
+      </td>
+      <td>
+          <button id="btn_add" onclick="javascript:btn_add_update()">save<br>&nbsp;</button>
+      </td>
+      </tr>
+      <tr>
+      <td colspan="2">
+        <button id="btn_del" onclick="javascript:btn_del(false)">clear<br><span class="smallfont">(hold to delete)</span></button>
+      </td>
+      </tr>
+      </table>
+    </div>
+
+
+</body>
+
+<script type="text/javascript" src="../js/barcode.js"></script>
+<script type="text/javascript">
+
+{{> mapscript}}
+
+</script>
+
+<script type="text/javascript" src="../js/app.js"></script>
+<script src="../js/carnet.js"></script>
+
+</html>

@@ -1,0 +1,456 @@
+<div data-role="page" id="itemDetails">
+
+
+    <style>
+
+      .more_menu{
+        position: fixed;
+        z-index: 99;
+        right: 10px;
+        margin-top: 5vh;
+      }
+
+      .more_btn{
+        width: 20px;
+        height: 10px;
+        float: right;
+        opacity: 0.9;
+      }
+
+      .more_menu button{
+        height: 2.5em;
+        min-width: 50vw !important;
+        padding: 2px;
+        margin: 2px;
+        text-shadow: 0px 0px 0px black !important;
+      }
+
+      .more_menu button:nth-child(3n+2){
+        background-color: rgba(255, 0, 76, 1);
+        color: rgba(255,242,205,1);
+      }
+      .more_menu button:nth-child(3){
+        background-color: rgba(255,242,205,1);
+      }
+      .more_menu button:nth-child(4){
+        background-color: rgba(171, 206, 204, 1);
+      }
+
+      .more_menu button {
+        text-transform: lowercase;
+      }
+
+
+      #detailTitle{
+        font-size: 1.1em;
+        background-color: rgba(255, 0, 76, 1);
+        color: rgba(255,242,205,1);
+        text-shadow: 0px 0px 0px black !important;
+      }
+
+      #detailDescription {
+        background-color: rgba(255,242,205,0.6);
+      }
+
+      #itemDetails_detailsContainer{
+        margin-left: -1em;
+
+      }
+
+      .btn_request{
+        font-size: 1.1em;
+        bottom: 0;
+        background-color: rgba(171, 206, 204, 0.8) !important;
+
+        text-shadow: 0px 0px 0px black !important;
+      }
+
+      #itemDetails input{
+        pointer-events: none;
+        background-color: beige;
+        border-color: rgba(0,0,0,0);
+        border-width: 0px;
+        border: 0px solid #f00 !important;
+      }
+
+      #itemDetails #getLocation{
+        display: none;
+      }
+
+      #itemDetails #getLocation iframe{
+        pointer-events: none;
+      }
+
+      #itemDetails #map>*{
+        pointer-events: none;
+      }
+
+      #itemDetails .ui-flipswitch{
+        display: none;
+      }
+
+      #itemDetails input:placeholder-shown{
+        display: none;
+      }
+
+      #itemDetails .ui-shadow-inset{
+        border-color: transparent;
+      }
+
+
+    </style>
+
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content" style="padding:0;">
+
+    <div class="ui-grid-b" style="width:100%;margin-top:-20px;height:100%">
+
+      <div class="more_menu">
+        <div class="more_btn ui-btn">...</div>
+        <div class="more_menu_btn_container">
+          <button class="more_menu_btn editSingleItem_btn">edit</button>
+          <button class="more_menu_btn moveSingleItem_btn">move</button>
+          <button class="more_menu_btn borrow_handover_btn">handover</button>
+          <button class="more_menu_btn deleteSingleItem_btn">delete</button>
+        </div>
+      </div>
+
+      <div class="ui-block-a" style="width:100%;height:33vh;background-color:black">
+        <img id="detailImg" src="icons/icon_512.png"
+        style="height:100%" alt="big picture of item">
+        </img>
+      </div>
+
+      <div class="ui-block-b" style="width:100%">
+        <div id="detailTitle" class="ui-bar ui-bar-a">TITLE</div>
+      </div>
+
+      <div class="ui-block-a"style="width:100%">
+              <div class="ui-bar" style="font-style:italic">
+                by <span id="detailOwners">owners</span>
+              </div>
+      </div>
+
+      <div id="itemDetail_location" class="ui-block-a" style="width:100%">
+
+      </div>
+
+      <div class="ui-block-a" style="width:100%">
+
+        <div id=detailDescription class="ui-bar" style="height:18vh;overflow:scroll">
+          description.
+          <p>blablabla. Das ist so ein schönes Dingsbumms. wow. Ich bin sehr verwirrt.<br>
+            Was mach ich jetzt bloß?
+          </p>
+          <p>blablabla. Das ist so ein schönes Dingsbumms. wow. Ich bin sehr verwirrt.<br>
+            Was mach ich jetzt bloß?
+          </p>
+          <p>blablabla. Das ist so ein schönes Dingsbumms. wow. Ich bin sehr verwirrt.<br>
+            Was mach ich jetzt bloß?
+          </p>
+        </div>
+      </div>
+
+      <div class="ui-block-a" style="width:100%">
+        <div id="itemDetails_detailsContainer" class="ui-bar ui-bar-a">
+         <!-- HERE GOES DETAILS FROM ADDNEW -->
+        </div>
+      </div>
+
+      <div class="ui-block-a" style="width:100vw">
+        <div class="borrow_handover_btn btn_request ui-btn" style="height:5vh">
+          BORROW
+        </div>
+      </div>
+
+    </div><!-- /grid-b -->
+
+    </div>
+
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+let itemDetails = {}
+
+$( document ).on( "pageshow", "#itemDetails", function(e,ui) {
+    console.log("just loaded itemDetails");
+    console.log(ui.prevPage);
+
+    $("#details").appendTo("#itemDetails_detailsContainer");
+    $("#itemDetails_detailsContainer").trigger("create");
+    $("#details").collapsible( "collapse" );
+    $("#itemDetails_detailsContainer :input").attr("disabled", true);
+
+    // move locationMoveable here
+    $("#locationMoveable").appendTo("#itemDetail_location");
+    $("#itemDetail_location").trigger("create");
+    $("#locationMoveable").collapsible( "collapse" )
+
+    clearForm(); // clear AddNew Form (in case we were editing before)
+
+    showItemDetails();
+
+    $(".more_menu_btn_container").hide();
+
+})
+
+$(".borrow_handover_btn").click(function(){
+  console.log("#btn_borrow_handover_single clicked");
+
+  if (itemDetails.itemInFocus.owners.includes(glb_username)) {
+    console.log("users own item. therefore: handover or take back");
+    // if not in possession of other user: it's a handover.
+    if (itemDetails.itemInFocus.inPossessionOf === undefined ||
+        itemDetails.itemInFocus.inPossessionOf.includes(glb_username) )
+    {
+      console.log("it's a handover");
+      collection.bulk = [itemDetails.itemInFocus];
+      $.mobile.pageContainer.pagecontainer("change", "#handover",
+                 {allowSamePageTransition:true,transition: "slidefade" });
+    }
+    // otherwise it is a take back (which is a fully automated handover to the user themselves)
+    else {
+      console.log("it's a take back!");
+      let newItem = itemDetails.itemInFocus;
+      newItem.inPossessionOf = glb_username;
+      handoverItem(newItem, callback=function(res){
+        showToast("item will be taken back from Possessor.",1000)
+        $.mobile.pageContainer.pagecontainer("change", "#collection",
+                   {allowSamePageTransition:true,transition: "slidefade" });
+        refreshCollection();
+        setTimeout(updateItemBatch,1200);
+      })
+    }
+
+  }
+  else {
+    console.log("other users item. therefore: borrow request or return request");
+    // if already in my Possesion: this must be a return to it's owners
+    if (itemDetails.itemInFocus.inPossessionOf &&
+        itemDetails.itemInFocus.inPossessionOf.includes(glb_username))
+    {
+      console.log("it's a return!");
+      let newItem = itemDetails.itemInFocus;
+      // second last item in hyperlink is dbOwner of things DB:
+      let thingsdatabaseowner = itemDetails.itemInFocus.hyperlink.split("/");
+      thingsdatabaseowner = thingsdatabaseowner[thingsdatabaseowner.length-2];
+      console.log("to "+thingsdatabaseowner);
+      newItem.inPossessionOf = thingsdatabaseowner;
+      handoverItem(newItem, callback=function(res){
+        console.log(res);
+        showToast("send a return request to owner of thing.",1000)
+        $.mobile.pageContainer.pagecontainer("change", "#collection",
+                   {allowSamePageTransition:true,transition: "slidefade" });
+        setTimeout(refreshCollection,1000);
+        setTimeout(updateItemBatch,1200);
+      })
+    }
+    // otherwise it is a borrow request to the owners
+    else
+    {
+      collection.bulk = [itemDetails.itemInFocus];
+      $.mobile.pageContainer.pagecontainer("change", "#borrow",
+                 {allowSamePageTransition:true,transition: "slidefade" });
+    }
+
+  }
+
+})
+
+$(".more_btn").click(function(){
+  console.log("MORE PRESSED");
+  //show menu
+  $(".more_menu_btn_container").toggle();
+})
+
+$(".moveSingleItem_btn").click(function(){
+  clearForm(); // clearForm including Location
+  $(".more_menu_btn").hide();
+  console.log("moving SingleItem!");
+  collection.bulk = [itemDetails.itemInFocus];
+  $.mobile.pageContainer.pagecontainer("change", "#move",
+             {allowSamePageTransition:true,transition: "slidefade" });
+})
+
+$(".editSingleItem_btn").click(function(){
+  $(".more_menu_btn").hide();
+  console.log("editing SingleItem!");
+  $.mobile.pageContainer.pagecontainer("change", "#addNew",
+             {allowSamePageTransition:true,transition: "slidefade" });
+  // let addNew know that it is in editmode:
+  addNew.editMode = true;
+})
+
+$(".deleteSingleItem_btn").click(function(){
+  $(".more_menu_btn").hide();
+  // confirm swal:
+  swal({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    type: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.value) {
+      console.log("deleting SingleItem!");
+      deleteItems([itemDetails.itemInFocus]);
+      setTimeout(function(){
+        shiftItemFocus();
+        showItemDetails();
+      },1000)
+    }
+  })
+})
+
+$("#itemDetails").on( "swipeleft", function(e) {
+  console.log("SWIPELEFT: next item");
+  console.log(e);
+  shiftItemFocus();
+  showItemDetails();
+/*  $.mobile.pageContainer.pagecontainer("change", "#itemDetails",
+           {allowSamePageTransition:true,transition: "slidefade" });*/
+ })
+
+ $("#itemDetails").on( "swiperight", function(e) {
+   console.log("SWIPERIGHT: prev item");
+   shiftItemFocus(1);
+   showItemDetails(); // not necessary. just for the looks of loading before pageshow
+   /*$.mobile.pageContainer.pagecontainer("change", "#itemDetails",
+            {allowSamePageTransition:true,transition: "slidefade",reverse: true  });*/
+  })
+
+
+function shiftItemFocus(shift=-1){
+  let position = collection.searchhistory[0].findIndex(i => i._id === itemDetails.itemInFocus._id);
+  if (position+shift > -1  && position+shift < collection.searchhistory[0].length)
+  {
+    position = position +shift;
+    itemDetails.itemInFocus = collection.searchhistory[0][position];
+  }
+  else if (position+shift < 0){
+    showToast(msg="no more items",1000);
+     window.history.back();
+  }
+  else {
+     window.history.back();
+  }
+}
+
+function showItemDetails(){
+  let mydoc = itemDetails.itemInFocus;
+  if (mydoc)
+  {
+    // fill itemView with infos from Doc:
+    let id = mydoc.hyperlink ? mydoc.hyperlink : API_BASE_URL+collection.searchDB+"/"+mydoc._id;
+    id = id+"/pic_small.jpg";
+    /*getPicAttachment(id,function(res){
+      console.log("seeting new pic: " +res.substring(0,8));
+      $("#detailImg").attr("src","data:image/jpeg;base64,"+res)
+    });*/
+    $("#detailImg").attr("src",id);
+    $("#detailImg").attr("onerror",'null;this.src="icons/icon_512.png"')
+    $("#detailTitle").html(mydoc.name);
+    $("#detailOwners").html(mydoc.owners.toString());
+
+    // hide / show edit / move / delete buttons depending on edit/move rights:
+    if (!mydoc.owners.includes(glb_username))
+    {
+      $(".editSingleItem_btn").hide();
+      $(".deleteSingleItem_btn").hide();
+      if (mydoc.inPossessionOf === undefined || mydoc.inPossessionOf.includes(glb_username))
+      {
+          $(".moveSingleItem_btn").show();
+      }
+      else
+      {
+          $(".moveSingleItem_btn").hide();
+      }
+
+    }
+    else {
+      // full rights. show all buttons
+      //$(".borrow_handover_btn").show(); // always the case so not needed here
+      $(".editSingleItem_btn").show();
+      $(".moveSingleItem_btn").show();
+      $(".deleteSingleItem_btn").show();
+    }
+
+    // change if borrow or handover button depending on itemownership and Possession:
+    if(mydoc.owners.includes(glb_username) )
+    {
+      if (mydoc.inPossessionOf && !mydoc.inPossessionOf.includes(glb_username) )
+      {
+        $(".borrow_handover_btn").html("TAKE BACK")
+      }
+      else {
+        $(".borrow_handover_btn").html("HANDOVER")
+      }
+
+    }
+    else if (mydoc.inPossessionOf && mydoc.inPossessionOf.includes(glb_username))
+    {
+        if (mydoc.owners.includes(glb_username))
+        {
+            $(".borrow_handover_btn").html("HANDOVER")
+        }
+        else {
+          $(".borrow_handover_btn").html("RETURN")
+        }
+
+    }
+    else {
+      $(".borrow_handover_btn").html("BORROW")
+    }
+
+    let detailLocaMini = mydoc.location.address ? mydoc.location.address : mydoc.location.description;
+    if (mydoc.location.insideOf)
+    {
+      detailLocaMini = '<a style="font-size:0.8em" href=\'javascript:getSingleItem("'+
+      mydoc.location.insideOf+
+      '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();});\'>'+
+      mydoc.location.insideOf+'</a>'
+    }
+    $("#detailLocation").html(detailLocaMini);
+    $("#detailDescription").html(mydoc.other.description ? mydoc.other.description : "");
+
+    fillForm(mydoc);
+  }
+}
+
+
+
+function getSingleItem(id,callback,error=console.log)
+{
+    // transform id into hyperlink in case no hyperlink was passed:
+    if (!id.startsWith("https")){
+      id = API_BASE_URL+glb_username+"/"+id;
+    }
+    console.log("fetching single Item: "+id);
+    // get item json from DB
+    $.ajax({
+      type: "GET",
+      url: id,
+      success: callback,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: error,
+      contentType:"application/json"
+    });
+
+}
+
+
+</script>

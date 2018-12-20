@@ -1,0 +1,17 @@
+{
+  "background_color": "black",
+  "description": "DINGSDA - share things not thoughts!",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "scope":".",
+  "icons": [
+    {
+      "src": "icons/icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "name": "dingsda",
+  "short_name": "dingsda",
+  "start_url": "https://dingsda.org/UI?map=true"
+}

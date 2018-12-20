@@ -1,8 +1,10 @@
 // to do: exports module stuff
-
+// to do: check config or mobile type if rather starting of barcode scanner
+//    app might be appropriate via appname:// thing like with zxing://
 
 function startBarcode()
 {
+
 
   Quagga.init({
       inputStream : {
@@ -10,22 +12,25 @@ function startBarcode()
         type : "LiveStream",
         target: document.querySelector('#barcodeviewport'),    // Or '#yourElement' (optional)
         constraints: {
-          width: 960,
-          height: 720,
-          facingMode: "environment",
-        }
+          width: {min: 640},
+					height: {min: 480},
+					aspectRatio: {min: 1, max: 100},
+          facingMode: "environment"
+        },
+        //singleChannel: true
       },
-      decoder : {
-        /*
-         TO DO: fill readers from config or depending on which field has focus
-        because UPC and EAN should be only in barcode or UPC EAN relevant fields
-        */
-        readers : ["ean_reader","upc_reader"],
-        debug: {
-          drawBoundingBox: true,
-          drawScanline: true
-        }
-      }
+      locator: {
+      				patchSize: "medium",
+      				halfSample: true
+      			},
+      numOfWorkers: (navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4),
+      decoder: {
+      				"readers":[
+      					{"format":"ean_reader","config":{}},
+                {"format":"upc_reader","config":{}}
+      				]
+      			},
+      locate: true
     }, function(err) {
         if (err) {
             console.log(err);
@@ -46,7 +51,7 @@ Quagga.onDetected(function(result){
 are detected, call Quagga.stop() and return the codeResult including code and
 format for further processing (e.g. putting it into Forms)
 */
-  if (Quagga.lastResults.length < 10)
+  if (Quagga.lastResults.length < 2)
   {
     Quagga.lastResults.push(result.codeResult.code);
   }

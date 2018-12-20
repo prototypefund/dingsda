@@ -4,38 +4,314 @@ dingsda - ze internez of dings
 
 https://www.dingsda.org
 
+test web UI (optimized for mobile): https://www.dingsda.org/two
+
+at the moment: invite only. Feel welcome to contact philip(_ät_)machinaex(_dot_)de to get a test account.
+
+
 ## API v0.1 ##
 
-![Sketch API flow chart](./img/API_flow.png)
+HTTP API running from node script:
 
-![Sketch API flow chart](./img/API_node_server_flow.png)
-
-| Name | URI | HTTP Method | HTTP Header | POST body | URI params | Result | done | priority | handled by |
-|-----------------|-----------------------|-------------|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|----------|----------------------|
-| Auth POST | api/v1/ | POST |  | {username:xxx, password:xxx} |  | {"ok": "true"} + cookie w/ AuthSession | YES |  | server.js middleware |
-| Auth GET | api/v1/ | GET |  |  | name & passwordORjson = {"username":"xxx", "password":"xxx"} | {"ok": "true"} + cookie w/ AuthSession | YES |  | server.js middleware |
-| REGISTER | api/v1/register | POST |  | {username:xxx, password:xxx} |  | ok + referrer to loginpage or API after verification of human or error. Request a userName and password and thereby an account with 1 DB under control of this user | NO | MEDIUM | instanceCommander() |
-|  |  |  |  |  |  |  |  |  |  |
-| GET ITEM | api/v1/:userDB:itemId | GET | cookie |  | IF NO COOKIE: name & passwordOR json = {"username":"xxx" , "password":"xxx"} | Show details of an item, if allowed by owner of item (returns not existing if any concerns arise) | YES |  | dingsCommander() |
-| MOVE ITEM | api/v1/:userDB:itemId | POST |  | {   "data": [{       "type": "move",       "location": xxxx}]} |  | updates location of a thing if requesting user is defined as mover in ownerDBs _security | YES |  | dingsCommander() |
-| UPDATE ITEM | api/v1/:userDB:itemId | POST |  | {   "data": [{       "type": "update",       "doc": {newdoc incl. last _rev}]} |  | updates complete object if correct _rev is provided and requesting user is listed as editor in ownerDBs _security. Careful!: this means FULL writing permissions for this object excluding only owners, id and name!!! | YES |  | dingsCommander() |
-|  |  |  |  |  |  |  |  |  |  |
-| DELETE ITEM(S) | api/v1/:userDB | POST | cookie | JSON String |  | Delete an existing item from your DBs. | NO | MEDIUM | DBCommander() |
-| FIND ITEM(S) | api/v1/:userDB | POST | cookie | {   "data": [{       "type": "find",       "doc": {document parameters to search in: and their keys. inside of keys regex is ok.}],       "bookmark": <String, optional use of watermark if last query was paginated and you need more results from the same query)} |  | Show list of all itemIds, names and location, matching search queries parameters and $regex((?i) (regex style: PCRE) (paginated after 50 items with couchDB watermark) | NO | HIGH | DBCommander() |
-| ADD ITEM(S) | api/v1/:userDB/ | POST | cookie | {   "data": [{       "type": "addItems",       "doc": {newdoc}]} |  | Add new item to your own DBs (tbd: multiple items) | NO | HIGH | DBCommander() |
-| REQUEST ITEM(S) | api/v1/:userDB | POST | cookie | JSON String |  | Send itemRequest to all owners of the item | NO | HIGH | DBCommander() |
-|  | api/v1/findItems | GET / POST | cookie | JSON String |  | Show list of all itemIds matching search Query (might be paginated if POST) | NO | LOW | instanceCommander() |
-|  | api/v1/addItems | POST | cookie | JSON String |  | Add details of new item(s) to DBs that list you in editor or admin group | NO | LOW | instanceCommander() |
-|  | api/v1/deleteItems | DELETE | cookie | JSON String |  | Delete existing item(s) that list you as owner in DBs that allow you access | NO | LOW | instanceCommander() |
-|  |  |  |  |  |  |  |  |  | instanceCommander() |
-|  | api/v1/public/:itemId | GET / POST |  |  |  | Show details of an item, if publicly visible item (for non publicly visible items you will have to know who is the owner) | NO | LOW | instanceCommander() |
+ *server.js*:
 
 
-(table made with: https://www.tablesgenerator.com/markdown_tables)
+**known issues**
+- not propper RESTful API because commands part of JSON payload instead of url endpoint. will be changed till v1.0.0, but atm not hightest priority (sorry, noob mistake)
 
+**dependencies:**
+- nano (^7.1.0)
+- https (^1.0.0)
+- express (^4.16.4)
+- request (^2.88.0)
+- cookie-parser (^1.4.3)
+- body-parser (^1.18.3)
+- uuid/v5 // npm install uuid (^3.3.2)
+- cors (^2.8.4)
+- http-proxy (^1.17.0)
 
+- web-push (^2.88.0)
 
-## json schema (work in progress) ##
+**configuration**
+
+configuration for server.js and pushServer_test is to be found within the config_file server_config.json
+
+configuration for the UIs is found inside of UI/<ui number>/config_UI.json
+
+please provide all necessary information before you start the server.
+
+**HTTP API**
+
+the dingsda API knows **3 different entry levels:**
+
+1. **Instance Level** (http requests to URL instanceUrl + API_BASE_URL will be considered Instance Level and handled within server.js by the function **instanceCommander()**)
+  for example: https://dingsda.org:3000/api/v1
+2. **Database Level** (http requests to URL instanceUrl + API_BASE_URL + <username> will be considered DB level and handled by function **DBCommander()**)
+  for example: https://dingsda.org:3000/api/v1/machinaex
+3. **Ding Level** (http requests to URL instanceURL + API_BASE_URL + <username> + <item _id> will be considered dinglevel and be handled by function **dingsCommander()**)
+  for example: https://dingsda.org:3000/api/v1/machinaex/29e5cf8f-a99c-571c-93ab-e24fad18d2be
+
+requests to API need AuthSessionToken within its cookies all times except for Authentication
+
+Important: **All POST API endpoints** MUST be **JSON formatted** and follow this
+basic form:
+
+```json
+{
+  "data":[
+    {
+  	"type":"<name of command type>",
+  	"<other fields>": {}
+    }
+  ]
+}
+```
+
+### 1. Instance Level API ###
+
+#### GET: ####
+
+###### Authentication: ######
+
+parameter     | description
+------------- | -------------
+name          | username to authenticate with
+password      | password
+
+examples:
+
+curl:
+```bash
+$ curl -X GET 'https://dingsda.org:3000/api/v1?name=jan&password=demopassword'
+```
+
+client js/jquery:
+```js
+var settings = {
+  "url": "https://dingsda.org:3000/api/v1?name=jan&password=demopassword",
+  "method": "GET",
+  "headers": {
+    "Content-Type": "application/json",
+    "cache-control": "no-cache",
+  },
+  "data": ""
+}
+
+$.ajax(settings).done(function (response) {
+  console.log(response);
+});
+```
+
+python:
+```python
+import requests
+
+url = "https://dingsda.org:3000/api/v1"
+
+querystring = {"name":"jan","password":"demopassword"}
+
+payload = ""
+headers = {
+    'Content-Type': "application/json",
+    'cache-control': "no-cache"
+    }
+
+response = requests.request("GET", url, data=payload, headers=headers, params=querystring)
+
+print(response.text)
+```
+--------------------------------
+
+#### POST: ####
+
+###### SEARCH: ######
+(CURRENTLY BROKEN AND NOT USED. SEE dingslevel/findItems)
+
+```json
+{
+  "type":"search",
+  "doc": {...}
+}
+```
+
+examples:
+(...)
+
+--------------------------------
+
+### 2. Database Level API ###
+
+#### GET: ####
+
+###### DB Infos: ######
+
+*returns:*  CouchDB Infos about DB.
+
+*note:* for testing. probably to be deprecated later.
+
+--------------------------------
+
+#### POST: ####
+--------------------------------
+###### ADD ITEMS ######
+
+*json*:
+
+```json
+"data":[
+  {
+    "type":"addItems",
+    "doc": {<doc to be added>}
+  }
+]
+```
+
+parameter     | description
+------------- | -------------
+doc           | doc to be added.
+
+**behaviour:**
+
+--------------------------------
+###### UPDATE ITEMS ######
+
+*json*:
+
+```json
+"data":[
+  {
+    "type":"updateItems",
+    "doc": {<doc to be updated>}
+  }
+]
+```
+
+parameter     | description
+------------- | -------------
+doc           | doc to be updated, including recent _rev(!)
+
+**behaviour:**
+
+updates item handed over in doc. needs to provide the most recent
+
+--------------------------------
+###### DELETE ITEMS ######
+
+*json*:
+
+```json
+"data":[
+  {
+    "type":"deleteItems",
+    "doc": {<doc to be deleted>}
+  }
+]
+```
+
+parameter     | description
+------------- | -------------
+doc           | doc to be deleted, including recent _rev(!)
+
+**behaviour:**
+
+--------------------------------
+###### FIND ITEMS ######
+
+*json*:
+
+```json
+"data":[
+  {
+    "type":"findItems",
+    "doc":<mango style searchTerm>
+  }
+]
+```
+
+parameter     | description
+------------- | -------------
+doc           | searchQuery: object w/ ```{ key : searchvalue }```
+bookmark      | (OPTIONAL) bookmark string from last result.
+
+**behaviour:**
+ Will search Database for documents matching the searchterm(s) specified in json-field data.doc
+
+This API will only simplify all requests to use either "$regex":"(?i)" or "$in": in front of the searchValue. So: Search for searchValue will be successfull if searchValue is in any way included (within array or as substring) inside doc.
+
+Also: in order to keep the API flat, it uses a dot notation (parent.child) for requests deeper down the object tree (e.g. parent.child:"hans" instead of parent:{child:"hans"}) (also: s.example below)
+
+If you want to search more DBs at once and/or make real [mango queries] (https://github.com/cloudant/mango) to dingsda, use the search API endpoint on instance Level.
+
+The query response result is limited to a maximum of 50 found items.
+The **optional bookmark** field can be added to follow up query in order to get the next 50 items returned. (see [couchDBs find()](https://docs.couchdb.org/en/stable/api/database/find.html?highlight=bookmark) API for more details on bookmarks behaviour)
+
+**returns:**
+JSON formatted list of objects matching the searchQuery, but only contains the following fields: "_id","name","location","other","owners","hyperlink","inPossessionOf". For more Information about the objects, a FETCH on Dings level is recommended
+
+examples:
+
+client js/jquery:
+```js
+var data =
+{
+	"data":
+	[{
+		"type":"findItems",
+		"doc":{
+				 "location.address": "India"
+			}
+	}]
+}
+
+var settings = {
+  "url": "https://dingsda.org:3000/api/v1/jan",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "data": JSON.stringify(data)
+}
+
+$.ajax(settings).done(function (response) {
+  console.log(response);
+});
+```
+--->
+```json
+{
+    "docs": [
+        {
+            "_id": "1e862072-b279-5b84-b0ed-98eca77e21db",
+            "name": "Samsonite Rollkoffer carry-on",
+            "location": {
+                "address": "jogishvari, Jogeshwari Road, Chamunda Colony, Amraiwadi, Ahmedabad, Gujarat 380026, India",
+                "latitude": "22.258652",
+                "longitude": "71.19238050000001"
+            },
+            "other": {
+                "tags": [
+                    "Tools",
+                    "Travel",
+                    "Reise"
+                ],
+                "visibility": [
+                    "public"
+                ],
+                "description": "2 compartments",
+                "borrowable": "not"
+            },
+            "owners": [
+                "jan"
+            ],
+            "hyperlink": "https://dingsda.org:3000/api/v1/jan/1e862072-b279-5b84-b0ed-98eca77e21db"
+        }
+    ],
+    "bookmark": "g1AAAAB4eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYqrGKZamBkZmBvpJhmZW-qaJlmY6CYZpKboWlqkJieam6caGaYkgfRywPQSrSsLAGuGH_M"
+}
+```
+--------------------------------
+
+### json schema (work in progress NOT UP TO DATE!!!) ###
 
 explanation needed for:
   - location either string (then: constraint free because only for humans anyhow)
@@ -43,7 +319,7 @@ explanation needed for:
    or the field "inside_id" to mark in which other item it can be found
   - other contains everything that is not absolutely needed for the simplest bare bone item (that includes: barcodes, prices, sizes, availablity etc.)
 
-```
+```json
 {
   "$id": "https://dingsda.org/api/v1/item.json",
   "description": "Schema for an item within dingsda.org DB. Describes a thing in as minimal terms as possible",
@@ -55,6 +331,9 @@ explanation needed for:
         "name": {
           "type": "string"
         },
+        "address": {
+          "type": "string"
+        },
         "longitude": {
           "type": "string",
           "pattern": "^(\\+|-)?(?:180(?:(?:\\.0{1,6})?)|(?:[0-9]|[1-9][0-9]|1[0-7][0-9])(?:(?:\\.[0-9]{1,6})?))$"
@@ -62,23 +341,15 @@ explanation needed for:
         "latitude": {
           "type": "string",
           "pattern": "^(\\+|-)?(?:90(?:(?:\\.0{1,6})?)|(?:[0-9]|[1-8][0-9])(?:(?:\\.[0-9]{1,6})?))$"
-        }
+        },
+        "insideOf": {
+          "type": "string"
+        },
       },
       "required": [
         "name",
         "longitude",
         "latitude"
-      ]
-    },
-    "obj_in_obj": {
-      "type": "object",
-      "properties": {
-        "inside_id": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "inside_id"
       ]
     }
   },
@@ -148,7 +419,7 @@ explanation needed for:
 
 this simple example would pass validation:
 
-```
+```json
 {
 	"_id":"1",
     "name":"eins",

@@ -1,0 +1,114 @@
+<style>
+
+  #config {
+    background-color: #fff2cd;
+  }
+
+  #logout{
+    background-color: #ff004c !important;
+    color: #fff2cd !important;
+    text-shadow: none;
+  }
+
+  #btn_upd_contact_info {
+    background-color: #abcecc;
+    text-shadow: none;
+  }
+
+</style>
+
+<div data-role="page" id="config">
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+
+      <button id="logout" style="margin-top:0">logout</button>
+      <h1 align="center">config</h1>
+      <br>
+
+      <h3 align="center">your contact information:</h3>
+      <input id="contact_email" type="email" placeholder="your email" value="" />
+      <input id="contact_telnumber" type="number" placeholder="your phone number" value="" />
+      <input id="contact_other" type="text" placeholder="other way to contact you" value="" />
+      <br>
+      <button id="btn_upd_contact_info">save</button>
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+<script>
+
+  let config = {
+    _id: "&config",
+    contact_details: {}
+  }
+
+  $( document ).on("pageshow", "#config", function(e,ui) {
+    fetchConfig();
+  })
+
+  function fetchConfig(){
+    getSingleItem("&config",function(res){
+      if (res._id){
+        console.log(res);
+        config = res;
+
+        // fillconfigForm:
+        $("#contact_email").val(config.contact_details.email);
+        $("#contact_telnumber").val(config.contact_details.telnumber);
+        $("#contact_other").val(config.contact_details.other);
+      }
+    })
+  }
+
+  $("#logout").click(function(){
+    // delete AuthSession Cookie (will only work if cookie from same URL)
+    $.ajax({
+        type: "DELETE",
+        url: API_BASE_URL,
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        success: function(res)
+          {
+            console.log(res);
+            showToast(res,500);
+            // reload page();
+            window.location.href = UI_URL;
+          },
+        error: function(err){
+          console.log(err);
+        },
+        contentType:"application/json"
+      });
+  })
+
+
+  $("#btn_upd_contact_info").click(function(){
+
+    config.contact_details.email = $("#contact_email").val();
+    config.contact_details.telnumber = $("#contact_telnumber").val();
+    config.contact_details.other = $("#contact_other").val();
+
+    updateit(config,function(res){
+      console.log(res);
+      if(res.ok == true)
+      {
+        swal({text:"SAVED SUCCESSFULLY", toast:true, timer:1200,
+          showConfirmButton:false, position:"center",customClass:"whiteletters"
+        }).then(function(){});
+      }
+      else {
+        swal({title:"UPDATE ERROR",text:res.statusText, toast:true,customClass:"whiteletters"});
+        console.log(res);
+      }
+    })
+
+
+  })
+
+</script>

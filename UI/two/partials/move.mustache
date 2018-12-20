@@ -1,0 +1,181 @@
+<div data-role="page" id="move">
+
+  <style>
+
+    #locationEditor_Move .ui-collapsible-content{
+      background-color: #fff2cd;
+      text-shadow: 0px 0px 0px black !important;
+      width: 100%;
+      margin-left:-1em;
+    }
+
+    #locationEditor_Move #map{
+      height: 20vh;
+    }
+
+    #locationEditor_Move .ui-collapsible-heading{
+      display: none
+    }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content" style="background-color:#abcecc;margin-bottom:10vh;">
+    Where do you want to move these items to ?
+    <br>
+
+  <div id="locationEditor_Move">
+
+
+  </div>
+
+
+  <div id="btn_move_items" class="btn_request ui-btn"
+    style="height:10vh;width:100%;left:-1em;bottom:-1em;background-color:#ff004c!important;
+    color:#fff2cd;z-index:3;position:fixed">
+    MOVE ITEMS</div>
+
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+$( document ).on( "pageshow", "#move", function(e,ui) {
+    //console.log(window.location.search);
+    console.log("just loaded move");
+    //console.log(ui.prevPage);
+
+    $("#move .ui-content li").remove()
+
+    $("#locationMoveable").appendTo("#locationEditor_Move");
+    $("#locationEditor_Move").trigger("create");
+    $("#locationMoveable").collapsible( "expand" )
+
+    for(value of collection.bulk)
+    {
+      $("#move .ui-content").append("<li>"+value.name)
+    }
+})
+
+$("#btn_move_items").click(function(){
+  let newlocation = getAllInputs().location;
+
+  if (newlocation !== undefined)
+  {
+    console.log("items will be moved to new location:");
+    console.log(newlocation);
+
+    for(value of collection.bulk)
+    {
+      value.location = newlocation;
+      //updateItem(value);
+      moveItem(value)
+    }
+
+    showToast("items will be moved",800);
+    setTimeout(refreshCollection,1000);
+    window.history.back();
+  }
+
+})
+
+function moveItem(obj, callback=console.log)
+{
+  console.log("trying to move item");
+
+  let path = API_BASE_URL+glb_username+"/"+obj._id;
+  if (obj.hyperlink !== undefined && obj.hyperlink != "")
+  { path = obj.hyperlink }
+
+  let dataOut = {
+    "data":
+          [{
+            "type":"move",
+            "location":obj.location
+          }]
+    }
+
+  $.ajax({
+    type: "POST",
+    url: path,
+    data: JSON.stringify(dataOut),
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: callback,
+    contentType:"application/json"
+  });
+}
+
+
+function updateItem(obj,picIncluded=false,callback=console.log)
+{
+  console.log("trying to fetch originalObject from DB");
+  console.log(obj);
+
+  let path = API_BASE_URL+glb_username+"/"+obj._id;
+  if (obj.hyperlink !== undefined && obj.hyperlink != "")
+  { path = obj.hyperlink }
+
+  getSingleItem(path, function(res){
+
+      console.log(res);
+      console.log("merging oldObj and formContents");
+      let newObj = Object.assign({}, res, obj);
+      console.log(newObj);
+      console.log("attempting update of object");
+
+      let newdata = {
+          "data":[{
+            "type":"update",
+            "doc":newObj,
+            //pic:document.getElementById("preview_photo").src
+          }]
+        }
+
+        // excluded picupdate. should have its own function, i think
+
+        // write into DB
+        $.ajax({
+          type: "POST",
+          url: path,
+          data: JSON.stringify(newdata),
+          success: callback,
+          xhrFields: { withCredentials: true }, // to make AuthCookie ok
+          error: callback,
+          contentType:"application/json"
+        });
+    },
+    function(err){callback(err)}
+  )
+
+}
+
+
+function getSingleItem(id,callback,error=console.log)
+{
+    // transform id into hyperlink in case no hyperlink was passed:
+    if (!id.startsWith("https")){
+      id = API_BASE_URL+glb_username+"/"+id;
+    }
+    console.log("fetching single Item: "+id);
+    // get item json from DB
+    $.ajax({
+      type: "GET",
+      url: id,
+      success: callback,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: error,
+      contentType:"application/json"
+    });
+
+}
+
+</script>

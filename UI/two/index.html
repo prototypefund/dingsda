@@ -1,0 +1,3704 @@
+<!DOCTYPE html>
+<html lang="en">
+  <!-- fdff -->
+<head>
+  <meta charset="utf-8">
+  <title>dingsda user interface 2</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../assets/jquery.mobile-1.4.5.min.css">
+
+  <!--<script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  <script src="assets/jquery.mobile-1.4.5.min.js"></script>
+  <script src="assets/sweetalert2.js"></script>
+  <script src="assets/bootstrap-tagsinput.js"></script>
+
+  <link rel="stylesheet" type="text/css" href="css/style.css" />
+  <link rel="stylesheet" type="text/css" href="assets/bootstrap-tagsinput.css" />
+  <!-- MAPSCRIPT HEADER PARTS  -->
+
+  <script type="text/javascript" src='https://maps.google.com/maps/api/js?key=AIzaSyAh_E5RUWU_48EPbSCkfIzwydNk1UEwZsQ&libraries=places'></script>
+  <!-- includes jquery plugin to use key -->
+  <script src="assets/locationpicker.jquery.js"></script>
+
+  <!--  END MAPSCRIPT HEADER PARTS  -->
+
+  <!-- CARNET ATA EXPORT PARTS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.0/jspdf.debug.js"></script>
+  <script src="assets/carnet.js"></script>
+  <!-- END CARNET ATA EXPORT PARTS-->
+
+</head>
+
+  <body class="ui-mobile-viewport ui-overlay-a">
+
+     <img id="loadingGif" src="assets/images/ajax-loader.gif" alt="ladeanimation"></img>
+
+<style>
+  .landing-content{
+    padding:0;
+    overflow: hidden
+  }
+
+  .landing-content #btn_collection{
+    background-color: #abcecc !important;
+  }
+
+  .landing-content #btn_searchpage{
+    background-color: #fff2cd !important;
+  }
+
+  .landing-content a[href="#addNew"]{
+    background-color: #ff004c !important;
+    color: #fff2cd !important;
+  }
+
+</style>
+
+<div data-role="page" id="landing">
+
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content landing-content">
+
+      <a class="ui-btn btn_3rd" href="#addNew" onclick="clearForm();">
+        <span>ADD NEW ITEMS</span>
+      </a>
+
+      <a class="ui-btn btn_3rd" id="btn_searchpage" href="#collection" onclick="btn_searchpage_clicked()">
+        <span>THINGS<br>OTHER PEOPLE<br>SHARE</span>
+      </a>
+
+      <a class="ui-btn btn_3rd" id="btn_collection" class="btn_collection" href="#collection" onclick="btn_collection_clicked()">
+        <span>MY COLLECTION</span>
+      </a>
+
+  </div>
+  <!-- END CONTENT -->
+
+ <!--<div data-role="page" id="maps">
+    <div id="locationMoveable" class="collapsible_right" data-role="collapsible"
+      data-mini="true" data-iconpos="right" data-collapsed-icon="location">
+      <h3 id="location_collapsible">
+        location: <span class="locationdescription"></span></h3>
+
+      <div id="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true">
+      <h6>contains:</h6>
+      <span class="mediumfont" id="other.containerOf"></span>
+      </div>
+
+      <div class="locationContainer">
+        <input type="text" class="form-control map_value" id="description"
+              placeholder="description/name of place"/>
+
+        <input type="text" class="form-control map_value" id="address"
+            placeholder="address"/>
+
+        <button id="getLocation" data-role="button" data-icon="location"
+          data-iconpos="right" data-inline="true" class="btn_getlocation">set</button>
+        <div id="map"></div>
+
+        <div class="geodataContainer" id="geodataContainer">
+
+          <table class="geotable">
+            <tr><td>
+              latitude:
+            </td></tr>
+            <tr><td>
+              <input type="text" class="form-control map_value" id="latitude"/>
+            </td></tr>
+          </table>
+          <table class="geotable">
+            <tr><td>
+              longitude:
+              </td></tr>
+              <tr><td>
+                <input type="text" class="form-control map_value" id="longitude"/>
+              </td></tr>
+          </table>
+        </div>
+
+    </div>
+
+      <div id="insideOfContainer" hidden>
+        insideOf: <a id="insideOf_name" class="mediumfont"></a>
+        <input type="text" class="form-control map_value"
+        placeholder="id of container" id="insideOf"/>
+      </div>
+
+
+      <input type="checkbox" data-role="flipswitch" name="flip-location"
+       id="fliplocation" data-off-text="not inside other thing"
+       data-on-text="inside other thing"
+       data-wrapper-class="custom-size-flipswitch"></input>
+
+    </div>
+</div>
+-->
+
+
+</div>
+
+
+<script>
+
+
+$( document ).on( "pageshow", "#landing", function(e,ui) {
+
+    console.log("just loaded landing");
+
+})
+
+function btn_collection_clicked(reload=false){
+  if(collection)
+  {
+    console.log("collection clicked. username will be target");
+    collection.searchQuery = {_id:""};
+    collection.searchDB = glb_username;
+  }
+  if(reload)
+  {
+    $.mobile.changePage("#collection", {
+       reloadPage: false
+   });
+
+  }
+   refreshCollection();
+}
+
+function refreshCollection(callback=console.log){
+  $("#loadingGif").show();
+  $("#itemList .item").parent().remove();
+  setTimeout(function(){
+      searchDB(collection.searchDB,collection.searchquery,function(inp){
+        drawItemCards(inp);
+        callback();
+      });
+  },100)
+
+}
+
+function getItemsInMyPossesion(callback=console.log){
+  getSingleItem("&inMyPossession",function(inMyPossesion){
+    for (item of inMyPossesion.things)
+    {
+      getSingleItem(item,function(object){
+        let card = makeItemCard(object);
+        $("#itemList").prepend(card);
+        addItemCardClickListener();
+        collection.searchhistory[0].push(object);
+        $("#itemList").listview('refresh');
+      })
+    }
+  })
+
+}
+
+function btn_searchpage_clicked(){
+  if(collection)
+  {
+    console.log("searchpage clicked. public is target");
+    collection.searchQuery = {_id:""};
+    collection.searchDB = "public";
+
+    $("#loadingGif").show();
+    $("#itemList .item").parent().remove();
+    searchDB(collection.searchDB,collection.searchquery,drawItemCards);
+
+  }
+}
+
+</script>
+
+<div data-role="page" id="maps">
+    <div id="locationMoveable" class="collapsible_right" data-role="collapsible"
+      data-mini="true" data-iconpos="right" data-collapsed-icon="location">
+      <h3 id="location_collapsible">
+        location: <span class="locationdescription"></span></h3>
+
+      <div id="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true">
+      <h6>contains:</h6>
+      <span class="mediumfont" id="other.containerOf"></span>
+      </div>
+
+      <div class="locationContainer">
+        <input type="text" class="form-control map_value" id="description"
+              placeholder="description/name of place"/>
+
+        <input type="text" class="form-control map_value" id="address"
+            placeholder="address"/>
+
+        <button id="getLocation" data-role="button" data-icon="location"
+          data-iconpos="right" data-inline="true" class="btn_getlocation">set</button>
+        <div id="map"></div>
+
+        <div class="geodataContainer" id="geodataContainer">
+
+          <table class="geotable">
+            <tr><td>
+              latitude:
+            </td></tr>
+            <tr><td>
+              <input type="text" class="form-control map_value" id="latitude"/>
+            </td></tr>
+          </table>
+          <table class="geotable">
+            <tr><td>
+              longitude:
+              </td></tr>
+              <tr><td>
+                <input type="text" class="form-control map_value" id="longitude"/>
+              </td></tr>
+          </table>
+        </div>
+
+    </div>
+
+      <div id="insideOfContainer" hidden>
+        insideOf: <a id="insideOf_name" class="mediumfont"></a>
+        <input type="text" class="form-control map_value"
+        placeholder="id of container" id="insideOf"/>
+      </div>
+
+
+      <input type="checkbox" data-role="flipswitch" name="flip-location"
+       id="fliplocation" data-off-text="not inside other thing"
+       data-on-text="inside other thing"
+       data-wrapper-class="custom-size-flipswitch"></input>
+
+    </div>
+</div>
+
+<style>
+
+  #config {
+    background-color: #fff2cd;
+  }
+
+  #logout{
+    background-color: #ff004c !important;
+    color: #fff2cd !important;
+    text-shadow: none;
+  }
+
+  #btn_upd_contact_info {
+    background-color: #abcecc;
+    text-shadow: none;
+  }
+
+</style>
+
+<div data-role="page" id="config">
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+
+      <button id="logout" style="margin-top:0">logout</button>
+      <h1 align="center">config</h1>
+      <br>
+
+      <h3 align="center">your contact information:</h3>
+      <input id="contact_email" type="email" placeholder="your email" value="" />
+      <input id="contact_telnumber" type="number" placeholder="your phone number" value="" />
+      <input id="contact_other" type="text" placeholder="other way to contact you" value="" />
+      <br>
+      <button id="btn_upd_contact_info">save</button>
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+<script>
+
+  let config = {
+    _id: "&config",
+    contact_details: {}
+  }
+
+  $( document ).on("pageshow", "#config", function(e,ui) {
+    fetchConfig();
+  })
+
+  function fetchConfig(){
+    getSingleItem("&config",function(res){
+      if (res._id){
+        console.log(res);
+        config = res;
+
+        // fillconfigForm:
+        $("#contact_email").val(config.contact_details.email);
+        $("#contact_telnumber").val(config.contact_details.telnumber);
+        $("#contact_other").val(config.contact_details.other);
+      }
+    })
+  }
+
+  $("#logout").click(function(){
+    // delete AuthSession Cookie (will only work if cookie from same URL)
+    $.ajax({
+        type: "DELETE",
+        url: API_BASE_URL,
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        success: function(res)
+          {
+            console.log(res);
+            showToast(res,500);
+            // reload page();
+            window.location.href = UI_URL;
+          },
+        error: function(err){
+          console.log(err);
+        },
+        contentType:"application/json"
+      });
+  })
+
+
+  $("#btn_upd_contact_info").click(function(){
+
+    config.contact_details.email = $("#contact_email").val();
+    config.contact_details.telnumber = $("#contact_telnumber").val();
+    config.contact_details.other = $("#contact_other").val();
+
+    updateit(config,function(res){
+      console.log(res);
+      if(res.ok == true)
+      {
+        swal({text:"SAVED SUCCESSFULLY", toast:true, timer:1200,
+          showConfirmButton:false, position:"center",customClass:"whiteletters"
+        }).then(function(){});
+      }
+      else {
+        swal({title:"UPDATE ERROR",text:res.statusText, toast:true,customClass:"whiteletters"});
+        console.log(res);
+      }
+    })
+
+
+  })
+
+</script>
+
+<div data-role="page" id="notifications">
+
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+      <p>notifications from UI 2 dingsda </p>
+      <ul data-role="listview" data-split-icon="gear" data-split-theme="d"></ul>
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+$( document ).on( "pageshow", "#notifications", function(e,ui) {
+    console.log(window.location.search);
+    console.log("just loaded notifications");
+    console.log(ui.prevPage);
+
+    console.log("fetching notifications from DB");
+
+    $("#notifications .ui-content ul").html("");
+    getNotificationsFlat(function(res){
+      for(value of res)
+      {
+        console.log(value);
+        addNotification(value);
+      }
+    })
+
+})
+
+function showNotifications(){
+  $.mobile.pageContainer.pagecontainer("change", "#notifications",
+             {allowSamePageTransition:true/*,transition: "slidefade"*/});
+  updateNotificationsBatch();
+}
+
+function removeNotification(notification, e)
+{
+  console.log("deleting simple notification"+notification.ref);
+  $(e.srcElement).parent().parent().remove(); // remove notification div
+  $.ajax({
+    type: "GET",
+    url: API_BASE_URL+glb_username+"/&notifications",
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json",
+    success: function(res){
+      delete res.pending.info[notification.ref]
+      let dataOut = {
+        "data":
+              [{
+                "type":"update",
+                "doc":res
+              }]
+      }
+      $.ajax({
+        type: "POST",
+        url: API_BASE_URL+glb_username+"/&notifications",
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        error: console.log,
+        data: JSON.stringify(dataOut),
+        contentType:"application/json",
+        success: function(res){
+          console.log(res);
+          updateNotificationsBatch();
+        }
+      });
+    }
+  });
+}
+
+function cancelHandover(notification,e)
+{
+  console.log("canceling pending handover"+notification.ref);
+  $(e.srcElement).parent().parent().remove(); // remove notification div
+  // send to users DB API: handover confirmation
+  let dataOut = {
+    "data":
+          [{
+            "type":"handover_cancel",
+            "ref":notification.ref,
+            "to":notification.to,
+          }]
+  }
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    data: JSON.stringify(dataOut),
+    success: function(r){
+      showNotifications();
+      console.log(r)
+    },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  });
+}
+
+function confirmHandover(notification, confirmed, e)
+{
+  console.log(notification);
+  if (confirmed)
+  {
+    console.log("confirming handover of "+notification.ref);
+    $(e.srcElement).parent().parent().remove(); // remove notification div
+    // send to users DB API: handover confirmation
+    let dataOut = {
+      "data":
+            [{
+              "type":"handover",
+              "ref":notification.ref,
+              "from":notification.from
+            }]
+    }
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL+glb_username,
+      data: JSON.stringify(dataOut),
+      success: function(r){
+        showNotifications();
+        console.log(r)
+      },
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: console.log,
+      contentType:"application/json"
+    });
+  }
+  else {
+    console.log("denying handover of "+notification.ref);
+    $(e.srcElement).parent().parent().remove(); // remove notification div
+    let dataOut = {
+      "data":
+            [{
+              "type":"handover_deny",
+              "ref":notification.ref,
+              "from":notification.from
+            }]
+    }
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL+glb_username,
+      data: JSON.stringify(dataOut),
+      success: function(r){showNotifications();console.log(r)},
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: console.log,
+      contentType:"application/json"
+    });
+    // to do: backend: send info notification to lender
+  }
+
+}
+
+function addNotification(noti)
+{
+  listitem = "";
+  switch(noti.type) {
+      case "handover_await":
+        listitem = makeNotification({
+            text:"<br>awaiting handover confirmation from "+noti.to,
+            cb_cancel:function(e){cancelHandover(noti,e);},
+          })
+        break;
+      case "handover_confirm":
+        listitem = makeNotification({
+            text:"<br>did you receive "+noti.ref+" from "+noti.from+"?",
+            wording_cancel:"no",
+            wording_confirm:"yes, i did!",
+            cb_confirm:function(e){confirmHandover(noti,true,e);},
+            cb_cancel:function(e){confirmHandover(noti,false,e);}
+          })
+        break;
+      case "info":
+      listitem = makeNotification({
+          text:"<br>"+noti.text,
+          wording_confirm:"OK",
+          cb_confirm:function(e){removeNotification(noti,e);
+            updateNotificationsBatch();showNotifications()}
+        })
+        break;
+      default:
+        break;
+  }
+  $("#notifications .ui-content ul").append(listitem)
+  //$("#notifications .ui-content ul").append("<li>"+JSON.stringify(noti) )
+}
+
+function makeNotification({text="",cb_confirm=null,cb_cancel=null,
+                      wording_confirm="confirm",wording_cancel="cancel"}={})
+{
+
+  let notification = document.createElement("li");
+  notification.classList.add("ui-btn");
+  notification.setAttribute("data-corners",false)
+  notification.style.maxWidth = "100vw";
+  notification.style.display = "flex";
+  notification.style.flexDirection = "column";
+  notification.style.justifyContent = "space-between";
+  notification.style.backgroundColor = "#fff2cd";
+
+  let notiText = document.createElement("div")
+  notiText.style.width = "100%";
+  notiText.style.minHeight = "50px";
+  notiText.style.whiteSpace = "normal";
+  notiText.innerHTML=text;
+
+  notification.appendChild(notiText)
+
+  let buttonContainer = document.createElement("div");
+  buttonContainer.style.width = "100%";
+  buttonContainer.style.display = "flex";
+  buttonContainer.style.flexDirection = "row";
+  buttonContainer.style.justifyContent = "space-between";
+
+  notification.appendChild(buttonContainer);
+
+  if (cb_confirm)
+  {
+    console.log("building confirm button");
+    let confirm_btn = document.createElement("div");
+    confirm_btn.classList.add("ui-btn");
+    confirm_btn.style.width = "100%";
+    confirm_btn.style.textShadow = "none";
+    confirm_btn.style.backgroundColor = "#abcecc";
+    confirm_btn.innerHTML = wording_confirm;
+    confirm_btn.addEventListener("click",function(e){cb_confirm(e)})
+
+    buttonContainer.appendChild(confirm_btn)
+  }
+  if (cb_cancel)
+  {
+    console.log("building confirm button");
+    let cancel_btn = document.createElement("div");
+    cancel_btn.classList.add("ui-btn");
+    cancel_btn.style.width = "100%";
+    cancel_btn.style.textShadow = "none";
+    cancel_btn.style.backgroundColor = "#ff004cc7";
+    cancel_btn.style.color = "#fff2cd";
+    cancel_btn.innerHTML = wording_cancel;
+    cancel_btn.addEventListener("click",function(e){cb_cancel(e)})
+
+    buttonContainer.appendChild(cancel_btn)
+  }
+
+  return notification
+}
+
+function getNotificationsFlat(callback=console.log)
+{
+  getSingleItem("&notifications",function(notifications){
+    // get number of total notifications (items 2nd step down the object tree:)
+    let items = [];
+    for (let i = 0; i < getObjectLength(notifications.pending); i++)
+    {
+      let obj = notifications.pending[Object.keys(notifications.pending)[i]]
+
+      for (item in obj){
+        let row = obj[item]
+        row.ref = item
+        row.type = Object.keys(notifications.pending)[i];
+        items.push(row);
+        //console.log(item + JSON.stringify(obj[item]));
+      }
+
+    }
+    callback(items);
+
+  })
+}
+
+</script>
+
+<div data-role="page" id="collection">
+  <style>
+    #collection{
+      margin-top: 0px;
+    }
+
+    #itemList{
+      margin-bottom: 5vh;
+    }
+
+    #filterform {
+      width: 100%;
+      bottom: 90px;
+      position: fixed;
+      z-index: 99;
+      background-color: white;
+      height: 0px;
+      font-size: 1.5em
+    }
+
+    .ui-listview .ui-li-has-thumb>img, .ui-listview
+    .ui-li-has-thumb>.ui-btn>img, .ui-listview .ui-li-has-thumb
+    .ui-li-thumb {
+      position: absolute;
+      left: 0;
+      top: 0;
+      max-height: 100%;
+      max-width: 50%;
+      z-index: 1;
+    }
+
+    .behindImg {
+      background-color: black;
+      height: 100%;
+      width: 50%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 0
+    }
+
+    .ui-listview>.ui-li-has-thumb>.ui-btn, .ui-listview>.ui-li-static.ui-li-has-thumb {
+      height: 7em;
+      padding-left: 51%;
+      white-space: normal;
+      overflow: hidden;
+      color: black;
+    }
+
+    .ui-listview span{
+        font-size: 0.9em;
+        display:block;
+        color: rgba(225,50,255,0.7);
+        line-height: 100% !important;
+    }
+
+    .ui-listview i{
+      /*color: #abcecc;*/
+      color: red;
+      font-size: 0.9em;
+    }
+
+    .ui-listview b{
+      color: black
+    }
+
+    .item{
+      overflow: scroll;
+      overflow: hidden; /*scroll would be cooler.*/
+    }
+
+    .chooseOverlay{
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      z-index: 50;
+      left: 0;
+      top: 0;
+      background-color: rgba(200, 200, 200, 0.0);
+    }
+
+    .itemCheckbox{
+      height:2em;
+      width: 2em;;
+      background-color: rgba(255,255,255,0.7);
+      border: 1px black solid;
+      left: 5px;
+      top: 5px;
+      border-radius: 25%;
+    }
+
+    .itemChecked span::after {
+      content: "\2713";
+      font-family: monospace;
+      font-size: 2em;
+      color: #0000008f;
+      margin-left: 0.2em;
+      margin-top: 0.2em;
+      position: absolute;
+    }
+
+    .itemChecked {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .borrowedItem {
+      background-color: lightblue !important;
+      text-shadow: none !important;
+    }
+
+    .borrowedItem::before{
+      font-size: 1em;
+      font-style: oblique;
+      z-index: 99;
+      position: absolute;
+      color: lightblue;
+      content: "  borrowed  ";
+      background: rgba(255,255,255,0.5);
+      left: 20px;
+      bottom:10px;
+      padding: 3px;
+    }
+
+
+    .loanedItem {
+      background-color: rgba(220,200,220,0.1) !important;
+      text-shadow: none !important;
+      opacity: 0.65
+    }
+
+    .loanedItem::before{
+      font-size: 1em;
+      font-style: oblique;
+      z-index: 99;
+      position: absolute;
+      color: #ff004c;
+      content: "  lent out  ";
+      background: rgba(255,255,255,0.7);
+      left: 20px;
+      bottom:10px;
+      padding: 3px;
+    }
+
+    .chooseButtons{
+      pointer-events: none;
+      position: fixed;
+      z-index: 9999;
+      top: -7px;
+      width: 100%;
+      left: 0;
+      display: none;
+    }
+
+    .btn_bulk_action{
+      pointer-events: all;
+      height: 3.8em;
+      text-shadow: 0px 0px 0px black !important;
+      background-color: #ff004c !important;
+      color: #fff2cd !important;
+      width: 100vw;
+      margin: 0;
+    }
+
+    .bulk_main_action {
+      background-color: #fff2cd !important;
+      color: black !important;
+    }
+
+    #btn_bulk_handover {
+      background-color: #fff2cd !important;
+      color: black !important;
+    }
+
+    #btn_bulk_move {
+      width: 100%;
+    }
+
+    #btn_mark_all{
+      pointer-events: all;
+      z-index: 33;
+      width: 9em;
+      font-size: 0.8em;
+      padding: 2px;
+      bottom: 4em;
+      height: 4em;
+      background-color: rgba(200,200,200,0.8);
+    }
+
+    #btn_endChooseMenu {
+      pointer-events: visible;
+      float: right;
+      width: 4em;
+      height: 4em;
+      padding: 3px;
+      font-size: 0.7em;
+      margin-right: 1em;
+      background-color: rgba(171, 207, 204,0.8);
+    }
+
+    #btn_bulk_carnet_pdf {
+      pointer-events: visible;
+      bottom: 3em;
+      right: 0;
+      opacity: 0.8;
+      width: 50vw;
+      background-color: rgba(0,0,0,0.8);
+      color: white;
+      text-shadow: none;
+    }
+
+    .overfooter{
+      bottom: -8px;
+      position: fixed;
+    }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+  <div  id="filterform">
+      <form class="ui-filterable" id=filterable>
+        <input id="filterinput" data-type="search"
+          placeholder="Filter by keywords..." aria-label="search input field">
+      </form>
+  </div>
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+
+    <div class="collectionview">
+
+    <ul id="itemList" data-role="listview" data-filter="true" data-input="#filterinput">
+
+      <li style="color:pink">no more items...</li>
+
+    </ul>
+
+    </div>
+    <div class="chooseButtons" data-role="button">
+      <button id="btn_bulk_delete" class="btn_bulk_action ">DELETE ITEMS</button>
+      <button id="btn_endChooseMenu">back</button>
+      <button id="btn_mark_all" class="overfooter">(un)check all</button>
+      <button id="btn_bulk_carnet_pdf" class="overfooter">Carnet ATA PDF</button>
+      <div class="overfooter ui-grid-a" style="width:100%">
+        <!--<button id="btn_bulk_handover" class="btn_bulk_action ui-block-a">HANDOVER ITEMS</button>-->
+        <button id="btn_bulk_move"
+        class="btn_bulk_action bulk_main_action ui-block-b">MOVE ITEMS</button>
+      </div>
+
+    </div>
+
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+<script>
+
+//// collection object is the global object containing all infos that other pages
+////  want to handover to collection or collection wants to remember
+let collection = {
+    searchQuery : {_id:""},
+    searchDB : "",
+    searchhistory:[],
+    chooseMode:false,
+    bulk:[]
+}
+
+function switchOffButtonListener()
+{
+  $('#btn_bulk_move').off('click');  // switch off button listener for overlay
+  $('#btn_bulk_delete').off('click'); // switch off button listener for overlay
+}
+
+
+$( document ).on( "pageshow", "#collection", function(e,ui) {
+    //console.log(window.location.search); console.log(ui.prevPage);
+    console.log("just loaded collection");
+
+    $("#btn_mark_all").click(function(){
+      $(".chooseOverlay:visible").toggleClass("itemChecked");
+    })
+
+    $("#btn_bulk_delete").click(function(){
+
+      getCheckedItems();
+      listChooseMode(); // end chooseMode
+      switchOffButtonListener()
+      deleteItems(collection.bulk);
+    })
+
+    $("#btn_bulk_move").click(function(){
+
+      getCheckedItems();
+      listChooseMode(); // end chooseMode
+      switchOffButtonListener();
+      $.mobile.changePage("#move");
+    })
+
+    $("#btn_bulk_handover").click(function(){
+
+      getCheckedItems();
+      listChooseMode(); // end chooseMode
+      $('#btn_bulk_handover').off('click');
+      $.mobile.changePage("#handover");
+    })
+
+    $("#btn_bulk_carnet_pdf").click(function(){
+      console.log("PDF clicked");
+      getCheckedItems();
+      listChooseMode(); // end chooseMode
+      //$('#btn_bulk_carnet_pdf').off('click');
+      //setTimeout(function(){$('#btn_bulk_carnet_pdf').on('click');},1000);
+      switchOffButtonListener();
+      downloadCarnetClicked(collection.bulk,true);
+    })
+
+    // prevent default pop up on hold and stuff:
+    $("body").on("contextmenu", "#itemList", function() { return false; });
+})
+
+$("#collection").swipeleft(function(){window.history.forward()});
+
+$("#collection").swiperight(function(){window.history.back()});
+
+
+// attach my own filter function to search input:
+$.mobile.document.on( "filterablecreate", "#collection", function() {
+    // changing jquery mobiles standard autocomplete for #itemList
+    $( "#itemList" ).filterable( "option", "filterCallback", function( index, searchValue ) {
+      //console.log(searchValue);
+      let keywords = searchValue.split(" ");
+      keywords = keywords.filter(function(e){return e}); // delete empty values
+
+      let matches = 0;
+
+      for (i in keywords)
+      {
+        if (  $(this).text().toLowerCase().includes(keywords[i]) )
+        {
+          matches++
+        }
+        else {
+          matches--
+        }
+      }
+
+      if (matches == keywords.length)
+      {
+        $(this).show()
+      }
+      else {
+        $(this).hide()
+      }
+
+    });
+});
+
+function getCheckedItems(){
+  collection.bulk = [];
+  let array = [];
+  $(".itemChecked").siblings(".hiddenJSON").each(
+    function(){collection.bulk.push(JSON.parse(this.innerText))})
+  console.log(collection.bulk);
+}
+
+/*
+<li>
+  <img src="https://cdn-learn.adafruit.com/guides/images/000/000/144/medium500/659_orig.jpg?1448301064"></img>
+  <div class="item">
+      <b>Flora Board</b><br>
+      <i>by Becky Stern</i><br>
+      <div class="address">in Berlin, 12053 Berlin, Germany, Morusstr. 30</div>
+      <span>This is a wonderful tool. A microcontroller, but build
+      so that you can even sew it into sth</span>
+  </div>
+</li>
+*/
+function makeItemCard(object){
+  let item = document.createElement('li');
+  $(item).addClass("itemInList");
+  if (object.inPossessionOf && !object.owners.includes(object.inPossessionOf))
+  {
+    if (object.owners.includes(glb_username))
+    {
+      $(item).addClass("loanedItem");
+    }
+    else {
+      $(item).addClass("borrowedItem");
+    }
+  }
+  let img = document.createElement('img');
+  let behindImg = document.createElement('div');
+  $(behindImg).addClass("behindImg");
+  let div = document.createElement('div');
+  let name = document.createElement('b');
+  let owners = document.createElement('i');
+  let address = document.createElement('div');
+  $(address).addClass("address");
+  let description = document.createElement('span');
+  let hidden = document.createElement('div');
+  $(hidden).hide();
+  $(hidden).addClass("hiddenJSON");
+  $(hidden).html(JSON.stringify(object));
+  let checkbox = document.createElement('div');
+  $(checkbox).addClass("chooseOverlay");
+  $(checkbox).hide();
+  $(checkbox).html('<span type="checkbox" class="itemCheckbox"></span>');
+
+  //img.src = "https://cdn-learn.adafruit.com/guides/images/000/000/144/medium500/659_orig.jpg?1448301064";
+  let idOrLink = object.hyperlink;
+  if (idOrLink == undefined || idOrLink == "")
+  { idOrLink = API_BASE_URL+collection.searchDB+"/"+object._id }
+  if (collection.searchDB !== "" && collection.searchDB !== undefined
+      && idOrLink !== undefined && !idOrLink.split("/").includes("undefined") )
+  {
+    img.src = idOrLink+"/pic_small.jpg";
+    $(img).attr("onerror",'null;this.src="icons/icon_512.png"');
+    /*getPicAttachment(idOrLink,function(res){
+      img.src = "data:image/jpeg;base64,"+res;
+    },function(err){console.log(err);});*/
+  }
+  else {
+    img.src = "icons/icon_512.png";
+    console.log("did not fetch a pic for: "+idOrLink+" from: "+collection.searchDB);
+  }
+
+  name.appendChild(document.createTextNode(object.name));
+
+  owners.appendChild(document.createTextNode(" by "+object.owners))
+  let addresslabel = object.location.address !== ""
+  && object.location.address !== undefined ? object.location.address : object.location.insideOf;
+  address.appendChild(document.createTextNode("in "+addresslabel))
+  description.appendChild(document.createTextNode(object.other.description))
+
+  item.appendChild(checkbox);
+  item.appendChild(img);
+  item.appendChild(behindImg);
+  item.appendChild(hidden);
+
+  div.appendChild(name);
+  div.appendChild(document.createElement("br"))
+  div.appendChild(owners);
+  div.appendChild(document.createElement("br"))
+  div.appendChild(address);
+  div.appendChild(document.createElement("br"))
+  div.appendChild(description);
+
+  $(div).addClass("item");
+  item.appendChild(div);
+  return item;
+}
+
+
+
+function drawItemCards(objects){
+
+  //$("#itemList .item").parent().remove();
+
+  // flag to  hide items with hyperlink containing users DB if we look at public items
+  //  (where we do not want to see our own stuff, right?!)
+  let lookingAtPublicDB = collection.searchDB.includes("public") || collection.searchDB.includes("friends")
+
+  for (i in objects)
+  {
+    let fromMyOwnDB = (objects[i].hyperlink.split("/").slice(-2)[0] === glb_username);
+
+    if ((!lookingAtPublicDB) || (lookingAtPublicDB && !fromMyOwnDB))
+    {
+      let item = makeItemCard(objects[i]);
+      $("#itemList").prepend(item);
+
+      $("#itemList").listview('refresh');
+    }
+    else {
+      //console.log("deleted "+objects[i].name+" from objects");
+      delete objects[i]
+    }
+
+  }
+  objects = objects.filter(function(val){return val}); // remove all undefined from array
+
+  // set global variable collection.detailView
+  if(collection){
+    
+    collection.searchhistory.unshift(objects);
+    // if more than 3 searches in history: delete oldest one:
+    if (collection.searchhistory.length > 3){ collection.searchhistory.pop() }
+  }
+
+  $("#loadingGif").hide();
+
+// listen for clicks on listitems and open item in detailView:
+  addItemCardClickListener();
+
+  if (!lookingAtPublicDB)
+  {
+    getItemsInMyPossesion(); // always???
+  }
+
+}
+
+function addItemCardClickListener(){
+  $(".itemInList").off("click");
+  $(".itemInList").click(function(e){
+    console.log("item in list clicked:");
+    if (collection.chooseMode)
+    {
+      $($(e.currentTarget).children()[0]).toggleClass("itemChecked");
+    }
+    else
+    {
+      let doc = $(e.currentTarget).children()[3].innerHTML;
+      // go to itemDetail and set itemDetails variable to choosenItem:
+      if(itemDetails){
+        itemDetails.itemInFocus=JSON.parse(doc);
+      }
+      $.mobile.pageContainer.pagecontainer("change", "#itemDetails");
+      //window.location.href = ("http://localhost:8080#itemDetails?data=test")
+    }
+
+  })
+
+  // listen for tapholds on listitems, change to listChoose mode & mark item tapped
+    $(".itemInList").off("taphold");
+    $(".itemInList").taphold(function(e){
+      console.log("item in list marked by taphold. Enterting listChooseMode:");
+      //console.log(e.currentTarget);
+      listChooseMode(e.currentTarget);
+
+    },300)
+}
+
+function listChooseMode(target){
+  if (target !== undefined && !collection.chooseMode)
+  {
+    //$(".itemChecked").removeClass("itemChecked");
+    $(".chooseOverlay").show();
+    $(".chooseButtons").show();
+    console.log(target);
+    collection.chooseMode=true;
+
+    $("#btn_endChooseMenu").click(function(){listChooseMode()}); // end chooseMode
+  }
+  else {
+    //switch back to normal listmode
+    $(".chooseOverlay").hide();
+    $(".chooseButtons").hide();
+    collection.chooseMode=false;
+  }
+}
+
+function countItemsInDB(callback=console.log){
+  $.ajax({
+    type: "GET",
+    url: API_BASE_URL+glb_username,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    success: function(result){
+       callback(result.doc_count-2);
+    },
+    error: function(err){console.log(err);},
+    contentType:"application/json"
+  });
+}
+
+function updateItemBatch(){
+  countItemsInDB(function(res){
+    $(".collection_icon").addClass("anim_heartbeat");
+    setTimeout(function(){
+      $(".collection_badge").html(res);
+      $(".collection_icon").removeClass("anim_heartbeat");
+      $(".collection_badge").addClass("anim_hop");
+      setTimeout(function(){$(".collection_badge").removeClass("anim_hop")},1050);
+    },300);
+  })
+}
+
+function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log){
+    console.log(`sending find Request to ${db}`);
+
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL+db,
+      data: JSON.stringify({
+            	"data":[{
+            		"type":"findItems",
+            		"doc":searchTerm
+            	}]
+            }),
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      success: function(result){
+         callback(result.docs)
+      },
+      error: err,
+      contentType:"application/json"
+    });
+}
+
+function deleteItems(items)
+{
+  $.when($.each(items, function(){
+      removeit(this._id,function(res){
+        console.log(res);
+      });
+  })).done(function(){
+    showToast("items will be deleted",900);
+    setTimeout(function(){
+      refreshCollection();
+      updateItemBatch();
+    },1000);
+  })
+}
+
+function removeit(id, callbackdel=console.log)
+{
+  console.log("removeit function triggered!!!");
+  if (id == "" || id == undefined)
+  {
+    return
+  }
+
+  console.log("trying to fetch originalObject from DB");
+
+  getAPI({
+    path:glb_username+"/"+id,
+    data:{
+      "data":[{
+        "type":"fetch"
+      }]
+    },
+    callback: function(res){
+
+      console.log(res);
+      console.log("attempting DELETE of object");
+
+      let deletedata = {
+          "data":[{
+            "type":"deleteItems",
+            "doc":res,
+          }]
+        }
+
+      postAPI({
+          path:glb_username+"/"+id,
+          data:deletedata,
+            callback: function(result){
+            callbackdel(result)
+            console.log("DELETED "+id+" successfully");
+            console.log(result);
+          },
+          error: function(err){
+            console.log("error in deleteit delete");
+            callbackdel(err)
+          }
+
+      });
+    },
+    error: function(err){
+      console.log("error in deleteit prefetch");
+      callbackdel(err)
+    }
+  })
+
+}
+
+
+console.log($.mobile.document);
+
+
+
+
+
+
+
+/*////////////////////////
+CARNET ATA STUFF
+*//////////////////////////
+
+function downloadCarnetClicked(items, pdf=false){
+  console.log(items);
+  let carnetArray = [];
+  for (i in items){
+    carnetArray.push(items[i]._id);
+  }
+  console.log(carnetArray);
+  if (pdf){
+      openCarnetPDF(carnetArray)
+      //renderCarnetATApdf(carnetArray);
+  }
+  else {
+    postAPI({
+        path:glb_username,
+        data:{
+                "data":[{
+                  "type":"getCarnet",
+                  "filetype":"csv",
+                  "ids":carnetArray
+                }]
+              },
+         callback: function(result){
+          //console.log(result[0]);
+          let myblob = new Blob([result],{type:'text/csv;charset=utf-8;'});
+          if (navigator.msSaveBlob) { //IE10
+              navigator.msSaveBlob(myblob, "carnetATA.csv");
+          } else {
+              let l = document.createElement("a");
+              if (l.download !== undefined) {
+                  let uri = URL.createObjectURL(myblob);
+                  l.setAttribute("href", uri);
+                  l.setAttribute("download", "carnetATA.csv");
+                  l.style.visibility = 'hidden';
+                  document.body.appendChild(l);
+                  l.click(); // does not work in ios because ajax request before
+                  document.body.removeChild(l);
+              }
+          }
+
+        }
+
+    });
+  }
+
+}
+
+
+function openCarnetPDF(ids=undefined)
+{
+  //let win = window.open();
+  postAPI({
+      path:glb_username,
+      data:{
+            	"data":[{
+            		"type":"getCarnet",
+            		"filetype":"json",
+                "ids":ids
+
+            	}]
+            },
+       callback: function(result){
+        console.log("show results of getCarnet:");
+        console.log(result);
+
+        renderCarnetATApdf(result);
+      }
+
+  });
+}
+
+
+
+</script>
+
+<div data-role="page" id="itemDetails">
+
+
+    <style>
+
+      .more_menu{
+        position: fixed;
+        z-index: 99;
+        right: 10px;
+        margin-top: 5vh;
+      }
+
+      .more_btn{
+        width: 20px;
+        height: 10px;
+        float: right;
+        opacity: 0.9;
+      }
+
+      .more_menu button{
+        height: 2.5em;
+        min-width: 50vw !important;
+        padding: 2px;
+        margin: 2px;
+        text-shadow: 0px 0px 0px black !important;
+      }
+
+      .more_menu button:nth-child(3n+2){
+        background-color: rgba(255, 0, 76, 1);
+        color: rgba(255,242,205,1);
+      }
+      .more_menu button:nth-child(3){
+        background-color: rgba(255,242,205,1);
+      }
+      .more_menu button:nth-child(4){
+        background-color: rgba(171, 206, 204, 1);
+      }
+
+      .more_menu button {
+        text-transform: lowercase;
+      }
+
+
+      #detailTitle{
+        font-size: 1.1em;
+        background-color: rgba(255, 0, 76, 1);
+        color: rgba(255,242,205,1);
+        text-shadow: 0px 0px 0px black !important;
+      }
+
+      #detailDescription {
+        background-color: rgba(255,242,205,0.6);
+      }
+
+      #itemDetails_detailsContainer{
+        margin-left: -1em;
+
+      }
+
+      .btn_request{
+        font-size: 1.1em;
+        bottom: 0;
+        background-color: rgba(171, 206, 204, 0.8) !important;
+
+        text-shadow: 0px 0px 0px black !important;
+      }
+
+      #itemDetails input{
+        pointer-events: none;
+        background-color: beige;
+        border-color: rgba(0,0,0,0);
+        border-width: 0px;
+        border: 0px solid #f00 !important;
+      }
+
+      #itemDetails #getLocation{
+        display: none;
+      }
+
+      #itemDetails #getLocation iframe{
+        pointer-events: none;
+      }
+
+      #itemDetails #map>*{
+        pointer-events: none;
+      }
+
+      #itemDetails .ui-flipswitch{
+        display: none;
+      }
+
+      #itemDetails input:placeholder-shown{
+        display: none;
+      }
+
+      #itemDetails .ui-shadow-inset{
+        border-color: transparent;
+      }
+
+
+    </style>
+
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content" style="padding:0;">
+
+    <div class="ui-grid-b" style="width:100%;margin-top:-20px;height:100%">
+
+      <div class="more_menu">
+        <div class="more_btn ui-btn">...</div>
+        <div class="more_menu_btn_container">
+          <button class="more_menu_btn editSingleItem_btn">edit</button>
+          <button class="more_menu_btn moveSingleItem_btn">move</button>
+          <button class="more_menu_btn borrow_handover_btn">handover</button>
+          <button class="more_menu_btn deleteSingleItem_btn">delete</button>
+        </div>
+      </div>
+
+      <div class="ui-block-a" style="width:100%;height:33vh;background-color:black">
+        <img id="detailImg" src="icons/icon_512.png"
+        style="height:100%" alt="big picture of item">
+        </img>
+      </div>
+
+      <div class="ui-block-b" style="width:100%">
+        <div id="detailTitle" class="ui-bar ui-bar-a">TITLE</div>
+      </div>
+
+      <div class="ui-block-a"style="width:100%">
+              <div class="ui-bar" style="font-style:italic">
+                by <span id="detailOwners">owners</span>
+              </div>
+      </div>
+
+      <div id="itemDetail_location" class="ui-block-a" style="width:100%">
+
+      </div>
+
+      <div class="ui-block-a" style="width:100%">
+
+        <div id=detailDescription class="ui-bar" style="height:18vh;overflow:scroll">
+          description.
+          <p>blablabla. Das ist so ein schönes Dingsbumms. wow. Ich bin sehr verwirrt.<br>
+            Was mach ich jetzt bloß?
+          </p>
+          <p>blablabla. Das ist so ein schönes Dingsbumms. wow. Ich bin sehr verwirrt.<br>
+            Was mach ich jetzt bloß?
+          </p>
+          <p>blablabla. Das ist so ein schönes Dingsbumms. wow. Ich bin sehr verwirrt.<br>
+            Was mach ich jetzt bloß?
+          </p>
+        </div>
+      </div>
+
+      <div class="ui-block-a" style="width:100%">
+        <div id="itemDetails_detailsContainer" class="ui-bar ui-bar-a">
+         <!-- HERE GOES DETAILS FROM ADDNEW -->
+        </div>
+      </div>
+
+      <div class="ui-block-a" style="width:100vw">
+        <div class="borrow_handover_btn btn_request ui-btn" style="height:5vh">
+          BORROW
+        </div>
+      </div>
+
+    </div><!-- /grid-b -->
+
+    </div>
+
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+let itemDetails = {}
+
+$( document ).on( "pageshow", "#itemDetails", function(e,ui) {
+    console.log("just loaded itemDetails");
+    console.log(ui.prevPage);
+
+    $("#details").appendTo("#itemDetails_detailsContainer");
+    $("#itemDetails_detailsContainer").trigger("create");
+    $("#details").collapsible( "collapse" );
+    $("#itemDetails_detailsContainer :input").attr("disabled", true);
+
+    // move locationMoveable here
+    $("#locationMoveable").appendTo("#itemDetail_location");
+    $("#itemDetail_location").trigger("create");
+    $("#locationMoveable").collapsible( "collapse" )
+
+    clearForm(); // clear AddNew Form (in case we were editing before)
+
+    showItemDetails();
+
+    $(".more_menu_btn_container").hide();
+
+})
+
+$(".borrow_handover_btn").click(function(){
+  console.log("#btn_borrow_handover_single clicked");
+
+  if (itemDetails.itemInFocus.owners.includes(glb_username)) {
+    console.log("users own item. therefore: handover or take back");
+    // if not in possession of other user: it's a handover.
+    if (itemDetails.itemInFocus.inPossessionOf === undefined ||
+        itemDetails.itemInFocus.inPossessionOf.includes(glb_username) )
+    {
+      console.log("it's a handover");
+      collection.bulk = [itemDetails.itemInFocus];
+      $.mobile.pageContainer.pagecontainer("change", "#handover",
+                 {allowSamePageTransition:true,transition: "slidefade" });
+    }
+    // otherwise it is a take back (which is a fully automated handover to the user themselves)
+    else {
+      console.log("it's a take back!");
+      let newItem = itemDetails.itemInFocus;
+      newItem.inPossessionOf = glb_username;
+      handoverItem(newItem, callback=function(res){
+        showToast("item will be taken back from Possessor.",1000)
+        $.mobile.pageContainer.pagecontainer("change", "#collection",
+                   {allowSamePageTransition:true,transition: "slidefade" });
+        refreshCollection();
+        setTimeout(updateItemBatch,1200);
+      })
+    }
+
+  }
+  else {
+    console.log("other users item. therefore: borrow request or return request");
+    // if already in my Possesion: this must be a return to it's owners
+    if (itemDetails.itemInFocus.inPossessionOf &&
+        itemDetails.itemInFocus.inPossessionOf.includes(glb_username))
+    {
+      console.log("it's a return!");
+      let newItem = itemDetails.itemInFocus;
+      // second last item in hyperlink is dbOwner of things DB:
+      let thingsdatabaseowner = itemDetails.itemInFocus.hyperlink.split("/");
+      thingsdatabaseowner = thingsdatabaseowner[thingsdatabaseowner.length-2];
+      console.log("to "+thingsdatabaseowner);
+      newItem.inPossessionOf = thingsdatabaseowner;
+      handoverItem(newItem, callback=function(res){
+        console.log(res);
+        showToast("send a return request to owner of thing.",1000)
+        $.mobile.pageContainer.pagecontainer("change", "#collection",
+                   {allowSamePageTransition:true,transition: "slidefade" });
+        setTimeout(refreshCollection,1000);
+        setTimeout(updateItemBatch,1200);
+      })
+    }
+    // otherwise it is a borrow request to the owners
+    else
+    {
+      collection.bulk = [itemDetails.itemInFocus];
+      $.mobile.pageContainer.pagecontainer("change", "#borrow",
+                 {allowSamePageTransition:true,transition: "slidefade" });
+    }
+
+  }
+
+})
+
+$(".more_btn").click(function(){
+  console.log("MORE PRESSED");
+  //show menu
+  $(".more_menu_btn_container").toggle();
+})
+
+$(".moveSingleItem_btn").click(function(){
+  clearForm(); // clearForm including Location
+  $(".more_menu_btn").hide();
+  console.log("moving SingleItem!");
+  collection.bulk = [itemDetails.itemInFocus];
+  $.mobile.pageContainer.pagecontainer("change", "#move",
+             {allowSamePageTransition:true,transition: "slidefade" });
+})
+
+$(".editSingleItem_btn").click(function(){
+  $(".more_menu_btn").hide();
+  console.log("editing SingleItem!");
+  $.mobile.pageContainer.pagecontainer("change", "#addNew",
+             {allowSamePageTransition:true,transition: "slidefade" });
+  // let addNew know that it is in editmode:
+  addNew.editMode = true;
+})
+
+$(".deleteSingleItem_btn").click(function(){
+  $(".more_menu_btn").hide();
+  // confirm swal:
+  swal({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    type: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.value) {
+      console.log("deleting SingleItem!");
+      deleteItems([itemDetails.itemInFocus]);
+      setTimeout(function(){
+        shiftItemFocus();
+        showItemDetails();
+      },1000)
+    }
+  })
+})
+
+$("#itemDetails").on( "swipeleft", function(e) {
+  console.log("SWIPELEFT: next item");
+  console.log(e);
+  shiftItemFocus();
+  showItemDetails();
+/*  $.mobile.pageContainer.pagecontainer("change", "#itemDetails",
+           {allowSamePageTransition:true,transition: "slidefade" });*/
+ })
+
+ $("#itemDetails").on( "swiperight", function(e) {
+   console.log("SWIPERIGHT: prev item");
+   shiftItemFocus(1);
+   showItemDetails(); // not necessary. just for the looks of loading before pageshow
+   /*$.mobile.pageContainer.pagecontainer("change", "#itemDetails",
+            {allowSamePageTransition:true,transition: "slidefade",reverse: true  });*/
+  })
+
+
+function shiftItemFocus(shift=-1){
+  let position = collection.searchhistory[0].findIndex(i => i._id === itemDetails.itemInFocus._id);
+  if (position+shift > -1  && position+shift < collection.searchhistory[0].length)
+  {
+    position = position +shift;
+    itemDetails.itemInFocus = collection.searchhistory[0][position];
+  }
+  else if (position+shift < 0){
+    showToast(msg="no more items",1000);
+     window.history.back();
+  }
+  else {
+     window.history.back();
+  }
+}
+
+function showItemDetails(){
+  let mydoc = itemDetails.itemInFocus;
+  if (mydoc)
+  {
+    // fill itemView with infos from Doc:
+    let id = mydoc.hyperlink ? mydoc.hyperlink : API_BASE_URL+collection.searchDB+"/"+mydoc._id;
+    id = id+"/pic_small.jpg";
+    /*getPicAttachment(id,function(res){
+      console.log("seeting new pic: " +res.substring(0,8));
+      $("#detailImg").attr("src","data:image/jpeg;base64,"+res)
+    });*/
+    $("#detailImg").attr("src",id);
+    $("#detailImg").attr("onerror",'null;this.src="icons/icon_512.png"')
+    $("#detailTitle").html(mydoc.name);
+    $("#detailOwners").html(mydoc.owners.toString());
+
+    // hide / show edit / move / delete buttons depending on edit/move rights:
+    if (!mydoc.owners.includes(glb_username))
+    {
+      $(".editSingleItem_btn").hide();
+      $(".deleteSingleItem_btn").hide();
+      if (mydoc.inPossessionOf === undefined || mydoc.inPossessionOf.includes(glb_username))
+      {
+          $(".moveSingleItem_btn").show();
+      }
+      else
+      {
+          $(".moveSingleItem_btn").hide();
+      }
+
+    }
+    else {
+      // full rights. show all buttons
+      //$(".borrow_handover_btn").show(); // always the case so not needed here
+      $(".editSingleItem_btn").show();
+      $(".moveSingleItem_btn").show();
+      $(".deleteSingleItem_btn").show();
+    }
+
+    // change if borrow or handover button depending on itemownership and Possession:
+    if(mydoc.owners.includes(glb_username) )
+    {
+      if (mydoc.inPossessionOf && !mydoc.inPossessionOf.includes(glb_username) )
+      {
+        $(".borrow_handover_btn").html("TAKE BACK")
+      }
+      else {
+        $(".borrow_handover_btn").html("HANDOVER")
+      }
+
+    }
+    else if (mydoc.inPossessionOf && mydoc.inPossessionOf.includes(glb_username))
+    {
+        if (mydoc.owners.includes(glb_username))
+        {
+            $(".borrow_handover_btn").html("HANDOVER")
+        }
+        else {
+          $(".borrow_handover_btn").html("RETURN")
+        }
+
+    }
+    else {
+      $(".borrow_handover_btn").html("BORROW")
+    }
+
+    let detailLocaMini = mydoc.location.address ? mydoc.location.address : mydoc.location.description;
+    if (mydoc.location.insideOf)
+    {
+      detailLocaMini = '<a style="font-size:0.8em" href=\'javascript:getSingleItem("'+
+      mydoc.location.insideOf+
+      '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();});\'>'+
+      mydoc.location.insideOf+'</a>'
+    }
+    $("#detailLocation").html(detailLocaMini);
+    $("#detailDescription").html(mydoc.other.description ? mydoc.other.description : "");
+
+    fillForm(mydoc);
+  }
+}
+
+
+
+function getSingleItem(id,callback,error=console.log)
+{
+    // transform id into hyperlink in case no hyperlink was passed:
+    if (!id.startsWith("https")){
+      id = API_BASE_URL+glb_username+"/"+id;
+    }
+    console.log("fetching single Item: "+id);
+    // get item json from DB
+    $.ajax({
+      type: "GET",
+      url: id,
+      success: callback,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: error,
+      contentType:"application/json"
+    });
+
+}
+
+
+</script>
+
+<div data-role="page" id="addNew">
+
+  <style>
+
+    .back_btn {
+      position: fixed;
+      z-index: 99;
+      right: 10px;
+      margin-top: 5vh;
+    }
+
+    #addName{
+      font-size: 1.1em;
+      background-color: rgba(255, 0, 76, 1);
+      color: rgba(255,242,205,1);
+      text-shadow: 0px 0px 0px black !important;
+      margin: 0;
+      border-radius: 0;
+    }
+
+    #addName::-webkit-input-placeholder {
+      color: rgba(255,255,255,0.8);
+      text-shadow: 0px 0px 0px black !important;
+    }
+
+    #addOwners{
+      width: 80%;
+      margin-left: 20px;
+      margin-top: 0px;
+      font-size: 1em;
+      text-shadow: 0px 0px 0px black !important;
+    }
+
+    #addLocation h3{
+      width: 100% !important;
+    }
+
+    #addDescription {
+      background-color: rgba(255,242,205,0.6);
+      padding-top: 2px;
+      margin: 0;
+      height: 20vh !important;
+    }
+
+    /* map stuff: */
+    #locationEditor .collapsible_right {
+      margin-bottom: 0;
+    }
+
+    #getLocation{
+      width: 100%;
+      height: 50px;
+    }
+
+    #map{
+      width: 100%;
+      height: 30vh;
+    }
+    .locationContainer{
+      display: flex;
+      flex-direction: column;
+    }
+    .geodataContainer{
+      display: flex;
+      flex-direction: row;
+    }
+    .geotable{
+      width: 45%;
+      padding: 0;
+    }
+
+    /*flipswitch shizzl*/
+    .custom-size-flipswitch.ui-flipswitch .ui-btn.ui-flipswitch-on {
+        text-indent: -15.9em;
+    }
+    .custom-size-flipswitch.ui-flipswitch .ui-flipswitch-off {
+        text-indent: 0.5em;
+    }
+    .custom-size-flipswitch.ui-flipswitch {
+        width: 98%;
+        padding-left: 2%;
+    }
+    .custom-size-flipswitch.ui-flipswitch.ui-flipswitch-active {
+        width: 10%;
+        padding-left: 85%;
+    }
+
+
+    /* photo shizzl*/
+    #addPhoto{
+      max-width: 100%;
+      height: 33vh;
+      position: absolute;
+      top: 3.2em;
+      pointer-events: none;
+    }
+
+    .fileContainer {
+        overflow: hidden;
+        min-height: 30vh;
+        width: 100%;
+        z-index: 0;
+        opacity: 0
+    }
+
+    .fileContainer [type=file] {
+        cursor: inherit;
+        display: block;
+        font-size: 999px;
+        filter: alpha(opacity=0);
+        min-height: 23vh;
+        min-width: 100%;
+        opacity: 0;
+        position: absolute;
+        right: 0;
+        text-align: right;
+        top: 0;
+    }
+
+
+    .collapsible_right a{
+      text-align: center !important;
+      background-color: rgba(200, 200, 200, 0.4) !important;
+    }
+
+    #details{
+      margin:0;
+    }
+
+    #details a{
+      margin: 0;
+      font-size: 1.5em;
+      line-height: 0.05em;
+    }
+
+    .bootstrap-tagsinput .tag {border: 1px solid rgba(0,0,0,0.3); line-height: 2em;
+      border-radius: 15%;padding:3px; background-color: rgba(250,250,250,0.2);color: black }
+    .bootstrap-tagsinput {color: black;background-color: rgba(0,0,0,0);border: 0px solid black;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075); width: 100%}
+
+    .smallfont {font-size: 6px !important;line-height: 50%}
+    .mediumfont {font-size: 12px !important;line-height: 100%}
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content" style="padding:0;">
+
+    <div class="ui-grid-b" style="width:100%;margin-top:-20px;height:100%">
+
+      <div class="back_btn more_btn ui-btn">x</div>
+
+      <div class="ui-block-a" style="width:100%;height:33vh;background-color:black;
+        display: flex;flex-direction: row;justify-content: center;">
+        <label class="fileContainer ui-btn">
+          <input type="file" accept="image/jpeg" id="photo_upload" multiple data-role="none"/>
+        </label>
+        <img id="addPhoto" src="" alt="big picture of item"></img>
+      </div>
+
+      <div class="ui-block-b" style="width:100%">
+        <input id="addName" class="ui-bar ui-bar-a" placeholder="name it!"></div>
+      </div>
+
+      <div class="ui-block-a" style="padding:0px; margin:0px;">
+        <div class="ui-bar"
+          style="font-style:italic; display:flex; flex-direction:row; padding: 0px;margin:0">
+            <span style="padding-left: 0.8em;">by</span> <div id="addOwners"
+              placeholder="owners" contenteditable="true"></input>
+        </div>
+      </div>
+
+      <!-- START LOCATIONEDITOR -->
+
+      <div id="locationEditor" class="ui-block-a" style="width:100%">
+
+      </div>
+
+      <!-- END LOCATIONEDITOR -->
+
+      <div class="ui-block-a" style="width:100%">
+        <textarea id=addDescription class="ui-bar" placeholder="describe it!"></textarea>
+      </div>
+
+          <!-- START DETAILS -->
+
+        <div id="addNew_detailsContainer">
+          <div id="details" class="collapsible_right ui-block-a" data-role="collapsible"
+              data-mini="true" data-collapsed-icon="info"
+              data-expanded-icon="arrow-u" data-collapsed="true" data-iconpos="none">
+              <h3 style="width:100vw;">...</h3>
+
+              tags / keywords:
+              <input id="other.tags" type="text" placeholder="type tag and hit enter"
+                data-role="tagsinput" value="" />
+
+              barcode:
+              <input type="text" id="other.barcode" placeholder="EAN, ISBN or UPC"
+                />
+
+              count / number of pieces:
+              <input type="text" id="other.count"
+                placeholder="how many items are summerized in this entry?"
+                />
+
+              weight per item:
+              <input type="text" id="other.weight"
+                placeholder="don't forget to include the unit (e.g. kg)"
+                />
+
+              value per item:
+              <input type="text" id="other.value"
+                placeholder="EUR? USD? CHF?" />
+
+              country of origin:
+              <input type="text" id="other.madein"
+                placeholder="made in..." />
+
+              <br>
+              unique id:
+              <input type="text" id="_id" placeholder="no unique id so far" disabled>
+              <div id="hyperlink" hidden></div>
+
+              <div data-role="collapsible" data-mini="true" data-collapsed-icon="heart">
+                <h3 class="mediumfont" style="width:100%">Visibility</h3>
+
+                  <select name="visibility" class="mediumfont" id="other.visibility">
+                    <option value="private">visible only to owners</option>
+                    <option value="friends" selected>visible to friends <span class="smallfont">(atm: like private)</span></option>
+                    <option value="friends2nd" disabled>visible to friends of friends</option>
+                    <option value="public">visible to friends in spe (public)</option>
+                  </select>
+
+              </div>
+
+
+          <!-- END DETAILS -->
+
+
+          </div>
+        </div>
+
+      <div class="ui-block-a" style="width:100vw">
+        <div id="btn_add_next" class="btn_request ui-btn" style="height:8vh">ADD / NEXT</div>
+      </div>
+
+    </div><!-- /grid-b -->
+
+    </div>
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+let addNew = {
+  urlStandInImg: "assets/images/takepicture.png",
+  editMode: false
+};
+
+const gmapsExists = true;
+
+$( document ).on( "pageshow", "#addNew", function(e,ui) {
+    console.log(window.location.search);
+    console.log("just loaded itemDetails");
+    console.log(ui.prevPage);
+
+    $("#details").appendTo("#addNew_detailsContainer");
+    $("#addNew_detailsContainer").trigger("create");
+    $("#details").collapsible( "collapse" )
+    $("#addNew_detailsContainer :input").attr("disabled", false);
+
+    clearForm();
+
+    $("#addPhoto").attr("src", addNew.urlStandInImg);
+
+    $("#locationMoveable").appendTo("#locationEditor");
+    $("#locationEditor").trigger("create");
+    $("#locationMoveable").collapsible( "collapse" )
+
+    if (addNew.editMode === false)
+    {
+      // if not in editmode
+      $("#addOwners").html(glb_username)
+      $("#btn_add_next").html("ADD / NEXT")
+    }
+    else {
+      console.log(addNew.editMode);
+      // if in editmode:
+      addNew.editMode = false; //switchoff editmode for next time
+      // fill AddItemForm with singleItem in focus:
+      let id = itemDetails.itemInFocus.hyperlink;
+      if (id === undefined){
+        id = itemDetails.itemInFocus._id
+      }
+      getSingleItem(id,function(r){
+        fillForm(r);
+      })
+      $("#btn_add_next").html("SAVE EDITS");
+    }
+
+})
+
+$(document).ready(function(){
+
+  // init gmaps
+  fillLocationForm({description: "",address: "",latitude:null,longitude:null})
+
+  $('#getLocation').click(autoGetLocation);
+
+  $('#address').change(function(){
+    $('.locationdescription').html($('#address').val())
+  })
+
+  $(".back_btn").click(function(){
+    window.history.back();
+  })
+
+  $("#btn_add_next").click(function(){
+    console.log("ADD button clicked");
+    btn_add_update();
+  })
+
+  document.getElementById("addPhoto").onerror = function(err){
+    console.log("error loading picture #addPhoto:");
+    console.log(err);
+    $("#addPhoto").attr("src", addNew.urlStandInImg);
+  }
+
+})
+
+function updateInsideOfFlipSwitch(on){
+  if (on){
+    $('#fliplocation').parent().addClass('ui-flipswitch-active');
+    $('#fliplocation').prop('checked', true);
+    updateInsideOfContainer()
+  }
+  else {
+    $('#fliplocation').parent().removeClass('ui-flipswitch-active');
+    $('#fliplocation').prop('checked', false);
+    updateInsideOfContainer()
+  }
+}
+
+
+
+$("#fliplocation").parent().click(function(e){
+  updateInsideOfContainer();
+})
+
+function updateInsideOfContainer()
+{
+  if ($("#fliplocation").prop("checked"))
+  {
+    $(".locationContainer").hide();
+    $("#insideOfContainer").show();
+  }
+  else
+  {
+    $(".locationContainer").show();
+    $("#insideOfContainer").hide();
+  }
+}
+
+
+document.getElementById("photo_upload").addEventListener("change",
+  function(){
+    console.log("got pic, will resize now:");
+    resizeBase64image(document.getElementById("photo_upload"),
+    function(base64img){
+      console.log("resized pic. will add it to src");
+      document.getElementById("addPhoto").src = base64img;
+    });
+});
+
+
+  function refreshMap()
+  {
+    let latitude = $('#latitude').val();
+    let longitude = $('#longitude').val();
+
+    if(latitude != "" && longitude != "")
+    {
+      $('#map').locationpicker({
+        radius: 0,
+        inputBinding: {
+            locationNameInput: $('#address'),
+            latitudeInput: $('#latitude'),
+            longitudeInput: $('#longitude')
+        },
+        location:{
+          latitude:latitude,
+          longitude:longitude
+        }
+
+      })
+
+      setTimeout(function() {
+
+        let out = $("#map").locationpicker("map").location.formattedAddress;
+        console.log(out);
+        $("#address").val(out);
+        if($("#insideOf").val() == "" || $("#insideOf").val() == undefined)
+        {
+          if($("#description").val() == "" || $("#description").val() == undefined)
+          {
+              $('.locationdescription').html($('#address').val())
+          }
+          else
+          {
+              $('.locationdescription').html($('#description').val())
+          }
+
+        }
+
+      },300)
+    }
+
+    // refresh map (should be inside of mapplugin)
+
+  }
+
+
+  function fillLocationForm(input){
+
+      $('#address').val(input.address);
+      $('#description').val(input.description);
+
+      $('#map').locationpicker({
+        location: {
+            latitude: input.latitude,
+            longitude: input.longitude
+        },
+        addressFormat:
+        "House Number, Street Direction, Street Name, Street Suffix, City, State, Zip, Country",
+        radius: 0,
+        inputBinding: {
+            locationNameInput: $('#address'),
+            latitudeInput: $('#latitude'),
+            longitudeInput: $('#longitude')
+        },
+        enableAutocomplete: true
+      });
+  }
+
+  function autoGetLocation()
+  {
+    console.log("get location clicked");
+    if ("geolocation" in navigator)  {
+      console.log("trying to get geolocation from navigator");
+      /* geolocation is available*/
+      navigator.geolocation.getCurrentPosition(function(location) {
+      console.log(location.coords.latitude);
+      $('#latitude').val(location.coords.latitude);
+      console.log(location.coords.longitude);
+      $('#longitude').val(location.coords.longitude);
+      console.log(location.coords.accuracy);
+      setTimeout(function(){
+        refreshMap();
+      },1000);
+    },function(){
+      swal({html:"could not fetch location. <br><br>location services enabled?",
+       toast:true,customClass:"whiteletters",timer:3200,showConfirmButton:false});
+     })
+    } else {
+      /* geolocation IS NOT available */
+      console.log("geolocation API not available");
+    }
+
+  }
+
+
+  function resizeBase64image(input, callback = console.log){
+
+    // TO DO: update preview_photo.oldsource after upload!!!
+
+    let canvas = document.createElement("canvas");
+    let file = input.files[0];
+
+    if (file){
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        console.log("loaded");
+        //let img = document.getElementById("camera_img");
+        let img = document.createElement("img");
+        img.src = e.target.result;
+
+        img.addEventListener('load', function(){
+          let ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+
+          let MAX_WIDTH = 500;
+          let MAX_HEIGHT = 500;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;canvas.height = height;
+          ctx = canvas.getContext("2d");
+          ctx.drawImage(img,0,0,width,height);
+          let dataurl = canvas.toDataURL("image/jpeg");
+          // Now post the dataurl to a server:
+          //console.log(dataurl);
+          callback(dataurl)
+        })
+      }
+
+      reader.readAsDataURL(file);
+    }
+
+
+  }
+
+///// UPDATE FUNCTIONS //////
+
+function btn_add_update()
+{
+    var basicout = getAllInputs();
+
+    //basicout = JSON.parse(basicout);
+    //console.log(basicout);
+
+    //check if ID provided:
+    if (basicout._id != undefined && basicout._id != "")
+    {
+      console.log("ID provided.\nErgo: item will be updated if it exists");
+
+      updateit(basicout,function(res){
+        if (config.clearFormsAfterUpdate)
+        {
+          clearForm();
+        }
+        console.log(res);
+        if(res.ok == true)
+        {
+          swal({text:"UPDATED SUCCESSFULLY\n(pic might need reload)", toast:true, timer:1200,
+            showConfirmButton:false, position:"center",customClass:"whiteletters"
+          }).then(function(){
+              refreshCollection(function(){
+                shiftItemFocus(0);
+                showItemDetails();
+                window.history.back();
+              });
+
+          });
+        }
+        else {
+          swal({title:"UPDATE ERROR",text:res.statusText, toast:true,customClass:"whiteletters"});
+          console.log(res);
+        }
+      })
+
+    }
+    else
+    {
+      // if not name in owners, put in user alone:
+      if (!basicout.hasOwnProperty("owners")){
+          $('#owners').val(glb_username);
+          basicout.owners=[ glb_username ];
+         }
+
+      if (checkIfBasicDataProvided(basicout))
+      {
+          console.log("No ID provided.\nErgo: new item will be added")
+          //console.log(createID(true));
+          //basicout._id = createID(false);
+          //fillForm(basicout);
+          addit(basicout, function(res){
+            basicout._id = res.id;
+
+            //fillForm(basicout);
+
+            // if called from addNew: clearForm with the exeption
+
+            clearFormsAfterAdd();
+
+            //console.log(res);
+            if(res.ok == true)
+            {
+              swal({
+                text:"ADDED SUCCESSFULLY", toast:true,
+                timer:1200,showConfirmButton:false,
+                position:"center",customClass:"whiteletters"
+              });
+              updateItemBatch();
+            }
+            else {
+              swal({text:"ADD ERROR", toast:true,customClass:"whiteletters"});
+              console.log(res);
+            }
+
+          })
+
+      }
+      else
+      {
+        let missing = ["name","location"];
+        if (basicout.hasOwnProperty("name") &&  basicout.name != "")
+        {
+          missing.splice(missing.indexOf("name"),1)
+        }
+        if (basicout.hasOwnProperty("location"))
+        {
+            missing.splice(missing.indexOf("location"),1)
+        }
+
+        swal({
+            html:"please provide at least <br><b>"+missing+"</b>"
+            , toast:true, timer:2000,showConfirmButton:false, position:"center",
+            customClass:"whiteletters"
+        })
+        console.log("The basic data requirements are not met. please provide at"
+        +" least:...");
+      }
+    }
+
+};
+
+
+// soll: alle textinputfelder usw. in einem objekt zusammenfuegen und uebergeben:
+function getAllInputs()
+{
+
+  let output = {};
+
+  output._id = $("#_id").val() != "" ? $("#_id").val() : null ;
+  output.hyperlink = $("#hyperlink").html() != "" ? $("#hyperlink").html() : null
+  output.name = $("#addName").val() != "" ? $("#addName").val() : null ;
+  output.owners = $("#addOwners").html().replace(/ /g,"").split(",");
+  output.location = {
+    address: $("#address").val(),
+    description: $("#description").val(),
+    latitude: $("#latitude").val(),
+    longitude: $("#longitude").val(),
+    insideOf: $("#insideOf").val()
+  }
+  output.other = {
+    tags:$("#other\\.tags").tagsinput("items"),
+    visibility:[$("#other\\.visibility").val()],
+    description:$("#addDescription").val()
+  }
+  // add all inputs that start with other but other.tags to var output.other:
+  $('input[id^="other"]:not(#other\\.tags)').each(
+    function(){
+      // to do: do this split with dotize instead:
+      output.other[$(this).attr("id").split(".")[1]] = $(this).val();
+    }
+  )
+  //output.hyperlink = hyperlink;
+
+  //delete all empty bits:
+  $.each(output, function(key, value){
+    if (value === "" || value === null || value === undefined){
+        delete output[key];
+    }
+  });
+  $.each(output.location, function(key, value){
+    if (value === "" || value === null || value === undefined){
+        delete output.location[key];
+    }
+  });
+  if (!output.location.address && !output.location.description && !output.location.insideOf)
+  {
+    delete output.location;
+  }
+  $.each(output.other, function(key, value){
+    if (value === "" || value === null || value === undefined){
+        delete output.other[key];
+    }
+  });
+
+  console.log(output);
+  return output;
+
+};
+
+function clearFormsAfterAdd()
+{
+  $("#addName").val("");
+  $("#_id").val("");
+
+  $("#addPhoto").attr("src",addNew.urlStandInImg);
+
+  // location stays after Add
+  //$("#address").val(""),
+  //$("#description").val(""),
+  //$("#latitude").val(""),
+  //$("#longitude").val(""),
+  //$("#insideOf").val("")
+
+  //$("#other\\.tags").tagsinput("removeAll"),
+  //$("#other\\.visibility").val(""),
+  $("#addDescription").val("")
+
+  // clear all inputs that start with other but other.tags to var output.other:
+
+  /*
+  $('input[id^="other"]:not(#other\\.tags)').each(
+    function(){
+      // to do: do this split with dotize instead:
+      $(this).val("");
+    }
+  )
+  */
+}
+
+
+function clearForm(){
+  $("#addName").val("");
+  $("#_id").val("");
+
+  $("#addPhoto").attr("src",addNew.urlStandInImg);
+
+  $("#address").val("");
+  $("#description").val("");
+  $("#latitude").val("");
+  $("#longitude").val("");
+  $("#insideOf").val("");
+
+  $("#other\\.containerOf").html("");
+  $("#containerOf").hide();
+
+
+  $(".locationdescription").html("");
+  $("#insideOf_name").html("");
+  $("#insideOf_name").attr("href","");
+  updateInsideOfFlipSwitch(false);
+
+  $("#other\\.tags").tagsinput("removeAll");
+  $("#other\\.visibility").val("friends").change();
+
+  $("#addDescription").val("");
+
+  // clear all inputs that start with other but other.tags to var output.other:
+
+  $('input[id^="other"]:not(#other\\.tags)').each(
+    function(){
+      // to do: do this split with dotize instead:
+      $(this).val("");
+    }
+  )
+
+}
+
+function checkIfBasicDataProvided(object)
+{
+  console.log(object);
+  if (object.hasOwnProperty("name")
+    && object.hasOwnProperty("location"))
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+/// API FUNCTIONS ////
+
+
+//// ADD / update
+
+function addit(obj,callback=console.log)
+{
+  let data = {
+            "data":[{
+              "type":"addItems",
+              "doc":obj,
+            }]
+          };
+
+  // photo upload:
+  if ( document.getElementById("addPhoto").src !== addNew.urlStandInImg)
+  {
+    data.data[0].pic = document.getElementById("addPhoto").src;
+  }
+  console.log("attempting to add item to dingsda");
+  postAPI({
+      path:glb_username,
+      data:data,
+       callback: function(result){
+        callback(result)
+      }
+
+  });
+
+}
+
+
+function postAPI({path="", data =null, callback=console.log,
+                  error=function(err)
+                  {/*swal({text:err.responseText})*/;
+                  console.log(err.responseText);
+                  callback(err)
+                }})
+{
+
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+path,
+    data: JSON.stringify(data),
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: error
+    ,contentType:"application/json"
+  });
+
+}
+
+function getAPI({path="", data=null, callback=console.log, error=function(err)
+                  {console.log(err.responseText)}})
+{
+
+  $.ajax({
+    type: "GET",
+    url: API_BASE_URL+path,
+    data: data,
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: error
+    //,dataType: "application/json"
+    ,contentType:"application/json"
+  });
+
+}
+
+
+
+
+
+function fillForm(object)
+{
+
+  console.log(object);
+
+  if(object.hyperlink !== undefined && object.hyperlink !== ""){
+    $('#hyperlink').html(object.hyperlink);
+  }
+
+  $("#addPhoto").attr("src",object.hyperlink+"/pic_small.jpg");
+
+  // otherwise: start filling the form
+  if(object.other !== undefined)
+  {
+    if (object.other.borrowable === undefined){object.other.borrowable = "not"};
+    if (object.other.visibility === undefined){object.other.visibility = "not"};
+
+    $('#other\\.barcode').val(object.other.barcode);
+    $('#other\\.visibility').val(object.other.visibility).change();
+    //$('#other\\.borrowable').val(object.other.borrowable).change();
+    //$('#other\\.borrowby').val(object.other.borrowby).change();
+
+    $('#addDescription').val(object.other.description);
+    $('#other\\.value').val(object.other.value);
+    $('#other\\.weight').val(object.other.weight);
+    $('#other\\.madein').val(object.other.madein);
+    $('#other\\.count').val(object.other.count);
+    $('#other\\.tags').val( object.other.tags);
+
+    if(object.other.containerOf !== undefined && object.other.containerOf.length > 0 )
+    {
+      $('#containerOf').show()
+      $('#other\\.containerOf').html("");
+      for (item in object.other.containerOf)
+      {
+        let links = "";
+        links = links + '<a href=\'javascript:getSingleItem("'+
+        object.other.containerOf[item]+
+        '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();})\'>'+
+        object.other.containerOf[item]+' </a><br>'
+        getSingleItem(object.other.containerOf[item],function(res){
+            links = res.name + " : <br>" + links;
+            $('#other\\.containerOf').append(links);
+        });
+      }
+    }else{
+      $('#containerOf').hide()
+      $('#other\\.containerOf').html("");
+    }
+
+    for (item in object.other.tags)
+    {
+        $('#other\\.tags').tagsinput('add', object.other.tags[item]);
+    }
+  }
+
+  $('#_id').val(object._id);
+  $('#addName').val(object.name);
+  $('#addOwners').html(object.owners.toString());
+  //$('#location').val(object.location); // old version from location always string
+
+  //////////////////////////////////////
+  // LOCATION OBJECT w/ map plugin:
+  // TO DO: establish DOT NOTATION FOR LOCATION OBJECT!!!! (maybe include dotize???)
+
+  if(typeof object.location === 'string')
+  {
+    console.log("location is a string");
+    $('#description').val(object.location);
+    $('.locationdescription').html(object.location);
+  }
+  else if (object.location !== null && typeof object.location === 'object')
+  {
+    console.log("location is an object");
+    $('#description').val(object.location.description);
+    $('.locationdescription').html(object.location.description);
+    $('#address').val(object.location.address);
+    $('#latitude').val(object.location.latitude);
+    $('#longitude').val(object.location.longitude);
+    $('#insideOf').val(object.location.insideOf);
+      // fill also name of object in insideOf:
+    if (object.location.insideOf !== undefined && object.location.insideOf !== "")
+    {
+      $('.locationdescription').html(object.location.insideOf);
+      getSingleItem(object.location.insideOf,insideOfUpdated);
+      updateInsideOfFlipSwitch(true);
+    }
+    else {
+      updateInsideOfFlipSwitch(false);
+      $("#insideOf_name").html("");
+    }
+
+
+  }
+
+  ///////////////////////////////////////
+  if(gmapsExists) // if the gmaps locationpicker module exists:
+  {
+    refreshMap();
+  }
+
+};
+
+
+function updateit(obj,callback=console.log)
+{
+  console.log("trying to fetch originalObject from DB");
+  console.log(obj);
+
+  let path = API_BASE_URL+glb_username+"/"+obj._id;
+  if (obj.hyperlink !== undefined && obj.hyperlink != "")
+  { path = obj.hyperlink }
+
+  getSingleItem(path, function(res){
+
+      console.log(res);
+      console.log("merging oldObj and formContents");
+      let newObj = Object.assign({}, res, obj);
+      console.log(newObj);
+      console.log("attempting update of object");
+
+      let newdata = {
+          "data":[{
+            "type":"update",
+            "doc":newObj,
+            //pic:document.getElementById("preview_photo").src
+            //"doc":{_id:"33","other.visibility":["friends"]}
+          }]
+        }
+        let reloadAfterUpdate = false;
+        // photo upload:
+        if (document.getElementById("addPhoto").src.startsWith("data:image/jpeg;base64") )
+        {
+          console.log("PIC added to newdata!!!");
+          newdata.data[0].pic = document.getElementById("addPhoto").src;
+
+        }
+        //console.log(newdata);
+        // write into DB
+        $.ajax({
+          type: "POST",
+          url: path,
+          data: JSON.stringify(newdata),
+          success: function(res){
+            callback(res)
+          },
+          xhrFields: { withCredentials: true }, // to make AuthCookie ok
+          error: callback,
+          contentType:"application/json"
+        });
+    },
+    function(err){callback(err)}
+  )
+
+}
+
+function insideOfUpdated(res)
+{
+  if (res._id !== undefined)
+  {
+    $('#insideOf_name').html(res.name);
+    $('#insideOf_name').attr("href", 'javascript:getSingleItem("'+res._id+
+    '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();});')
+  }
+
+}
+
+</script>
+
+<div data-role="page" id="move">
+
+  <style>
+
+    #locationEditor_Move .ui-collapsible-content{
+      background-color: #fff2cd;
+      text-shadow: 0px 0px 0px black !important;
+      width: 100%;
+      margin-left:-1em;
+    }
+
+    #locationEditor_Move #map{
+      height: 20vh;
+    }
+
+    #locationEditor_Move .ui-collapsible-heading{
+      display: none
+    }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content" style="background-color:#abcecc;margin-bottom:10vh;">
+    Where do you want to move these items to ?
+    <br>
+
+  <div id="locationEditor_Move">
+
+
+  </div>
+
+
+  <div id="btn_move_items" class="btn_request ui-btn"
+    style="height:10vh;width:100%;left:-1em;bottom:-1em;background-color:#ff004c!important;
+    color:#fff2cd;z-index:3;position:fixed">
+    MOVE ITEMS</div>
+
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+$( document ).on( "pageshow", "#move", function(e,ui) {
+    //console.log(window.location.search);
+    console.log("just loaded move");
+    //console.log(ui.prevPage);
+
+    $("#move .ui-content li").remove()
+
+    $("#locationMoveable").appendTo("#locationEditor_Move");
+    $("#locationEditor_Move").trigger("create");
+    $("#locationMoveable").collapsible( "expand" )
+
+    for(value of collection.bulk)
+    {
+      $("#move .ui-content").append("<li>"+value.name)
+    }
+})
+
+$("#btn_move_items").click(function(){
+  let newlocation = getAllInputs().location;
+
+  if (newlocation !== undefined)
+  {
+    console.log("items will be moved to new location:");
+    console.log(newlocation);
+
+    for(value of collection.bulk)
+    {
+      value.location = newlocation;
+      //updateItem(value);
+      moveItem(value)
+    }
+
+    showToast("items will be moved",800);
+    setTimeout(refreshCollection,1000);
+    window.history.back();
+  }
+
+})
+
+function moveItem(obj, callback=console.log)
+{
+  console.log("trying to move item");
+
+  let path = API_BASE_URL+glb_username+"/"+obj._id;
+  if (obj.hyperlink !== undefined && obj.hyperlink != "")
+  { path = obj.hyperlink }
+
+  let dataOut = {
+    "data":
+          [{
+            "type":"move",
+            "location":obj.location
+          }]
+    }
+
+  $.ajax({
+    type: "POST",
+    url: path,
+    data: JSON.stringify(dataOut),
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: callback,
+    contentType:"application/json"
+  });
+}
+
+
+function updateItem(obj,picIncluded=false,callback=console.log)
+{
+  console.log("trying to fetch originalObject from DB");
+  console.log(obj);
+
+  let path = API_BASE_URL+glb_username+"/"+obj._id;
+  if (obj.hyperlink !== undefined && obj.hyperlink != "")
+  { path = obj.hyperlink }
+
+  getSingleItem(path, function(res){
+
+      console.log(res);
+      console.log("merging oldObj and formContents");
+      let newObj = Object.assign({}, res, obj);
+      console.log(newObj);
+      console.log("attempting update of object");
+
+      let newdata = {
+          "data":[{
+            "type":"update",
+            "doc":newObj,
+            //pic:document.getElementById("preview_photo").src
+          }]
+        }
+
+        // excluded picupdate. should have its own function, i think
+
+        // write into DB
+        $.ajax({
+          type: "POST",
+          url: path,
+          data: JSON.stringify(newdata),
+          success: callback,
+          xhrFields: { withCredentials: true }, // to make AuthCookie ok
+          error: callback,
+          contentType:"application/json"
+        });
+    },
+    function(err){callback(err)}
+  )
+
+}
+
+
+function getSingleItem(id,callback,error=console.log)
+{
+    // transform id into hyperlink in case no hyperlink was passed:
+    if (!id.startsWith("https")){
+      id = API_BASE_URL+glb_username+"/"+id;
+    }
+    console.log("fetching single Item: "+id);
+    // get item json from DB
+    $.ajax({
+      type: "GET",
+      url: id,
+      success: callback,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: error,
+      contentType:"application/json"
+    });
+
+}
+
+</script>
+
+<div data-role="page" id="handover">
+
+  <style>
+
+    iframe {
+      left: -10px;
+      height: 100vh;
+      width: 95vw;
+    }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+    To whom do you want to hand these items over to ?
+    <br>
+    <input id="newPossessor" type="text"></input>
+
+  <div id="btn_handover_items" class="btn_request ui-btn"
+    style="height:10vh;width:100%;left:-1em;bottom:-1em;background-color:#ff004c!important;
+    color:#fff2cd;z-index:3;position:fixed">
+    HANDOVER ITEMS</div>
+
+  </div>
+
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+$( document ).on( "pageshow", "#handover", function(e,ui) {
+    console.log(window.location.search);
+    console.log("just loaded handover");
+    console.log(ui.prevPage);
+
+    $("#handover .ui-content li").remove()
+
+    for(value of collection.bulk)
+    {
+      $("#handover .ui-content").append("<li>"+value.name)
+    }
+})
+
+$("#btn_handover_items").click(function(){
+  let newPossessor = $("#newPossessor").val();
+
+  if (newPossessor !== undefined)
+  {
+    console.log("items will be handed over to new possesor:");
+    console.log(newPossessor);
+
+    for(value of collection.bulk)
+    {
+      value.inPossessionOf = newPossessor;
+      //updateItem(value);
+      handoverItem(value,function(res){
+        if (!res.ok){
+          console.log("item could not be announced for handover. probably already in process or race condition");
+        }
+        else {
+          updateNotificationsBatch();
+          $.mobile.pageContainer.pagecontainer("change", "#notifications",
+                     {allowSamePageTransition:true,transition: "slidefade" });
+        }
+      })
+    }
+
+    showToast("items will be handed over",800);
+    // TO DO:
+    // - update notifications
+    // -
+
+  }
+
+})
+
+function handoverItem(obj, callback=console.log)
+{
+  console.log("trying to send handover announcement");
+
+  let path = API_BASE_URL+glb_username+"/"+obj._id;
+  if (obj.hyperlink !== undefined && obj.hyperlink != "")
+  { path = obj.hyperlink }
+  let thingsdatabaseowner = obj.hyperlink.split("/");
+  thingsdatabaseowner = thingsdatabaseowner[thingsdatabaseowner.length-2];
+  let isReturnToOwner = (thingsdatabaseowner === obj.inPossessionOf)
+  let dataOut = {
+    "data":
+          [{
+            "type":"handover_announce",
+            "username":obj.inPossessionOf,
+            "isReturn":isReturnToOwner
+          }]
+    }
+
+  $.ajax({
+    type: "POST",
+    url: path,
+    data: JSON.stringify(dataOut),
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: callback,
+    contentType:"application/json"
+  });
+}
+
+
+</script>
+
+<div data-role="page" id="borrow">
+
+  <style>
+
+
+    #borrow {
+      background-color: #fff2cd;
+    }
+
+    #btn_send_item_request {
+      background-color: #abcecc;
+      text-shadow: none;
+    }
+
+    .borrow_footer {
+      margin-left: -1em;
+      padding: 10px;
+      bottom: 0px;
+      position: fixed;
+      z-index: 99;
+      background-color: #ff004c;
+      color: #fff2cd !important;
+      text-shadow: none;
+    }
+
+    .borrow_header {
+      background-color: #abcecc;
+      width: 100vw;
+      padding: 5px;
+      margin-left: -1em;
+      margin-top: -1em;
+    }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+      <div class="borrow_header">
+        <h2 align="center">CONTACT OWNERS OF ITEM</h2>
+        <div align="center">
+          You want to borrow the items below <br>
+        </div>
+      </div>
+      <br>
+      <b>from:</b>
+      <input type="date" name="date" id="from" value=""  />
+      <br>
+      <b>till:</b>
+      <input type="date" name="date" id="till" value=""  />
+      <div class="borrow_footer">
+        <hr>
+        <span>
+        <b>ATTENTION: If you send a BORROW request to its owners your contact details will be
+        forwarded to the owner!</b> <br>(You can change these details anytime in the config menu)
+        </span>
+        <br>
+
+        <button id="btn_send_item_request">SEND BORROW REQUEST</button>
+        <hr>
+      </div>
+
+
+  </div>
+  <!-- END CONTENT -->
+</div>
+
+
+<script>
+
+$( document ).on( "pageshow", "#borrow", function(e,ui) {
+    console.log(window.location.search);
+    console.log("just loaded borrow");
+    console.log(ui.prevPage);
+
+    $("#handover .ui-content li").remove()
+
+    for(value of collection.bulk)
+    {
+      $("#borrow .ui-content").append("<li>"+value.name)
+    }
+})
+
+$("#btn_send_item_request").click(function(){
+
+  let dataOut = {
+    "data":
+          [{
+            "type":"borrow_request",
+            "ref":collection.bulk[0].name,
+            "from":$("#from").val(),
+            "till":$("#till").val(),
+            "contact_details":config.contact_details
+          }]
+  }
+  let dbOwner = collection.bulk[0].hyperlink.split("/");
+  dbOwner = dbOwner[dbOwner.length-2];
+  console.log(dataOut);
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+dbOwner, //testing only
+    data: JSON.stringify(dataOut),
+    success: function(r){ console.log(r) },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  });
+
+})
+
+
+</script>
+
+  </body>
+
+
+
+  <script>
+  // BASE JAVASCRIPT HERE
+  const API_BASE_URL = "https://dingsda.org:3000/api/v1/";
+  const UI_URL = "https://dingsda.org/two/";
+
+  let glb_username = undefined;
+
+
+  if (glb_username === undefined)
+  {
+    login();
+  }
+
+  $("#fliplocation").parent().click(function(e){
+    if ($("#fliplocation").prop("checked"))
+    {
+      $(".locationContainer").hide();
+      $("#insideOfContainer").show();
+    }
+    else
+    {
+      $(".locationContainer").show();
+      $("#insideOfContainer").hide();
+    }
+  })
+
+
+
+///////////// METHODS ///////////////
+
+function login (){
+
+    $.ajax({
+      type: "GET",
+      url: API_BASE_URL,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      success: function(res){
+        console.log(res);
+        if (res.username)
+        {
+          glb_username = res.username;
+          console.log("you are logged in already as "+ glb_username);
+          swal({html:"logged in as <br><b>"+ glb_username+"</b>",
+          toast:true, timer:1200,showConfirmButton:false, position:"center",
+          customClass:"whiteletters"})
+          updateItemBatch();
+          updateNotificationsBatch();
+          fetchConfig();
+          $.mobile.pageContainer.pagecontainer("change", "#landing",
+                     {allowSamePageTransition:true});
+
+          //fetchConfig();
+        }
+      },
+      error: function(err){
+        console.log(err);
+        loginPopUp();
+      },
+      contentType:"application/json"
+    });
+
+}
+
+  // login pop up
+
+  function loginPopUp(param={customClass:'animated jello', extra:""})
+  {
+    let {value: formValues} = swal({
+    title: 'login',
+    html:
+      'log into your dingsder account<br>'+
+      '<input id="swal-input1" class="swal2-input" placeholder="username">' +
+      '<input id="swal-input2" class="swal2-input" placeholder="password" type="password">'+
+      param.extra +
+      '<br>don\'t have an account yet? <span class="registerlink">REGISTER!</span>',
+    focusConfirm: true,
+    allowEscapeKey: false,
+    allowOutsideClick: false,
+    animation: true,
+    showLoaderOnConfirm: true,
+    customClass: 'animated shake',
+    preConfirm: () => {
+
+      let username = document.getElementById('swal-input1').value;
+      let pw = document.getElementById('swal-input2').value;
+
+      $.ajax({
+        type: "GET",
+        url: API_BASE_URL,
+        data: { "name":username,"password":pw },
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        success: function(res)
+          {
+            console.log("successfully logged in as "+username);
+            glb_username = username;
+            swal({html:"logged in as <br><b>"+ glb_username+"</b>",
+            toast:true, timer:1200,showConfirmButton:false, position:"center",
+            customClass:"whiteletters"})
+            updateItemBatch();
+            fetchConfig();
+            $.mobile.pageContainer.pagecontainer("change", "#landing",
+                       {allowSamePageTransition:true});
+            //fetchConfig();
+          },
+        error: function(err){
+          console.log(err);
+          loginPopUp({extra:"<br><span class='err'>you don't exist! Try again</span><br>"});
+        },
+        contentType:"application/json"
+      });
+    }
+  })
+
+  $(".registerlink").click(function(){
+    console.log("register!");
+    registerPopUp()
+  });
+
+  }
+
+
+  function getPicAttachment(thingid,callback=console.log,err=console.log)
+  {
+
+    if (!thingid.startsWith("http")){
+        thingid = API_BASE_URL+glb_username+"/"+thingid;
+      }
+
+    console.log("fetching single item attachment: "+thingid);
+    // get item json from DB
+    $.ajax({
+      type: "GET",
+      url: thingid+"/pic_small.jpg",
+      success: callback,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: err
+      ,contentType:"application/json"
+    });
+
+  }
+
+  function showToast(msg="",time){
+    swal({html:""+msg,
+    toast:true, timer:time,showConfirmButton:false, position:"center",
+    customClass:"whiteletters"})
+  }
+
+  function updateNotificationsBatch(){
+    countNotificationsInDB(function(res){
+      $(".notifications_icon").addClass("anim_heartbeat");
+      setTimeout(function(){
+        $(".notifications_badge").html(res);
+        $(".notifications_icon").removeClass("anim_heartbeat");
+        $(".notifications_badge").addClass("anim_hop");
+        setTimeout(function(){$(".notifications_badge").removeClass("anim_hop")},650);
+      },300);
+    })
+  }
+
+
+  function countNotificationsInDB(callback=console.log){
+
+    console.log("fetching notifications from database");
+
+    getSingleItem("&notifications",function(notifications){
+      // get number of total notifications (items 2nd step down the object tree:)
+      let length = 0;
+      for (let i = 0; i < getObjectLength(notifications.pending); i++)
+      {
+        let obj = notifications.pending[Object.keys(notifications.pending)[i]]
+        length += getObjectLength(obj);
+        //console.log(obj);
+      }
+      //console.log(length);
+      callback(length);
+
+    })
+
+  }
+
+  function getObjectLength(obj){
+   return Object.keys(obj).length
+  }
+
+
+  </script>
+
+
+</html>

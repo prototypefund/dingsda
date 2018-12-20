@@ -1,0 +1,1016 @@
+<div data-role="page" id="addNew">
+
+  <style>
+
+    .back_btn {
+      position: fixed;
+      z-index: 99;
+      right: 10px;
+      margin-top: 5vh;
+    }
+
+    #addName{
+      font-size: 1.1em;
+      background-color: rgba(255, 0, 76, 1);
+      color: rgba(255,242,205,1);
+      text-shadow: 0px 0px 0px black !important;
+      margin: 0;
+      border-radius: 0;
+    }
+
+    #addName::-webkit-input-placeholder {
+      color: rgba(255,255,255,0.8);
+      text-shadow: 0px 0px 0px black !important;
+    }
+
+    #addOwners{
+      width: 80%;
+      margin-left: 20px;
+      margin-top: 0px;
+      font-size: 1em;
+      text-shadow: 0px 0px 0px black !important;
+    }
+
+    #addLocation h3{
+      width: 100% !important;
+    }
+
+    #addDescription {
+      background-color: rgba(255,242,205,0.6);
+      padding-top: 2px;
+      margin: 0;
+      height: 20vh !important;
+    }
+
+    /* map stuff: */
+    #locationEditor .collapsible_right {
+      margin-bottom: 0;
+    }
+
+    #getLocation{
+      width: 100%;
+      height: 50px;
+    }
+
+    #map{
+      width: 100%;
+      height: 30vh;
+    }
+    .locationContainer{
+      display: flex;
+      flex-direction: column;
+    }
+    .geodataContainer{
+      display: flex;
+      flex-direction: row;
+    }
+    .geotable{
+      width: 45%;
+      padding: 0;
+    }
+
+    /*flipswitch shizzl*/
+    .custom-size-flipswitch.ui-flipswitch .ui-btn.ui-flipswitch-on {
+        text-indent: -15.9em;
+    }
+    .custom-size-flipswitch.ui-flipswitch .ui-flipswitch-off {
+        text-indent: 0.5em;
+    }
+    .custom-size-flipswitch.ui-flipswitch {
+        width: 98%;
+        padding-left: 2%;
+    }
+    .custom-size-flipswitch.ui-flipswitch.ui-flipswitch-active {
+        width: 10%;
+        padding-left: 85%;
+    }
+
+
+    /* photo shizzl*/
+    #addPhoto{
+      max-width: 100%;
+      height: 33vh;
+      position: absolute;
+      top: 3.2em;
+      pointer-events: none;
+    }
+
+    .fileContainer {
+        overflow: hidden;
+        min-height: 30vh;
+        width: 100%;
+        z-index: 0;
+        opacity: 0
+    }
+
+    .fileContainer [type=file] {
+        cursor: inherit;
+        display: block;
+        font-size: 999px;
+        filter: alpha(opacity=0);
+        min-height: 23vh;
+        min-width: 100%;
+        opacity: 0;
+        position: absolute;
+        right: 0;
+        text-align: right;
+        top: 0;
+    }
+
+
+    .collapsible_right a{
+      text-align: center !important;
+      background-color: rgba(200, 200, 200, 0.4) !important;
+    }
+
+    #details{
+      margin:0;
+    }
+
+    #details a{
+      margin: 0;
+      font-size: 1.5em;
+      line-height: 0.05em;
+    }
+
+    .bootstrap-tagsinput .tag {border: 1px solid rgba(0,0,0,0.3); line-height: 2em;
+      border-radius: 15%;padding:3px; background-color: rgba(250,250,250,0.2);color: black }
+    .bootstrap-tagsinput {color: black;background-color: rgba(0,0,0,0);border: 0px solid black;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075); width: 100%}
+
+    .smallfont {font-size: 6px !important;line-height: 50%}
+    .mediumfont {font-size: 12px !important;line-height: 100%}
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content" style="padding:0;">
+
+    <div class="ui-grid-b" style="width:100%;margin-top:-20px;height:100%">
+
+      <div class="back_btn more_btn ui-btn">x</div>
+
+      <div class="ui-block-a" style="width:100%;height:33vh;background-color:black;
+        display: flex;flex-direction: row;justify-content: center;">
+        <label class="fileContainer ui-btn">
+          <input type="file" accept="image/jpeg" id="photo_upload" multiple data-role="none"/>
+        </label>
+        <img id="addPhoto" src="" alt="big picture of item"></img>
+      </div>
+
+      <div class="ui-block-b" style="width:100%">
+        <input id="addName" class="ui-bar ui-bar-a" placeholder="name it!"></div>
+      </div>
+
+      <div class="ui-block-a" style="padding:0px; margin:0px;">
+        <div class="ui-bar"
+          style="font-style:italic; display:flex; flex-direction:row; padding: 0px;margin:0">
+            <span style="padding-left: 0.8em;">by</span> <div id="addOwners"
+              placeholder="owners" contenteditable="true"></input>
+        </div>
+      </div>
+
+      <!-- START LOCATIONEDITOR -->
+
+      <div id="locationEditor" class="ui-block-a" style="width:100%">
+
+      </div>
+
+      <!-- END LOCATIONEDITOR -->
+
+      <div class="ui-block-a" style="width:100%">
+        <textarea id=addDescription class="ui-bar" placeholder="describe it!"></textarea>
+      </div>
+
+          <!-- START DETAILS -->
+
+        <div id="addNew_detailsContainer">
+          <div id="details" class="collapsible_right ui-block-a" data-role="collapsible"
+              data-mini="true" data-collapsed-icon="info"
+              data-expanded-icon="arrow-u" data-collapsed="true" data-iconpos="none">
+              <h3 style="width:100vw;">...</h3>
+
+              tags / keywords:
+              <input id="other.tags" type="text" placeholder="type tag and hit enter"
+                data-role="tagsinput" value="" />
+
+              barcode:
+              <input type="text" id="other.barcode" placeholder="EAN, ISBN or UPC"
+                />
+
+              count / number of pieces:
+              <input type="text" id="other.count"
+                placeholder="how many items are summerized in this entry?"
+                />
+
+              weight per item:
+              <input type="text" id="other.weight"
+                placeholder="don't forget to include the unit (e.g. kg)"
+                />
+
+              value per item:
+              <input type="text" id="other.value"
+                placeholder="EUR? USD? CHF?" />
+
+              country of origin:
+              <input type="text" id="other.madein"
+                placeholder="made in..." />
+
+              <br>
+              unique id:
+              <input type="text" id="_id" placeholder="no unique id so far" disabled>
+              <div id="hyperlink" hidden></div>
+
+              <div data-role="collapsible" data-mini="true" data-collapsed-icon="heart">
+                <h3 class="mediumfont" style="width:100%">Visibility</h3>
+
+                  <select name="visibility" class="mediumfont" id="other.visibility">
+                    <option value="private">visible only to owners</option>
+                    <option value="friends" selected>visible to friends <span class="smallfont">(atm: like private)</span></option>
+                    <option value="friends2nd" disabled>visible to friends of friends</option>
+                    <option value="public">visible to friends in spe (public)</option>
+                  </select>
+
+              </div>
+
+
+          <!-- END DETAILS -->
+
+
+          </div>
+        </div>
+
+      <div class="ui-block-a" style="width:100vw">
+        <div id="btn_add_next" class="btn_request ui-btn" style="height:8vh">ADD / NEXT</div>
+      </div>
+
+    </div><!-- /grid-b -->
+
+    </div>
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+
+<script>
+
+let addNew = {
+  urlStandInImg: "assets/images/takepicture.png",
+  editMode: false
+};
+
+const gmapsExists = true;
+
+$( document ).on( "pageshow", "#addNew", function(e,ui) {
+    console.log(window.location.search);
+    console.log("just loaded itemDetails");
+    console.log(ui.prevPage);
+
+    $("#details").appendTo("#addNew_detailsContainer");
+    $("#addNew_detailsContainer").trigger("create");
+    $("#details").collapsible( "collapse" )
+    $("#addNew_detailsContainer :input").attr("disabled", false);
+
+    clearForm();
+
+    $("#addPhoto").attr("src", addNew.urlStandInImg);
+
+    $("#locationMoveable").appendTo("#locationEditor");
+    $("#locationEditor").trigger("create");
+    $("#locationMoveable").collapsible( "collapse" )
+
+    if (addNew.editMode === false)
+    {
+      // if not in editmode
+      $("#addOwners").html(glb_username)
+      $("#btn_add_next").html("ADD / NEXT")
+    }
+    else {
+      console.log(addNew.editMode);
+      // if in editmode:
+      addNew.editMode = false; //switchoff editmode for next time
+      // fill AddItemForm with singleItem in focus:
+      let id = itemDetails.itemInFocus.hyperlink;
+      if (id === undefined){
+        id = itemDetails.itemInFocus._id
+      }
+      getSingleItem(id,function(r){
+        fillForm(r);
+      })
+      $("#btn_add_next").html("SAVE EDITS");
+    }
+
+})
+
+$(document).ready(function(){
+
+  // init gmaps
+  fillLocationForm({description: "",address: "",latitude:null,longitude:null})
+
+  $('#getLocation').click(autoGetLocation);
+
+  $('#address').change(function(){
+    $('.locationdescription').html($('#address').val())
+  })
+
+  $(".back_btn").click(function(){
+    window.history.back();
+  })
+
+  $("#btn_add_next").click(function(){
+    console.log("ADD button clicked");
+    btn_add_update();
+  })
+
+  document.getElementById("addPhoto").onerror = function(err){
+    console.log("error loading picture #addPhoto:");
+    console.log(err);
+    $("#addPhoto").attr("src", addNew.urlStandInImg);
+  }
+
+})
+
+function updateInsideOfFlipSwitch(on){
+  if (on){
+    $('#fliplocation').parent().addClass('ui-flipswitch-active');
+    $('#fliplocation').prop('checked', true);
+    updateInsideOfContainer()
+  }
+  else {
+    $('#fliplocation').parent().removeClass('ui-flipswitch-active');
+    $('#fliplocation').prop('checked', false);
+    updateInsideOfContainer()
+  }
+}
+
+
+
+$("#fliplocation").parent().click(function(e){
+  updateInsideOfContainer();
+})
+
+function updateInsideOfContainer()
+{
+  if ($("#fliplocation").prop("checked"))
+  {
+    $(".locationContainer").hide();
+    $("#insideOfContainer").show();
+  }
+  else
+  {
+    $(".locationContainer").show();
+    $("#insideOfContainer").hide();
+  }
+}
+
+
+document.getElementById("photo_upload").addEventListener("change",
+  function(){
+    console.log("got pic, will resize now:");
+    resizeBase64image(document.getElementById("photo_upload"),
+    function(base64img){
+      console.log("resized pic. will add it to src");
+      document.getElementById("addPhoto").src = base64img;
+    });
+});
+
+
+  function refreshMap()
+  {
+    let latitude = $('#latitude').val();
+    let longitude = $('#longitude').val();
+
+    if(latitude != "" && longitude != "")
+    {
+      $('#map').locationpicker({
+        radius: 0,
+        inputBinding: {
+            locationNameInput: $('#address'),
+            latitudeInput: $('#latitude'),
+            longitudeInput: $('#longitude')
+        },
+        location:{
+          latitude:latitude,
+          longitude:longitude
+        }
+
+      })
+
+      setTimeout(function() {
+
+        let out = $("#map").locationpicker("map").location.formattedAddress;
+        console.log(out);
+        $("#address").val(out);
+        if($("#insideOf").val() == "" || $("#insideOf").val() == undefined)
+        {
+          if($("#description").val() == "" || $("#description").val() == undefined)
+          {
+              $('.locationdescription').html($('#address').val())
+          }
+          else
+          {
+              $('.locationdescription').html($('#description').val())
+          }
+
+        }
+
+      },300)
+    }
+
+    // refresh map (should be inside of mapplugin)
+
+  }
+
+
+  function fillLocationForm(input){
+
+      $('#address').val(input.address);
+      $('#description').val(input.description);
+
+      $('#map').locationpicker({
+        location: {
+            latitude: input.latitude,
+            longitude: input.longitude
+        },
+        addressFormat:
+        "House Number, Street Direction, Street Name, Street Suffix, City, State, Zip, Country",
+        radius: 0,
+        inputBinding: {
+            locationNameInput: $('#address'),
+            latitudeInput: $('#latitude'),
+            longitudeInput: $('#longitude')
+        },
+        enableAutocomplete: true
+      });
+  }
+
+  function autoGetLocation()
+  {
+    console.log("get location clicked");
+    if ("geolocation" in navigator)  {
+      console.log("trying to get geolocation from navigator");
+      /* geolocation is available*/
+      navigator.geolocation.getCurrentPosition(function(location) {
+      console.log(location.coords.latitude);
+      $('#latitude').val(location.coords.latitude);
+      console.log(location.coords.longitude);
+      $('#longitude').val(location.coords.longitude);
+      console.log(location.coords.accuracy);
+      setTimeout(function(){
+        refreshMap();
+      },1000);
+    },function(){
+      swal({html:"could not fetch location. <br><br>location services enabled?",
+       toast:true,customClass:"whiteletters",timer:3200,showConfirmButton:false});
+     })
+    } else {
+      /* geolocation IS NOT available */
+      console.log("geolocation API not available");
+    }
+
+  }
+
+
+  function resizeBase64image(input, callback = console.log){
+
+    // TO DO: update preview_photo.oldsource after upload!!!
+
+    let canvas = document.createElement("canvas");
+    let file = input.files[0];
+
+    if (file){
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        console.log("loaded");
+        //let img = document.getElementById("camera_img");
+        let img = document.createElement("img");
+        img.src = e.target.result;
+
+        img.addEventListener('load', function(){
+          let ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+
+          let MAX_WIDTH = 500;
+          let MAX_HEIGHT = 500;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;canvas.height = height;
+          ctx = canvas.getContext("2d");
+          ctx.drawImage(img,0,0,width,height);
+          let dataurl = canvas.toDataURL("image/jpeg");
+          // Now post the dataurl to a server:
+          //console.log(dataurl);
+          callback(dataurl)
+        })
+      }
+
+      reader.readAsDataURL(file);
+    }
+
+
+  }
+
+///// UPDATE FUNCTIONS //////
+
+function btn_add_update()
+{
+    var basicout = getAllInputs();
+
+    //basicout = JSON.parse(basicout);
+    //console.log(basicout);
+
+    //check if ID provided:
+    if (basicout._id != undefined && basicout._id != "")
+    {
+      console.log("ID provided.\nErgo: item will be updated if it exists");
+
+      updateit(basicout,function(res){
+        if (config.clearFormsAfterUpdate)
+        {
+          clearForm();
+        }
+        console.log(res);
+        if(res.ok == true)
+        {
+          swal({text:"UPDATED SUCCESSFULLY\n(pic might need reload)", toast:true, timer:1200,
+            showConfirmButton:false, position:"center",customClass:"whiteletters"
+          }).then(function(){
+              refreshCollection(function(){
+                shiftItemFocus(0);
+                showItemDetails();
+                window.history.back();
+              });
+
+          });
+        }
+        else {
+          swal({title:"UPDATE ERROR",text:res.statusText, toast:true,customClass:"whiteletters"});
+          console.log(res);
+        }
+      })
+
+    }
+    else
+    {
+      // if not name in owners, put in user alone:
+      if (!basicout.hasOwnProperty("owners")){
+          $('#owners').val(glb_username);
+          basicout.owners=[ glb_username ];
+         }
+
+      if (checkIfBasicDataProvided(basicout))
+      {
+          console.log("No ID provided.\nErgo: new item will be added")
+          //console.log(createID(true));
+          //basicout._id = createID(false);
+          //fillForm(basicout);
+          addit(basicout, function(res){
+            basicout._id = res.id;
+
+            //fillForm(basicout);
+
+            // if called from addNew: clearForm with the exeption
+
+            clearFormsAfterAdd();
+
+            //console.log(res);
+            if(res.ok == true)
+            {
+              swal({
+                text:"ADDED SUCCESSFULLY", toast:true,
+                timer:1200,showConfirmButton:false,
+                position:"center",customClass:"whiteletters"
+              });
+              updateItemBatch();
+            }
+            else {
+              swal({text:"ADD ERROR", toast:true,customClass:"whiteletters"});
+              console.log(res);
+            }
+
+          })
+
+      }
+      else
+      {
+        let missing = ["name","location"];
+        if (basicout.hasOwnProperty("name") &&  basicout.name != "")
+        {
+          missing.splice(missing.indexOf("name"),1)
+        }
+        if (basicout.hasOwnProperty("location"))
+        {
+            missing.splice(missing.indexOf("location"),1)
+        }
+
+        swal({
+            html:"please provide at least <br><b>"+missing+"</b>"
+            , toast:true, timer:2000,showConfirmButton:false, position:"center",
+            customClass:"whiteletters"
+        })
+        console.log("The basic data requirements are not met. please provide at"
+        +" least:...");
+      }
+    }
+
+};
+
+
+// soll: alle textinputfelder usw. in einem objekt zusammenfuegen und uebergeben:
+function getAllInputs()
+{
+
+  let output = {};
+
+  output._id = $("#_id").val() != "" ? $("#_id").val() : null ;
+  output.hyperlink = $("#hyperlink").html() != "" ? $("#hyperlink").html() : null
+  output.name = $("#addName").val() != "" ? $("#addName").val() : null ;
+  output.owners = $("#addOwners").html().replace(/ /g,"").split(",");
+  output.location = {
+    address: $("#address").val(),
+    description: $("#description").val(),
+    latitude: $("#latitude").val(),
+    longitude: $("#longitude").val(),
+    insideOf: $("#insideOf").val()
+  }
+  output.other = {
+    tags:$("#other\\.tags").tagsinput("items"),
+    visibility:[$("#other\\.visibility").val()],
+    description:$("#addDescription").val()
+  }
+  // add all inputs that start with other but other.tags to var output.other:
+  $('input[id^="other"]:not(#other\\.tags)').each(
+    function(){
+      // to do: do this split with dotize instead:
+      output.other[$(this).attr("id").split(".")[1]] = $(this).val();
+    }
+  )
+  //output.hyperlink = hyperlink;
+
+  //delete all empty bits:
+  $.each(output, function(key, value){
+    if (value === "" || value === null || value === undefined){
+        delete output[key];
+    }
+  });
+  $.each(output.location, function(key, value){
+    if (value === "" || value === null || value === undefined){
+        delete output.location[key];
+    }
+  });
+  if (!output.location.address && !output.location.description && !output.location.insideOf)
+  {
+    delete output.location;
+  }
+  $.each(output.other, function(key, value){
+    if (value === "" || value === null || value === undefined){
+        delete output.other[key];
+    }
+  });
+
+  console.log(output);
+  return output;
+
+};
+
+function clearFormsAfterAdd()
+{
+  $("#addName").val("");
+  $("#_id").val("");
+
+  $("#addPhoto").attr("src",addNew.urlStandInImg);
+
+  // location stays after Add
+  //$("#address").val(""),
+  //$("#description").val(""),
+  //$("#latitude").val(""),
+  //$("#longitude").val(""),
+  //$("#insideOf").val("")
+
+  //$("#other\\.tags").tagsinput("removeAll"),
+  //$("#other\\.visibility").val(""),
+  $("#addDescription").val("")
+
+  // clear all inputs that start with other but other.tags to var output.other:
+
+  /*
+  $('input[id^="other"]:not(#other\\.tags)').each(
+    function(){
+      // to do: do this split with dotize instead:
+      $(this).val("");
+    }
+  )
+  */
+}
+
+
+function clearForm(){
+  $("#addName").val("");
+  $("#_id").val("");
+
+  $("#addPhoto").attr("src",addNew.urlStandInImg);
+
+  $("#address").val("");
+  $("#description").val("");
+  $("#latitude").val("");
+  $("#longitude").val("");
+  $("#insideOf").val("");
+
+  $("#other\\.containerOf").html("");
+  $("#containerOf").hide();
+
+
+  $(".locationdescription").html("");
+  $("#insideOf_name").html("");
+  $("#insideOf_name").attr("href","");
+  updateInsideOfFlipSwitch(false);
+
+  $("#other\\.tags").tagsinput("removeAll");
+  $("#other\\.visibility").val("friends").change();
+
+  $("#addDescription").val("");
+
+  // clear all inputs that start with other but other.tags to var output.other:
+
+  $('input[id^="other"]:not(#other\\.tags)').each(
+    function(){
+      // to do: do this split with dotize instead:
+      $(this).val("");
+    }
+  )
+
+}
+
+function checkIfBasicDataProvided(object)
+{
+  console.log(object);
+  if (object.hasOwnProperty("name")
+    && object.hasOwnProperty("location"))
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+/// API FUNCTIONS ////
+
+
+//// ADD / update
+
+function addit(obj,callback=console.log)
+{
+  let data = {
+            "data":[{
+              "type":"addItems",
+              "doc":obj,
+            }]
+          };
+
+  // photo upload:
+  if ( document.getElementById("addPhoto").src !== addNew.urlStandInImg)
+  {
+    data.data[0].pic = document.getElementById("addPhoto").src;
+  }
+  console.log("attempting to add item to dingsda");
+  postAPI({
+      path:glb_username,
+      data:data,
+       callback: function(result){
+        callback(result)
+      }
+
+  });
+
+}
+
+
+function postAPI({path="", data =null, callback=console.log,
+                  error=function(err)
+                  {/*swal({text:err.responseText})*/;
+                  console.log(err.responseText);
+                  callback(err)
+                }})
+{
+
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+path,
+    data: JSON.stringify(data),
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: error
+    ,contentType:"application/json"
+  });
+
+}
+
+function getAPI({path="", data=null, callback=console.log, error=function(err)
+                  {console.log(err.responseText)}})
+{
+
+  $.ajax({
+    type: "GET",
+    url: API_BASE_URL+path,
+    data: data,
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: error
+    //,dataType: "application/json"
+    ,contentType:"application/json"
+  });
+
+}
+
+
+
+
+
+function fillForm(object)
+{
+
+  console.log(object);
+
+  if(object.hyperlink !== undefined && object.hyperlink !== ""){
+    $('#hyperlink').html(object.hyperlink);
+  }
+
+  $("#addPhoto").attr("src",object.hyperlink+"/pic_small.jpg");
+
+  // otherwise: start filling the form
+  if(object.other !== undefined)
+  {
+    if (object.other.borrowable === undefined){object.other.borrowable = "not"};
+    if (object.other.visibility === undefined){object.other.visibility = "not"};
+
+    $('#other\\.barcode').val(object.other.barcode);
+    $('#other\\.visibility').val(object.other.visibility).change();
+    //$('#other\\.borrowable').val(object.other.borrowable).change();
+    //$('#other\\.borrowby').val(object.other.borrowby).change();
+
+    $('#addDescription').val(object.other.description);
+    $('#other\\.value').val(object.other.value);
+    $('#other\\.weight').val(object.other.weight);
+    $('#other\\.madein').val(object.other.madein);
+    $('#other\\.count').val(object.other.count);
+    $('#other\\.tags').val( object.other.tags);
+
+    if(object.other.containerOf !== undefined && object.other.containerOf.length > 0 )
+    {
+      $('#containerOf').show()
+      $('#other\\.containerOf').html("");
+      for (item in object.other.containerOf)
+      {
+        let links = "";
+        links = links + '<a href=\'javascript:getSingleItem("'+
+        object.other.containerOf[item]+
+        '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();})\'>'+
+        object.other.containerOf[item]+' </a><br>'
+        getSingleItem(object.other.containerOf[item],function(res){
+            links = res.name + " : <br>" + links;
+            $('#other\\.containerOf').append(links);
+        });
+      }
+    }else{
+      $('#containerOf').hide()
+      $('#other\\.containerOf').html("");
+    }
+
+    for (item in object.other.tags)
+    {
+        $('#other\\.tags').tagsinput('add', object.other.tags[item]);
+    }
+  }
+
+  $('#_id').val(object._id);
+  $('#addName').val(object.name);
+  $('#addOwners').html(object.owners.toString());
+  //$('#location').val(object.location); // old version from location always string
+
+  //////////////////////////////////////
+  // LOCATION OBJECT w/ map plugin:
+  // TO DO: establish DOT NOTATION FOR LOCATION OBJECT!!!! (maybe include dotize???)
+
+  if(typeof object.location === 'string')
+  {
+    console.log("location is a string");
+    $('#description').val(object.location);
+    $('.locationdescription').html(object.location);
+  }
+  else if (object.location !== null && typeof object.location === 'object')
+  {
+    console.log("location is an object");
+    $('#description').val(object.location.description);
+    $('.locationdescription').html(object.location.description);
+    $('#address').val(object.location.address);
+    $('#latitude').val(object.location.latitude);
+    $('#longitude').val(object.location.longitude);
+    $('#insideOf').val(object.location.insideOf);
+      // fill also name of object in insideOf:
+    if (object.location.insideOf !== undefined && object.location.insideOf !== "")
+    {
+      $('.locationdescription').html(object.location.insideOf);
+      getSingleItem(object.location.insideOf,insideOfUpdated);
+      updateInsideOfFlipSwitch(true);
+    }
+    else {
+      updateInsideOfFlipSwitch(false);
+      $("#insideOf_name").html("");
+    }
+
+
+  }
+
+  ///////////////////////////////////////
+  if(gmapsExists) // if the gmaps locationpicker module exists:
+  {
+    refreshMap();
+  }
+
+};
+
+
+function updateit(obj,callback=console.log)
+{
+  console.log("trying to fetch originalObject from DB");
+  console.log(obj);
+
+  let path = API_BASE_URL+glb_username+"/"+obj._id;
+  if (obj.hyperlink !== undefined && obj.hyperlink != "")
+  { path = obj.hyperlink }
+
+  getSingleItem(path, function(res){
+
+      console.log(res);
+      console.log("merging oldObj and formContents");
+      let newObj = Object.assign({}, res, obj);
+      console.log(newObj);
+      console.log("attempting update of object");
+
+      let newdata = {
+          "data":[{
+            "type":"update",
+            "doc":newObj,
+            //pic:document.getElementById("preview_photo").src
+            //"doc":{_id:"33","other.visibility":["friends"]}
+          }]
+        }
+        let reloadAfterUpdate = false;
+        // photo upload:
+        if (document.getElementById("addPhoto").src.startsWith("data:image/jpeg;base64") )
+        {
+          console.log("PIC added to newdata!!!");
+          newdata.data[0].pic = document.getElementById("addPhoto").src;
+
+        }
+        //console.log(newdata);
+        // write into DB
+        $.ajax({
+          type: "POST",
+          url: path,
+          data: JSON.stringify(newdata),
+          success: function(res){
+            callback(res)
+          },
+          xhrFields: { withCredentials: true }, // to make AuthCookie ok
+          error: callback,
+          contentType:"application/json"
+        });
+    },
+    function(err){callback(err)}
+  )
+
+}
+
+function insideOfUpdated(res)
+{
+  if (res._id !== undefined)
+  {
+    $('#insideOf_name').html(res.name);
+    $('#insideOf_name').attr("href", 'javascript:getSingleItem("'+res._id+
+    '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();});')
+  }
+
+}
+
+</script>

@@ -1,0 +1,6 @@
+{
+  "name":"dingsda UI config",
+  "description":"config file with all configuration data needed to serve UI one and UI two",
+
+  "googlemapsAPIkey":"xxxxxxxxxxxxx"
+}

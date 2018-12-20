@@ -1,0 +1,19 @@
+{
+  "name":"dingsda server config",
+  "description":"config file with all configuration data needed to start server.js as well as push_server_https.js",
+
+  "DBadminPW":"demopassword",
+
+  "SSLkey":"/etc/letsencrypt/live/mypage/privkey.pem",
+  "SSLcert":"/etc/letsencrypt/live/mypage/fullchain.pem",
+
+  "instanceURL" :"https://mymainurl.com",
+  "databaseURL" : "http://localhost:5984/",
+  "API_PORT" : 3000,
+  "API_BASE_URL" : "/api/v1/",
+
+  "CORS_whitelist":["file://","undefined","http://localhost:8080","http://127.0.0.1:8080"],
+
+  "privateVapidkey":"privateVapidKeyforPushNotifications",
+  "publicVapidKey" : "publicVapidKeyforPushNotifications"
+}

@@ -1,0 +1,106 @@
+
+      testinput = {
+        description: "",
+        address: "",
+        latitude:"",
+        longitude:""
+      }
+
+
+      $(document).ready(function(){
+        // init
+          fillLocationForm(testinput)
+
+          $('#description').change(function(){
+            $('.locationdescription').html($('#description').val())
+          })
+
+          $('#getLocation').click(autoGetLocation);
+
+      })
+
+
+      const gmapsExists = true
+
+
+      function refreshMap()
+      {
+        let latitude = $('#latitude').val();
+        let longitude = $('#longitude').val();
+
+        if(latitude != "" && longitude != "")
+        {
+          $('#map').locationpicker({
+            radius: 0,
+            inputBinding: {
+                locationNameInput: $('#address'),
+                latitudeInput: $('#latitude'),
+                longitudeInput: $('#longitude')
+            },
+            location:{
+              latitude:latitude,
+              longitude:longitude
+            }
+
+          })
+
+          setTimeout(function() {
+
+            let out = $("#map").locationpicker("map").location.formattedAddress;
+            console.log(out);
+            $("#address").val(out)
+
+          },300)
+        }
+
+        // refresh map (should be inside of mapplugin)
+
+      }
+
+
+      function fillLocationForm(input){
+
+          $('#address').val(input.address);
+          $('#description').val(input.description);
+
+          $('#map').locationpicker({
+            location: {
+                latitude: input.latitude,
+                longitude: input.longitude
+            },
+            addressFormat:"House Number, Street Direction, Street Name, Street Suffix, City, State, Zip, Country",
+            radius: 0,
+            inputBinding: {
+                locationNameInput: $('#address'),
+                latitudeInput: $('#latitude'),
+                longitudeInput: $('#longitude')
+            },
+            enableAutocomplete: true
+          });
+      }
+
+      function autoGetLocation()
+      {
+        console.log("get location clicked");
+        if ("geolocation" in navigator)  {
+          console.log("trying to get geolocation from navigator");
+          /* geolocation is available*/
+          navigator.geolocation.getCurrentPosition(function(location) {
+          console.log(location.coords.latitude);
+          $('#latitude').val(location.coords.latitude);
+          console.log(location.coords.longitude);
+          $('#longitude').val(location.coords.longitude);
+          console.log(location.coords.accuracy);
+          setTimeout(function(){
+            refreshMap();
+          },1000);
+        },function(){
+          swal({html:"could not fetch location. <br><br>location services enabled?",
+           toast:true,customClass:"whiteletters",timer:3200,showConfirmButton:false});
+         })
+        } else {
+          /* geolocation IS NOT available */
+          console.log("geolocation API not available");
+        }
+
+      }

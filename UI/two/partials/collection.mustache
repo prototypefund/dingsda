@@ -1,0 +1,752 @@
+<div data-role="page" id="collection">
+  <style>
+    #collection{
+      margin-top: 0px;
+    }
+
+    #itemList{
+      margin-bottom: 5vh;
+    }
+
+    #filterform {
+      width: 100%;
+      bottom: 90px;
+      position: fixed;
+      z-index: 99;
+      background-color: white;
+      height: 0px;
+      font-size: 1.5em
+    }
+
+    .ui-listview .ui-li-has-thumb>img, .ui-listview
+    .ui-li-has-thumb>.ui-btn>img, .ui-listview .ui-li-has-thumb
+    .ui-li-thumb {
+      position: absolute;
+      left: 0;
+      top: 0;
+      max-height: 100%;
+      max-width: 50%;
+      z-index: 1;
+    }
+
+    .behindImg {
+      background-color: black;
+      height: 100%;
+      width: 50%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 0
+    }
+
+    .ui-listview>.ui-li-has-thumb>.ui-btn, .ui-listview>.ui-li-static.ui-li-has-thumb {
+      height: 7em;
+      padding-left: 51%;
+      white-space: normal;
+      overflow: hidden;
+      color: black;
+    }
+
+    .ui-listview span{
+        font-size: 0.9em;
+        display:block;
+        color: rgba(225,50,255,0.7);
+        line-height: 100% !important;
+    }
+
+    .ui-listview i{
+      /*color: #abcecc;*/
+      color: red;
+      font-size: 0.9em;
+    }
+
+    .ui-listview b{
+      color: black
+    }
+
+    .item{
+      overflow: scroll;
+      overflow: hidden; /*scroll would be cooler.*/
+    }
+
+    .chooseOverlay{
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      z-index: 50;
+      left: 0;
+      top: 0;
+      background-color: rgba(200, 200, 200, 0.0);
+    }
+
+    .itemCheckbox{
+      height:2em;
+      width: 2em;;
+      background-color: rgba(255,255,255,0.7);
+      border: 1px black solid;
+      left: 5px;
+      top: 5px;
+      border-radius: 25%;
+    }
+
+    .itemChecked span::after {
+      content: "\2713";
+      font-family: monospace;
+      font-size: 2em;
+      color: #0000008f;
+      margin-left: 0.2em;
+      margin-top: 0.2em;
+      position: absolute;
+    }
+
+    .itemChecked {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .borrowedItem {
+      background-color: lightblue !important;
+      text-shadow: none !important;
+    }
+
+    .borrowedItem::before{
+      font-size: 1em;
+      font-style: oblique;
+      z-index: 99;
+      position: absolute;
+      color: lightblue;
+      content: "  borrowed  ";
+      background: rgba(255,255,255,0.5);
+      left: 20px;
+      bottom:10px;
+      padding: 3px;
+    }
+
+
+    .loanedItem {
+      background-color: rgba(220,200,220,0.1) !important;
+      text-shadow: none !important;
+      opacity: 0.65
+    }
+
+    .loanedItem::before{
+      font-size: 1em;
+      font-style: oblique;
+      z-index: 99;
+      position: absolute;
+      color: #ff004c;
+      content: "  lent out  ";
+      background: rgba(255,255,255,0.7);
+      left: 20px;
+      bottom:10px;
+      padding: 3px;
+    }
+
+    .chooseButtons{
+      pointer-events: none;
+      position: fixed;
+      z-index: 9999;
+      top: -7px;
+      width: 100%;
+      left: 0;
+      display: none;
+    }
+
+    .btn_bulk_action{
+      pointer-events: all;
+      height: 3.8em;
+      text-shadow: 0px 0px 0px black !important;
+      background-color: #ff004c !important;
+      color: #fff2cd !important;
+      width: 100vw;
+      margin: 0;
+    }
+
+    .bulk_main_action {
+      background-color: #fff2cd !important;
+      color: black !important;
+    }
+
+    #btn_bulk_handover {
+      background-color: #fff2cd !important;
+      color: black !important;
+    }
+
+    #btn_bulk_move {
+      width: 100%;
+    }
+
+    #btn_mark_all{
+      pointer-events: all;
+      z-index: 33;
+      width: 9em;
+      font-size: 0.8em;
+      padding: 2px;
+      bottom: 4em;
+      height: 4em;
+      background-color: rgba(200,200,200,0.8);
+    }
+
+    #btn_endChooseMenu {
+      pointer-events: visible;
+      float: right;
+      width: 4em;
+      height: 4em;
+      padding: 3px;
+      font-size: 0.7em;
+      margin-right: 1em;
+      background-color: rgba(171, 207, 204,0.8);
+    }
+
+    #btn_bulk_carnet_pdf {
+      pointer-events: visible;
+      bottom: 3em;
+      right: 0;
+      opacity: 0.8;
+      width: 50vw;
+      background-color: rgba(0,0,0,0.8);
+      color: white;
+      text-shadow: none;
+    }
+
+    .overfooter{
+      bottom: -8px;
+      position: fixed;
+    }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+  <div  id="filterform">
+      <form class="ui-filterable" id=filterable>
+        <input id="filterinput" data-type="search"
+          placeholder="Filter by keywords..." aria-label="search input field">
+      </form>
+  </div>
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+
+    <div class="collectionview">
+
+    <ul id="itemList" data-role="listview" data-filter="true" data-input="#filterinput">
+
+      <li style="color:pink">no more items...</li>
+
+    </ul>
+
+    </div>
+    <div class="chooseButtons" data-role="button">
+      <button id="btn_bulk_delete" class="btn_bulk_action ">DELETE ITEMS</button>
+      <button id="btn_endChooseMenu">back</button>
+      <button id="btn_mark_all" class="overfooter">(un)check all</button>
+      <button id="btn_bulk_carnet_pdf" class="overfooter">Carnet ATA PDF</button>
+      <div class="overfooter ui-grid-a" style="width:100%">
+        <!--<button id="btn_bulk_handover" class="btn_bulk_action ui-block-a">HANDOVER ITEMS</button>-->
+        <button id="btn_bulk_move"
+        class="btn_bulk_action bulk_main_action ui-block-b">MOVE ITEMS</button>
+      </div>
+
+    </div>
+
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+<script>
+
+//// collection object is the global object containing all infos that other pages
+////  want to handover to collection or collection wants to remember
+let collection = {
+    searchQuery : {_id:""},
+    searchDB : "",
+    searchhistory:[],
+    chooseMode:false,
+    bulk:[]
+}
+
+function switchOffButtonListener()
+{
+  $('#btn_bulk_move').off('click');  // switch off button listener for overlay
+  $('#btn_bulk_delete').off('click'); // switch off button listener for overlay
+}
+
+
+$( document ).on( "pageshow", "#collection", function(e,ui) {
+    //console.log(window.location.search); console.log(ui.prevPage);
+    console.log("just loaded collection");
+
+    $("#btn_mark_all").click(function(){
+      $(".chooseOverlay:visible").toggleClass("itemChecked");
+    })
+
+    $("#btn_bulk_delete").click(function(){
+
+      getCheckedItems();
+      listChooseMode(); // end chooseMode
+      switchOffButtonListener()
+      deleteItems(collection.bulk);
+    })
+
+    $("#btn_bulk_move").click(function(){
+
+      getCheckedItems();
+      listChooseMode(); // end chooseMode
+      switchOffButtonListener();
+      $.mobile.changePage("#move");
+    })
+
+    $("#btn_bulk_handover").click(function(){
+
+      getCheckedItems();
+      listChooseMode(); // end chooseMode
+      $('#btn_bulk_handover').off('click');
+      $.mobile.changePage("#handover");
+    })
+
+    $("#btn_bulk_carnet_pdf").click(function(){
+      console.log("PDF clicked");
+      getCheckedItems();
+      listChooseMode(); // end chooseMode
+      //$('#btn_bulk_carnet_pdf').off('click');
+      //setTimeout(function(){$('#btn_bulk_carnet_pdf').on('click');},1000);
+      switchOffButtonListener();
+      downloadCarnetClicked(collection.bulk,true);
+    })
+
+    // prevent default pop up on hold and stuff:
+    $("body").on("contextmenu", "#itemList", function() { return false; });
+})
+
+$("#collection").swipeleft(function(){window.history.forward()});
+
+$("#collection").swiperight(function(){window.history.back()});
+
+
+// attach my own filter function to search input:
+$.mobile.document.on( "filterablecreate", "#collection", function() {
+    // changing jquery mobiles standard autocomplete for #itemList
+    $( "#itemList" ).filterable( "option", "filterCallback", function( index, searchValue ) {
+      //console.log(searchValue);
+      let keywords = searchValue.split(" ");
+      keywords = keywords.filter(function(e){return e}); // delete empty values
+
+      let matches = 0;
+
+      for (i in keywords)
+      {
+        if (  $(this).text().toLowerCase().includes(keywords[i]) )
+        {
+          matches++
+        }
+        else {
+          matches--
+        }
+      }
+
+      if (matches == keywords.length)
+      {
+        $(this).show()
+      }
+      else {
+        $(this).hide()
+      }
+
+    });
+});
+
+function getCheckedItems(){
+  collection.bulk = [];
+  let array = [];
+  $(".itemChecked").siblings(".hiddenJSON").each(
+    function(){collection.bulk.push(JSON.parse(this.innerText))})
+  console.log(collection.bulk);
+}
+
+/*
+<li>
+  <img src="https://cdn-learn.adafruit.com/guides/images/000/000/144/medium500/659_orig.jpg?1448301064"></img>
+  <div class="item">
+      <b>Flora Board</b><br>
+      <i>by Becky Stern</i><br>
+      <div class="address">in Berlin, 12053 Berlin, Germany, Morusstr. 30</div>
+      <span>This is a wonderful tool. A microcontroller, but build
+      so that you can even sew it into sth</span>
+  </div>
+</li>
+*/
+function makeItemCard(object){
+  let item = document.createElement('li');
+  $(item).addClass("itemInList");
+  if (object.inPossessionOf && !object.owners.includes(object.inPossessionOf))
+  {
+    if (object.owners.includes(glb_username))
+    {
+      $(item).addClass("loanedItem");
+    }
+    else {
+      $(item).addClass("borrowedItem");
+    }
+  }
+  let img = document.createElement('img');
+  let behindImg = document.createElement('div');
+  $(behindImg).addClass("behindImg");
+  let div = document.createElement('div');
+  let name = document.createElement('b');
+  let owners = document.createElement('i');
+  let address = document.createElement('div');
+  $(address).addClass("address");
+  let description = document.createElement('span');
+  let hidden = document.createElement('div');
+  $(hidden).hide();
+  $(hidden).addClass("hiddenJSON");
+  $(hidden).html(JSON.stringify(object));
+  let checkbox = document.createElement('div');
+  $(checkbox).addClass("chooseOverlay");
+  $(checkbox).hide();
+  $(checkbox).html('<span type="checkbox" class="itemCheckbox"></span>');
+
+  //img.src = "https://cdn-learn.adafruit.com/guides/images/000/000/144/medium500/659_orig.jpg?1448301064";
+  let idOrLink = object.hyperlink;
+  if (idOrLink == undefined || idOrLink == "")
+  { idOrLink = API_BASE_URL+collection.searchDB+"/"+object._id }
+  if (collection.searchDB !== "" && collection.searchDB !== undefined
+      && idOrLink !== undefined && !idOrLink.split("/").includes("undefined") )
+  {
+    img.src = idOrLink+"/pic_small.jpg";
+    $(img).attr("onerror",'null;this.src="icons/icon_512.png"');
+    /*getPicAttachment(idOrLink,function(res){
+      img.src = "data:image/jpeg;base64,"+res;
+    },function(err){console.log(err);});*/
+  }
+  else {
+    img.src = "icons/icon_512.png";
+    console.log("did not fetch a pic for: "+idOrLink+" from: "+collection.searchDB);
+  }
+
+  name.appendChild(document.createTextNode(object.name));
+
+  owners.appendChild(document.createTextNode(" by "+object.owners))
+  let addresslabel = object.location.address !== ""
+  && object.location.address !== undefined ? object.location.address : object.location.insideOf;
+  address.appendChild(document.createTextNode("in "+addresslabel))
+  description.appendChild(document.createTextNode(object.other.description))
+
+  item.appendChild(checkbox);
+  item.appendChild(img);
+  item.appendChild(behindImg);
+  item.appendChild(hidden);
+
+  div.appendChild(name);
+  div.appendChild(document.createElement("br"))
+  div.appendChild(owners);
+  div.appendChild(document.createElement("br"))
+  div.appendChild(address);
+  div.appendChild(document.createElement("br"))
+  div.appendChild(description);
+
+  $(div).addClass("item");
+  item.appendChild(div);
+  return item;
+}
+
+
+
+function drawItemCards(objects){
+
+  //$("#itemList .item").parent().remove();
+
+  // flag to  hide items with hyperlink containing users DB if we look at public items
+  //  (where we do not want to see our own stuff, right?!)
+  let lookingAtPublicDB = collection.searchDB.includes("public") || collection.searchDB.includes("friends")
+
+  for (i in objects)
+  {
+    let fromMyOwnDB = (objects[i].hyperlink.split("/").slice(-2)[0] === glb_username);
+
+    if ((!lookingAtPublicDB) || (lookingAtPublicDB && !fromMyOwnDB))
+    {
+      let item = makeItemCard(objects[i]);
+      $("#itemList").prepend(item);
+
+      $("#itemList").listview('refresh');
+    }
+    else {
+      //console.log("deleted "+objects[i].name+" from objects");
+      delete objects[i]
+    }
+
+  }
+  objects = objects.filter(function(val){return val}); // remove all undefined from array
+
+  // set global variable collection.detailView
+  if(collection){
+    
+    collection.searchhistory.unshift(objects);
+    // if more than 3 searches in history: delete oldest one:
+    if (collection.searchhistory.length > 3){ collection.searchhistory.pop() }
+  }
+
+  $("#loadingGif").hide();
+
+// listen for clicks on listitems and open item in detailView:
+  addItemCardClickListener();
+
+  if (!lookingAtPublicDB)
+  {
+    getItemsInMyPossesion(); // always???
+  }
+
+}
+
+function addItemCardClickListener(){
+  $(".itemInList").off("click");
+  $(".itemInList").click(function(e){
+    console.log("item in list clicked:");
+    if (collection.chooseMode)
+    {
+      $($(e.currentTarget).children()[0]).toggleClass("itemChecked");
+    }
+    else
+    {
+      let doc = $(e.currentTarget).children()[3].innerHTML;
+      // go to itemDetail and set itemDetails variable to choosenItem:
+      if(itemDetails){
+        itemDetails.itemInFocus=JSON.parse(doc);
+      }
+      $.mobile.pageContainer.pagecontainer("change", "#itemDetails");
+      //window.location.href = ("http://localhost:8080#itemDetails?data=test")
+    }
+
+  })
+
+  // listen for tapholds on listitems, change to listChoose mode & mark item tapped
+    $(".itemInList").off("taphold");
+    $(".itemInList").taphold(function(e){
+      console.log("item in list marked by taphold. Enterting listChooseMode:");
+      //console.log(e.currentTarget);
+      listChooseMode(e.currentTarget);
+
+    },300)
+}
+
+function listChooseMode(target){
+  if (target !== undefined && !collection.chooseMode)
+  {
+    //$(".itemChecked").removeClass("itemChecked");
+    $(".chooseOverlay").show();
+    $(".chooseButtons").show();
+    console.log(target);
+    collection.chooseMode=true;
+
+    $("#btn_endChooseMenu").click(function(){listChooseMode()}); // end chooseMode
+  }
+  else {
+    //switch back to normal listmode
+    $(".chooseOverlay").hide();
+    $(".chooseButtons").hide();
+    collection.chooseMode=false;
+  }
+}
+
+function countItemsInDB(callback=console.log){
+  $.ajax({
+    type: "GET",
+    url: API_BASE_URL+glb_username,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    success: function(result){
+       callback(result.doc_count-2);
+    },
+    error: function(err){console.log(err);},
+    contentType:"application/json"
+  });
+}
+
+function updateItemBatch(){
+  countItemsInDB(function(res){
+    $(".collection_icon").addClass("anim_heartbeat");
+    setTimeout(function(){
+      $(".collection_badge").html(res);
+      $(".collection_icon").removeClass("anim_heartbeat");
+      $(".collection_badge").addClass("anim_hop");
+      setTimeout(function(){$(".collection_badge").removeClass("anim_hop")},1050);
+    },300);
+  })
+}
+
+function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log){
+    console.log(`sending find Request to ${db}`);
+
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL+db,
+      data: JSON.stringify({
+            	"data":[{
+            		"type":"findItems",
+            		"doc":searchTerm
+            	}]
+            }),
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      success: function(result){
+         callback(result.docs)
+      },
+      error: err,
+      contentType:"application/json"
+    });
+}
+
+function deleteItems(items)
+{
+  $.when($.each(items, function(){
+      removeit(this._id,function(res){
+        console.log(res);
+      });
+  })).done(function(){
+    showToast("items will be deleted",900);
+    setTimeout(function(){
+      refreshCollection();
+      updateItemBatch();
+    },1000);
+  })
+}
+
+function removeit(id, callbackdel=console.log)
+{
+  console.log("removeit function triggered!!!");
+  if (id == "" || id == undefined)
+  {
+    return
+  }
+
+  console.log("trying to fetch originalObject from DB");
+
+  getAPI({
+    path:glb_username+"/"+id,
+    data:{
+      "data":[{
+        "type":"fetch"
+      }]
+    },
+    callback: function(res){
+
+      console.log(res);
+      console.log("attempting DELETE of object");
+
+      let deletedata = {
+          "data":[{
+            "type":"deleteItems",
+            "doc":res,
+          }]
+        }
+
+      postAPI({
+          path:glb_username+"/"+id,
+          data:deletedata,
+            callback: function(result){
+            callbackdel(result)
+            console.log("DELETED "+id+" successfully");
+            console.log(result);
+          },
+          error: function(err){
+            console.log("error in deleteit delete");
+            callbackdel(err)
+          }
+
+      });
+    },
+    error: function(err){
+      console.log("error in deleteit prefetch");
+      callbackdel(err)
+    }
+  })
+
+}
+
+
+console.log($.mobile.document);
+
+
+
+
+
+
+
+/*////////////////////////
+CARNET ATA STUFF
+*//////////////////////////
+
+function downloadCarnetClicked(items, pdf=false){
+  console.log(items);
+  let carnetArray = [];
+  for (i in items){
+    carnetArray.push(items[i]._id);
+  }
+  console.log(carnetArray);
+  if (pdf){
+      openCarnetPDF(carnetArray)
+      //renderCarnetATApdf(carnetArray);
+  }
+  else {
+    postAPI({
+        path:glb_username,
+        data:{
+                "data":[{
+                  "type":"getCarnet",
+                  "filetype":"csv",
+                  "ids":carnetArray
+                }]
+              },
+         callback: function(result){
+          //console.log(result[0]);
+          let myblob = new Blob([result],{type:'text/csv;charset=utf-8;'});
+          if (navigator.msSaveBlob) { //IE10
+              navigator.msSaveBlob(myblob, "carnetATA.csv");
+          } else {
+              let l = document.createElement("a");
+              if (l.download !== undefined) {
+                  let uri = URL.createObjectURL(myblob);
+                  l.setAttribute("href", uri);
+                  l.setAttribute("download", "carnetATA.csv");
+                  l.style.visibility = 'hidden';
+                  document.body.appendChild(l);
+                  l.click(); // does not work in ios because ajax request before
+                  document.body.removeChild(l);
+              }
+          }
+
+        }
+
+    });
+  }
+
+}
+
+
+function openCarnetPDF(ids=undefined)
+{
+  //let win = window.open();
+  postAPI({
+      path:glb_username,
+      data:{
+            	"data":[{
+            		"type":"getCarnet",
+            		"filetype":"json",
+                "ids":ids
+
+            	}]
+            },
+       callback: function(result){
+        console.log("show results of getCarnet:");
+        console.log(result);
+
+        renderCarnetATApdf(result);
+      }
+
+  });
+}
+
+
+
+</script>

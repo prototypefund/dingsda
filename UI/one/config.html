@@ -1,0 +1,628 @@
+<!--
+STANDALONE CONFIG in case dingsda UI one need a single page solution instead of
+modals/pop ups etc.
+-->
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
+
+    <script src="./assets/jquery-1.8.min.js"></script>
+
+
+    <link rel="stylesheet" type="text/css" href="./css/style.css" />
+    <style>
+      *{
+        font-family: Futura,Trebuchet, Arial, sans-serif;
+        color: #e1ddea;
+      }
+
+      body{
+        background-color: #4b4068;
+      }
+
+      .switchcontainer {
+        width: 100vw;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+      }
+
+      .onoffswitch {
+        margin: 1em;
+        position: relative; width: 300px;
+        -webkit-user-select:none; -moz-user-select:none; -ms-user-select: none;
+      }
+      .onoffswitch-checkbox {
+          display: none;
+      }
+      .onoffswitch-label {
+          display: block; overflow: hidden; cursor: pointer;
+          border: 2px solid #E3E3E3; border-radius: 50px;
+      }
+      .onoffswitch-inner {
+          display: block; width: 200%; margin-left: -100%;
+          transition: margin 0.3s ease-in 0s;
+      }
+      .onoffswitch-inner:before, .onoffswitch-inner:after {
+          display: block; float: left; width: 50%; height: 30px; padding: 0; line-height: 30px;
+          font-size: 13px; color: white; font-family: Trebuchet, Arial, sans-serif; font-weight: bold;
+          box-sizing: border-box;
+      }
+      .onoffswitch-inner:before {
+          /*content: "visibility in search";*/
+          padding-left: 5px;
+          text-align: center;
+          /*background-color: #F0F0F0; */
+          background-color: #dfe9fb;
+          color: #403759;
+      }
+      .onoffswitch-inner:after {
+          /*content: "visibility not in search";*/
+          padding-right: 10px;
+          background-color: #dfe9fb;
+          color: #8879ad;
+          text-align: right;
+      }
+      .onoffswitch-switch {
+          display: block; width: 28px; margin: 2px;
+          background: #a59ac1;
+          position: absolute; top: 0; bottom: 0;
+          right: 260px;
+          border: 2px solid #E3E3E3; border-radius: 50px;
+          transition: all 0.3s ease-in 0s;
+      }
+      .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-inner {
+          margin-left: 0;
+      }
+      .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+          right: 0px;
+          background-color: #403759;
+      }
+
+      #includeVisiblityInSearch_inner:before{
+        content: "visibility in search";
+      }
+      #includeVisiblityInSearch_inner:after{
+        content: "visibility in search";
+      }
+
+      #includeBorrowableInSearch_inner:before{
+        content: "borrowable in search";
+      }
+      #includeBorrowableInSearch_inner:after{
+        content: "borrowable in search";
+      }
+
+      #clearFormsAfterAdd_inner:before{
+        content: "clear forms after new item";
+      }
+      #clearFormsAfterAdd_inner:after{
+        content: "clear forms after new item";
+      }
+
+      #clearFormsAfterUpdate_inner:before{
+        content: "clear forms after item update";
+      }
+      #clearFormsAfterUpdate_inner:after{
+        content: "clear forms after item update";
+      }
+
+      .fieldsNotToClear{
+          border-color: #e1ddea;
+      }
+
+      .title {
+        text-align: center;
+        width: 100%;
+        margin-top: 0;
+        margin-bottom: 1em;
+        background-color: #362e4a;
+      }
+
+      #id_inner:before{
+        content: "id";
+      }
+      #id_inner:after{
+        content: "id";
+      }
+
+      #name_inner:before{
+        content: "name";
+      }
+      #name_inner:after{
+        content: "name";
+      }
+
+      #location_inner:before{
+        content: "location";
+      }
+      #location_inner:after{
+        content: "location";
+      }
+
+      #barcode_inner:before{
+        content: "barcode";
+      }
+      #barcode_inner:after{
+        content: "barcode";
+      }
+
+      #owners_inner:before{
+        content: "owners";
+      }
+      #owners_inner:after{
+        content: "owners";
+      }
+
+      #picture_inner:before{
+        content: "picture";
+      }
+      #picture_inner:after{
+        content: "picture";
+      }
+
+      #tags_inner:before{
+        content: "tags/keywords";
+      }
+      #tags_inner:after{
+        content: "tags/keywords";
+      }
+
+      #price_inner:before{
+        content: "price";
+      }
+      #price_inner:after{
+        content: "price";
+      }
+
+      #country_inner:before{
+        content: "country of origin";
+      }
+      #country_inner:after{
+        content: "country of origin";
+      }
+
+      #count_inner:before{
+        content: "count/number of pieces";
+      }
+      #count_inner:after{
+        content: "count/number of pieces";
+      }
+
+      #weight_inner:before{
+        content: "weight";
+      }
+      #weight_inner:after{
+        content: "weight";
+      }
+
+      #visibility_inner:before{
+        content: "visibility";
+      }
+      #visibility_inner:after{
+        content: "visibility";
+      }
+
+      .btn_back {
+        background-color: rgba(0,0,0,0.1);
+        border-radius: 10em;
+      }
+
+    </style>
+
+    <title>  DINGSDA UI config </title>
+  </head>
+  <body>
+
+
+      <div class="title">
+        <br>
+        <p>UserInterface ONE configuration</p>
+        <button class="btn_back">back to dingsda</button>
+      </div>
+
+      <div class="title">
+        <p>fields to be cleared on clear:</p>
+      </div>
+
+    <div class="switchcontainer">
+      <div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="id">
+          <label class="onoffswitch-label" for="id">
+              <span id="id_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="name">
+          <label class="onoffswitch-label" for="name">
+              <span id="name_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="location">
+          <label class="onoffswitch-label" for="location">
+              <span id="location_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="owners">
+          <label class="onoffswitch-label" for="owners">
+              <span id="owners_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="barcode">
+          <label class="onoffswitch-label" for="barcode">
+              <span id="barcode_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="picture">
+          <label class="onoffswitch-label" for="picture">
+              <span id="picture_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="weight">
+          <label class="onoffswitch-label" for="weight">
+              <span id="weight_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="price">
+          <label class="onoffswitch-label" for="price">
+              <span id="price_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="country">
+          <label class="onoffswitch-label" for="country">
+              <span id="country_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="tags">
+          <label class="onoffswitch-label" for="tags">
+              <span id="tags_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+        <div class="onoffswitch">
+          <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox clearer"
+          id="visibility">
+          <label class="onoffswitch-label" for="visibility">
+              <span id="visibility_inner" class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch fieldsNotToClear"></span>
+          </label>
+        </div>
+
+    </div>
+  </div>
+
+      <div class="title">
+        <p>basic config:</p>
+      </div>
+
+  <div class="switchcontainer">
+    <div>
+
+      <div class="onoffswitch">
+        <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox"
+        id="includeVisiblityInSearch">
+        <label class="onoffswitch-label" for="includeVisiblityInSearch">
+            <span id="includeVisiblityInSearch_inner" class="onoffswitch-inner"></span>
+            <span class="onoffswitch-switch"></span>
+        </label>
+      </div>
+<!--
+      <div class="onoffswitch">
+        <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox"
+        id="includeBorrowableInSearch">
+        <label class="onoffswitch-label" for="includeBorrowableInSearch">
+            <span id="includeBorrowableInSearch_inner" class="onoffswitch-inner"></span>
+            <span class="onoffswitch-switch"></span>
+        </label>
+      </div>
+-->
+      <div class="onoffswitch">
+        <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox"
+        id="clearFormsAfterAdd">
+        <label class="onoffswitch-label" for="clearFormsAfterAdd">
+            <span id="clearFormsAfterAdd_inner" class="onoffswitch-inner"></span>
+            <span class="onoffswitch-switch"></span>
+        </label>
+      </div>
+
+      <div class="onoffswitch">
+        <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox"
+        id="clearFormsAfterUpdate">
+        <label class="onoffswitch-label" for="clearFormsAfterUpdate">
+            <span id="clearFormsAfterUpdate_inner" class="onoffswitch-inner"></span>
+            <span class="onoffswitch-switch"></span>
+        </label>
+      </div>
+
+    </div>
+
+</div>
+
+<div width="100%" class="switchcontainer">
+  <button class="btn_back">back to dingsda</button>
+</div>
+<br><br>
+
+
+<script>
+
+
+const app_BASE_URL = "https://dingsda.org/dingsda-prepublic/UI/one/";
+const API_BASE_URL = "https://dingsda.org:3000/api/v1/";
+let glb_username = "";
+
+let config = {
+  _id:"config_one",
+  name:"config UI one",
+  location:"database",
+  owners:[glb_username],
+  searchIn:[], // DBs to search in for Items NOT YET SUPPORTED
+  barcodeApp: "Quagga", // app:// uri to Scanner App OR (default) Quagga
+
+  upcitemdb_com: "", // key for API of upcitemdb.com (best! works 100x a day w/o)
+  upcdatabase_com: "",// key for API of upcdatabase.com
+  upcdatabase_org: "", // key for API of upcdatabase.org
+
+  includeVisiblityInSearch: false,
+  includeBorrowableInSearch: false,
+  clearFormsAfterAdd: false,
+  clearFormsAfterUpdate: false,
+  // Array of names of fields that should be cleared by clearForms():
+  fieldsNotToClear:["owners","location"],
+}
+
+loginAndGetConfig();
+
+$('.onoffswitch').change(getconfig)
+$('.btn_back').click(function(){
+  window.location.href = 'https://dingsda.org/UI?map=true'
+})
+
+function getconfig (){
+  $('.onoffswitch-checkbox').each(function(){
+    console.log(this.id + " : " + this.checked);
+    if (this.classList.contains("clearer"))
+    {
+      if (this.checked){
+        let index = config.fieldsNotToClear.indexOf(this.id);
+        if (index == -1) config.fieldsNotToClear.push(this.id);
+        //console.log(config);
+      }
+      else {
+        let index = config.fieldsNotToClear.indexOf(this.id);
+        if (index !== -1) config.fieldsNotToClear.splice(index, 1);
+        //console.log(config);
+      }
+
+    }
+    else {
+        config[this.id] = this.checked;
+    }
+
+  })
+
+  updateConfig(config);
+
+}
+
+
+
+function initMenu()
+{
+  $(".clearer").each(function(){
+      this.checked = (config.fieldsNotToClear.indexOf(this.id) !=-1);
+  })
+
+  $(".onoffswitch-checkbox").each(function(){
+
+    if (this.classList.contains("clearer") == false)
+    {
+      this.checked = config[this.id];
+    }
+
+  })
+
+
+}
+
+
+
+function loginAndGetConfig()
+{
+  getAPI({
+      data:{ },
+      callback: function(res){
+        console.log(res);
+        if (res.username)
+        {
+            glb_username = res.username;
+            console.log("you are logged in already as "+ glb_username);
+
+            getAPI({
+              path:glb_username+"/"+"config_one",
+              data:{
+                "data":[{
+                  "type":"fetch"
+                }]
+              },
+              callback: function(res){
+                console.log("new config received");
+                console.log(res);
+                if(res != "missing" && res != "deleted")
+                {
+                  config = res;
+                  initMenu();
+                }
+              }
+
+          })
+        }
+      },
+      error: function(err){
+        console.log(err);
+        //loginPopUp();
+        alert("ERROR. please go back to UI and log in again")
+
+      }
+  })
+}
+
+
+//// DB functions from app.js
+
+function postAPI({path="", data =null, callback=console.log,
+                  error=function(err)
+                  {/*swal({text:err.responseText})*/;
+                  console.log(err.responseText);
+                  callback(err)
+                }})
+{
+
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+path,
+    data: JSON.stringify(data),
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: error
+    ,contentType:"application/json"
+  });
+
+}
+
+function getAPI({path="", data=null, callback=console.log, error=function(err)
+                  {console.log(err.responseText)}})
+{
+
+  $.ajax({
+    type: "GET",
+    url: API_BASE_URL+path,
+    data: data,
+    success: callback,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: error
+    //,dataType: "application/json"
+    ,contentType:"application/json"
+  });
+
+}
+
+
+function updateConfig(obj,callback=console.log)
+{
+  console.log("trying to fetch originalObject from DB");
+
+  getAPI({
+    path:glb_username+"/"+"config_one",
+    data:{
+      "data":[{
+        "type":"fetch"
+      }]
+    },
+    callback: function(res){
+      if (res != "missing")
+      {
+        console.log(res);
+        console.log("merging oldObj and formContents");
+        let newObj = Object.assign({}, res, obj);
+        console.log(newObj);
+        console.log("attempting update of object");
+
+        let newdata = {
+            "data":[{
+              "type":"update",
+              "doc":newObj,
+            }]
+          }
+
+        postAPI({
+            path:glb_username+"/"+"config_one",
+            data:newdata,
+              callback: function(result){
+              callback(result)
+              console.log("updated successfully");
+              console.log(result);
+              config._rev = result.rev;
+              console.log("updated config rev");
+            },
+            error: function(err){callback(err)}
+
+        });
+      }
+      else {
+        console.log("no config found. adding it");
+        postAPI({
+            path:glb_username,
+            data:{"data":[{
+              "type":"updateItems",
+              "doc":obj
+            }]},
+              callback: function(result){
+              callback(result)
+              console.log("updated successfully");
+              console.log(result);
+            },
+            error: function(err){callback(err)}
+
+        });
+      }
+
+
+    },
+    error: function(err){callback(err)}
+  })
+
+}
+
+
+
+</script>
+
+
+  </body>
+</html>

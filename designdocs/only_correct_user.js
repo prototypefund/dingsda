@@ -30,7 +30,9 @@ ddoc.validate_doc_update = function (newDoc, oldDoc, userCtx, secObj) {
 
     var isAdmin = userCtx.roles.indexOf('_admin') > -1;
     var isDBadmin = secObj.admins.names.indexOf(userCtx.name) > -1;
-    if (oldDoc)
+
+
+    if (oldDoc && oldDoc.owners)
     {
         var isOwner = oldDoc.owners.indexOf(userCtx.name) > -1;
     }
