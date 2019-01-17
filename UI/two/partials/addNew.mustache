@@ -141,6 +141,12 @@
     .smallfont {font-size: 6px !important;line-height: 50%}
     .mediumfont {font-size: 12px !important;line-height: 100%}
 
+
+    /* overwriting eaysautocompletes behaviour */
+    .easy-autocomplete{
+      width:100% !important
+    }
+
   </style>
 
   <!-- HEADER TEMPLATE -->
@@ -305,6 +311,45 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
       })
       $("#btn_add_next").html("SAVE EDITS");
     }
+
+    // bind easyAutocomplete to insideOf
+    var options = {
+      //url: "alldocs.json",
+
+      data: collection.searchhistory[0],
+
+      getValue: "name",
+
+      list: {
+        match: {
+          enabled: true
+        },
+        maxNumberOfElements: 8,
+        onSelectItemEvent: function() {
+    			var value = $("#insideOf").getSelectedItemData()._id;
+          console.log("doing "+ value);
+    			$("#insideOf").val(value).trigger("change");
+    		}
+      },
+
+      template: {
+        type: "custom",
+        method: function(value, item) {
+          console.log(value);
+          console.log(item);
+          return "<span class='flag flag-" + item + "' ></span>" + value;
+        }
+      },
+
+      /*theme: "round",*/
+
+      ajaxSettings: {
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      }
+
+    };
+    $("#insideOf").easyAutocomplete(options);
+
 
 })
 
@@ -875,27 +920,39 @@ function fillForm(object)
     $('#other\\.count').val(object.other.count);
     $('#other\\.tags').val( object.other.tags);
 
-    if(object.other.containerOf !== undefined && object.other.containerOf.length > 0 )
-    {
-      $('#containerOf').show()
-      $('#other\\.containerOf').html("");
-      for (item in object.other.containerOf)
+    /*
+    fetch containerOf doc of this item
+    and show containerOf fields if not empty:
+    (changed with betterContainerOf branch)
+    */
+    console.log("fetching -containerOf");
+    getSingleItem(object.hyperlink+"-containerOf",function(res){
+      console.log("-containerOf:");console.log(res);
+      if(res.containerOf !== undefined && res.containerOf.length > 0 )
       {
-        let links = "";
-        links = links + '<a href=\'javascript:getSingleItem("'+
-        object.other.containerOf[item]+
-        '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();})\'>'+
-        object.other.containerOf[item]+' </a><br>'
-        getSingleItem(object.other.containerOf[item],function(res){
-            links = res.name + " : <br>" + links;
-            $('#other\\.containerOf').append(links);
-        });
+        $('#containerOf').show();
+        $('#other\\.containerOf').html("");
+        for (item in res.containerOf)
+        {
+          let links = "";
+          links = links + '<a href=\'javascript:getSingleItem("'+
+          res.containerOf[item]+
+          '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();})\'>'+
+          res.containerOf[item]+' </a><br>'
+          getSingleItem(res.containerOf[item],function(res2){
+              links = res2.name + " : <br>" + links;
+              $('#other\\.containerOf').append(links);
+          });
+        }
+      }else{
+        $('#containerOf').hide()
+        $('#other\\.containerOf').html("");
       }
-    }else{
-      $('#containerOf').hide()
-      $('#other\\.containerOf').html("");
-    }
 
+    });
+
+
+    $("#other\\.tags").tagsinput("removeAll");
     for (item in object.other.tags)
     {
         $('#other\\.tags').tagsinput('add', object.other.tags[item]);

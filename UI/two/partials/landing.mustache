@@ -76,13 +76,15 @@ function btn_collection_clicked(reload=false){
    refreshCollection();
 }
 
-function refreshCollection(callback=console.log){
+function refreshCollection(callback=console.log,draw=true){
   $("#loadingGif").show();
   $("#itemList .item").parent().remove();
   setTimeout(function(){
       searchDB(collection.searchDB,collection.searchquery,function(inp){
-        drawItemCards(inp);
-        callback();
+        if(draw){
+          drawItemCards(inp);
+        }
+        callback(inp);
       });
   },100)
 
@@ -90,6 +92,7 @@ function refreshCollection(callback=console.log){
 
 function getItemsInMyPossesion(callback=console.log){
   getSingleItem("&inMyPossession",function(inMyPossesion){
+    //updateBorrowItemsBatch(inMyPossesion.things.length)
     for (item of inMyPossesion.things)
     {
       getSingleItem(item,function(object){
@@ -101,7 +104,6 @@ function getItemsInMyPossesion(callback=console.log){
       })
     }
   })
-
 }
 
 function btn_searchpage_clicked(){

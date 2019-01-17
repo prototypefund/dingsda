@@ -1,4 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: server.js</title>
 
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: server.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>
 /*
     BUG: !!!!!: atm only check for read rights is done if thingrequest.
     for find() we have to do that on DBLevel as well as on instanceLevel!!!!!
@@ -149,9 +177,9 @@ EXPRESS SERVER END
 ///////////////////////////////////////*/
 
 /**
-request handler. manages all incoming requests on thing level.<br>
-This means: all requests addressing only a single item/doc in the database<br>
-<br>
+request handler. manages all incoming requests on thing level.&lt;br>
+This means: all requests addressing only a single item/doc in the database&lt;br>
+&lt;br>
 checks for requests HTTP verb ( GET / POST ) as well as the requests JSON payload
 and forwards request and response object to the different thinglevel document
 functions.
@@ -166,10 +194,10 @@ function dingsCommander(req,res)
   {
     fetch(req,res);
   }
-  else if (req.method == "POST" && req.body.data !== undefined)
+  else if (req.method == "POST" &amp;&amp; req.body.data !== undefined)
   {
     // does .data contain more than one query? if only array but one item put item into body.data
-    if (!Array.isArray(req.body.data) || (req.body.data.length == 1 && (req.body.data=req.body.data[0])))
+    if (!Array.isArray(req.body.data) || (req.body.data.length == 1 &amp;&amp; (req.body.data=req.body.data[0])))
     {
       switch(req.body.data.type) {
           case "fetch":
@@ -208,9 +236,9 @@ function dingsCommander(req,res)
 }
 
 /**
-request handler. manages all incoming requests on database level.<br>
+request handler. manages all incoming requests on database level.&lt;br>
 This means: all requests addressing a single database (most of the times a users DB)
-<br><br>
+&lt;br>&lt;br>
 checks for requests HTTP verb ( GET / POST ) as well as the requests JSON payload
 and forwards request and response object to the different database level functions.
 
@@ -227,10 +255,10 @@ function DBCommander(req,res)
       res.send(body);
     })
   }
-  else if (req.method == "POST" && req.body.data !== undefined)
+  else if (req.method == "POST" &amp;&amp; req.body.data !== undefined)
   {
     // does .data contain more than one query? if only array but one item put item into body.data
-    if (!Array.isArray(req.body.data) || (req.body.data.length == 1 && (req.body.data=req.body.data[0])))
+    if (!Array.isArray(req.body.data) || (req.body.data.length == 1 &amp;&amp; (req.body.data=req.body.data[0])))
     {
       switch(req.body.data.type.toLowerCase()) {
           case "finditems":
@@ -279,9 +307,9 @@ function DBCommander(req,res)
 }
 
 /**
-request handler. manages all incoming requests on instance level.<br>
+request handler. manages all incoming requests on instance level.&lt;br>
 This means: all requests the complete server instance (e.g. https://dingsda.org:3000/api/v1/)
-<br><br>
+&lt;br>&lt;br>
 checks for requests HTTP verb ( GET / POST / DELETE ) as well as the requests JSON payload
 and forwards request and response object to the different functions.
 
@@ -301,9 +329,9 @@ function instanceCommander(req,res)
     */
     return res.send({"username":req.username})
   }
-  else if (req.method == "POST" && req.body.data !== undefined)
+  else if (req.method == "POST" &amp;&amp; req.body.data !== undefined)
   {
-    if (!Array.isArray(req.body.data) || (req.body.data.length == 1 && (req.body.data=req.body.data[0])))
+    if (!Array.isArray(req.body.data) || (req.body.data.length == 1 &amp;&amp; (req.body.data=req.body.data[0])))
     {
       switch(req.body.data.type.toLowerCase())
       {
@@ -341,7 +369,7 @@ function instanceCommander(req,res)
 
 
 /**
-thing level function.<br>
+thing level function.&lt;br>
 gets item requested by request url target ID (https:xxx/api/v1/xxxx/ID/xxxxx) from database
 if an attachment is also requested via request url (https:xxx/api/v1/xxxxx/xxxx/ATTACHMENT)
 the attachment is added to the response payload instead of document
@@ -405,14 +433,14 @@ function fetch(req,res)
 
 
 /**
-thing level function.<br>
+thing level function.&lt;br>
 announces the handover of a phyisical thing from the user sending the request to
-another user (defined in req payload .data.username).<br>
-writes notifications into &notifications doc of user sending the request as well
-as into &notifications doc of user that is allegedely receiving the item defined
+another user (defined in req payload .data.username).&lt;br>
+writes notifications into &amp;notifications doc of user sending the request as well
+as into &amp;notifications doc of user that is allegedely receiving the item defined
 by url path of request (target[1])
 
-@TODO change after &notifications doc became &notifications database
+@TODO change after &amp;notifications doc became &amp;notifications database
 
 @param {Object} req - request object from express app
 @param {Object} res - response object from express app
@@ -460,18 +488,18 @@ function handover_announce(req,res)
         // if handover is requested for a thing owned by the user themselves OR
         //  by somebody currently in Possession of the thing with goal of returning it to its owners:
         if (req.targets[0] === req.username || doc.owners.includes(req.username) ||
-            (doc.inPossessionOf && doc.inPossessionOf.includes(req.username) &&
+            (doc.inPossessionOf &amp;&amp; doc.inPossessionOf.includes(req.username) &amp;&amp;
             doc.owners.includes(req.body.data.username))
            )
         {
-    // TODO:  CHECK IF FRIENDS OR IF borrower/&notifications.requested includes id of item
+    // TODO:  CHECK IF FRIENDS OR IF borrower/&amp;notifications.requested includes id of item
     // TODO:  CHECK IF OPEN OTHER handover annoncments in my and others Notifications and if delete those before continueing
           console.log("legal handover announcement by owner");
 
           // if Lender has no pending handovers for this item, add this item to pending:
-          return dbLender.get("&notifications").then((notifications) => {
+          return dbLender.get("&amp;notifications").then((notifications) => {
             console.log(notifications);
-            if (notifications.pending["handover_await"] !== undefined &&
+            if (notifications.pending["handover_await"] !== undefined &amp;&amp;
                 notifications.pending["handover_await"][req.targets[1]] === undefined )
                 {
                   console.log("handover_await exists and will be written");
@@ -486,7 +514,7 @@ function handover_announce(req,res)
 
                       // add counter notification to Borrowers DB as well:
 
-                      return dbBorrower.get("&notifications").then((notificationsBorrower) => {
+                      return dbBorrower.get("&amp;notifications").then((notificationsBorrower) => {
 
                           notificationsBorrower.pending.handover_confirm[req.targets[1]] =
                                   {
@@ -526,7 +554,7 @@ function handover_announce(req,res)
         res.statusCode = err.statusCode;
         return res.send(""+err.reason)
       });
-      // <<< HANDOVER SHOULD BE DONE HERE
+      // &lt;&lt;&lt; HANDOVER SHOULD BE DONE HERE
     })
   }).catch(function(err){
     console.log("ERROR INSIDE HANDOVER ANNOUNCE:");
@@ -539,15 +567,15 @@ function handover_announce(req,res)
 }
 
 /**
-thing level function.<br>
-cancels an announced handover set in {@link handover_announce}.<br>
+thing level function.&lt;br>
+cancels an announced handover set in {@link handover_announce}.&lt;br>
 deletes notification entries with item reference defined by request payload .data.ref
-from &notifications doc of user sending as well as user defined by request payload .data.to
+from &amp;notifications doc of user sending as well as user defined by request payload .data.to
 
 @param {Object} req - request object from express app
 @param {Object} res - response object from express app
 
-@TODO change after &notifications doc became &notifications database
+@TODO change after &amp;notifications doc became &amp;notifications database
 
 @returns {Object} sends response to client with either couchDBs response after
 notifications are deleted or error
@@ -567,7 +595,7 @@ function handover_cancel(req,res)
 
 // TODO: CHECK IF ALLOWED TO CANCEL FIRST!!!
 
-  return db.get("&notifications").then((notifications) => {
+  return db.get("&amp;notifications").then((notifications) => {
     console.log(notifications);
     let validHandover =
     (notifications.pending.handover_await[req.body.data.ref] !== undefined)
@@ -576,7 +604,7 @@ function handover_cancel(req,res)
      {
        delete notifications.pending.handover_await[req.body.data.ref];
        return db.insert(notifications).then(() =>{
-         return dbBorrower.get("&notifications").then((notificationsBorrower) =>
+         return dbBorrower.get("&amp;notifications").then((notificationsBorrower) =>
          {
            delete notificationsBorrower.pending.handover_confirm[req.body.data.ref];
              return dbBorrower.insert(notificationsBorrower).then(()=>{
@@ -599,15 +627,15 @@ function handover_cancel(req,res)
 }
 
 /**
-thing level function.<br>
-denies an announced handover set in {@link handover_announce}.<br>
+thing level function.&lt;br>
+denies an announced handover set in {@link handover_announce}.&lt;br>
 deletes notification entries with item reference defined by request payload .data.ref
-from &notifications doc of user sending as well as user defined by request payload .data.from
+from &amp;notifications doc of user sending as well as user defined by request payload .data.from
 
 @param {Object} req - request object from express app
 @param {Object} res - response object from express app
 
-@TODO change after &notifications doc became &notifications database
+@TODO change after &amp;notifications doc became &amp;notifications database
 
 @returns {Object} sends response to client with either couchDBs response after
 notifications are deleted and a notification about the denial is inserted into
@@ -628,7 +656,7 @@ function handover_deny(req,res)
 
 // TODO: CHECK IF ALLOWED TO CANCEL FIRST!!!
 
-  return db.get("&notifications").then((notifications) => {
+  return db.get("&amp;notifications").then((notifications) => {
     console.log(notifications);
     let validHandover =
     (notifications.pending.handover_await[req.body.data.ref] !== undefined)
@@ -641,7 +669,7 @@ function handover_deny(req,res)
       if (notifications.pending.info === undefined){ notifications.pending.info = {} }
        notifications.pending.info[req.body.data.ref] = newNoti;
        return db.insert(notifications).then(() =>{
-         return dbBorrower.get("&notifications").then((notificationsBorrower) =>
+         return dbBorrower.get("&amp;notifications").then((notificationsBorrower) =>
          {
            delete notificationsBorrower.pending.handover_confirm[req.body.data.ref];
              return dbBorrower.insert(notificationsBorrower).then(()=>{
@@ -665,18 +693,18 @@ function handover_deny(req,res)
 
 
 /**
-thing level function.<br>
-confirms an announced handover set in {@link handover_announce}.<br>
+thing level function.&lt;br>
+confirms an announced handover set in {@link handover_announce}.&lt;br>
 deletes notification entries with item reference defined by request payload .data.ref
-from &notifications doc of user sending as well as user defined by request payload
-.data.from<br>
-writes into &inMyPossession doc of user sending request<br>
+from &amp;notifications doc of user sending as well as user defined by request payload
+.data.from&lt;br>
+writes into &amp;inMyPossession doc of user sending request&lt;br>
 writes username of new possessor into doc in questions field .inPossessionOf
 
 @param {Object} req - request object from express app
 @param {Object} res - response object from express app
 
-@TODO change after &notifications and &inMyPossession docs became databases
+@TODO change after &amp;notifications and &amp;inMyPossession docs became databases
 
 @returns {Object|string} sends response to client with either "ok: handover success"
 or error
@@ -701,11 +729,11 @@ function handover(req,res)  // not correct anymore!!!
   let dbLender = nanoAdmin.db.use('userdb-'+toHex(req.body.data.from));
 
   // check if alleged lender has notification of pending handover in DB:
-  dbLender.get("&notifications").then((notifications) => {
+  dbLender.get("&amp;notifications").then((notifications) => {
 
     console.log(notifications);
     let validHandover =
-    (notifications.pending.handover_await[req.body.data.ref] !== undefined &&
+    (notifications.pending.handover_await[req.body.data.ref] !== undefined &amp;&amp;
      notifications.pending.handover_await[req.body.data.ref].to === req.username)
 
      if (validHandover)
@@ -717,7 +745,7 @@ function handover(req,res)  // not correct anymore!!!
         delete notifications.pending.handover_await[req.body.data.ref];
         return dbLender.insert(notifications).then((DBres_L) =>{
           console.log("deleted handover Notification from Lenders DB");
-          return db.get("&notifications").then((notifications_borrower)=>{
+          return db.get("&amp;notifications").then((notifications_borrower)=>{
             console.log("got borrowers notifications:");
             console.log(notifications_borrower.pending.handover_confirm);
             let isReturn = notifications_borrower.pending.handover_confirm[req.body.data.ref].isReturn;
@@ -837,45 +865,45 @@ function handover(req,res)  // not correct anymore!!!
 }
 
 /**
-helper function.<br>
-adds doc ID into db Owners &inMyPossession doc (this is where all items not owned
-by possesed by a user a referenced)<br>
+helper function.&lt;br>
+adds doc ID into db Owners &amp;inMyPossession doc (this is where all items not owned
+by possesed by a user a referenced)&lt;br>
 sister function of {@link deleteFromInMyPossession}
 
 @param {Object} db - nano database instance
 @param {string} itemHyperlink - .hyperlink field from item/doc to be written
 into inMyPossession
 
-@TODO change after &inMyPossession doc became databases
+@TODO change after &amp;inMyPossession doc became databases
 
 @returns {Promise} returns nano promise to insert updated doc
 */
 function addToInMyPossession(db,itemHyperlink)
 {
   console.log("adding to inMyPossession");
-  return db.get("&inMyPossession").then((inMyPossession) => {
+  return db.get("&amp;inMyPossession").then((inMyPossession) => {
     inMyPossession.things = addToArrayIfNotExist(inMyPossession.things,itemHyperlink);
     return db.insert(inMyPossession)
   })
 }
 
 /**
-helper function.<br>
-removes doc ID from db Owners &inMyPossession doc<br>
+helper function.&lt;br>
+removes doc ID from db Owners &amp;inMyPossession doc&lt;br>
 sister function of {@link addToInMyPossession}
 
 @param {Object} db - nano database instance
 @param {string} itemHyperlink - .hyperlink field from item/doc to be written
 into inMyPossession
 
-@TODO change after &inMyPossession doc became databases
+@TODO change after &amp;inMyPossession doc became databases
 
 @returns {Promise} returns nano promise to insert updated doc
 */
 function deleteFromInMyPossession(db,itemHyperlink)
 {
   console.log("DELETING ITEM "+itemHyperlink+" FROM POSSESION OF OLD POSS ");
-  return db.get("&inMyPossession").then((inMyPossession) => {
+  return db.get("&amp;inMyPossession").then((inMyPossession) => {
     if (inMyPossession.things.includes(itemHyperlink))
     {
       console.log("index "+inMyPossession.things.indexOf(itemHyperlink));
@@ -887,7 +915,7 @@ function deleteFromInMyPossession(db,itemHyperlink)
 
 
 /**
-thing level function.<br>
+thing level function.&lt;br>
 updates doc.location in DB (both defined by request url) to new location defined
 in requests payload .data.location.
 
@@ -912,7 +940,7 @@ if (req.body.data.location == undefined)
   let db = nanoAdmin.db.use('userdb-'+toHex(req.targets[0]));
 
   db.get(req.targets[1]).then((doc) => {
-    if (doc.inPossessionOf && doc.inPossessionOf.includes(req.username))
+    if (doc.inPossessionOf &amp;&amp; doc.inPossessionOf.includes(req.username))
     {
       console.log("moving via inPossessionOf!!!");
 
@@ -925,7 +953,7 @@ if (req.body.data.location == undefined)
           {
             updatePublicDBIfPublic(req,newdoc);
             // if insideOf provided in new location: update it's container:
-            if (newdoc.location && newdoc.location.insideOf && newdoc.location.insideOf !== "" )
+            if (newdoc.location &amp;&amp; newdoc.location.insideOf &amp;&amp; newdoc.location.insideOf !== "" )
             {
               updateContainerOf(req,newdoc.location.insideOf,newdoc._id,req.DBAuthToken,false,
                 function(updateRes){
@@ -967,9 +995,9 @@ if (req.body.data.location == undefined)
 // NICE TO HAVE: delete fields if they contain _delete or null ?
 
 /**
-thing level function.<br>
-updates doc in DB (both defined by request url)<br>
-<br>
+thing level function.&lt;br>
+updates doc in DB (both defined by request url)&lt;br>
+&lt;br>
 fetched oldDoc, compares and merges oldDoc and .data.doc (from request payload),
 calls {@link updateContainerOf} if locationInsideOf is present in .data.doc, updates
 publicDB(s) if .data.other.visibility indicates public Read Rights (via
@@ -1010,8 +1038,8 @@ function update(req,res)
       // CONTAINER / INSIDEOF UPDATES:
       // if item is inside of other item: update the other items conainerOf:
       // function UpdateContainerOfIfUpdateNeeded(req, oldDoc, newDoc,target)
-      if (oldDoc.location !== undefined &&
-          oldDoc.location.insideOf !== undefined &&
+      if (oldDoc.location !== undefined &amp;&amp;
+          oldDoc.location.insideOf !== undefined &amp;&amp;
           oldDoc.location.insideOf != req.body.data.doc.location.insideOf)
       {
         console.log("insideOf changed");
@@ -1029,7 +1057,7 @@ function update(req,res)
 
           console.log("CONTAINER SHOULD BE UPDATED NOW");
               // update new container item
-              if (targetUpd !== undefined && targetUpd !== ""){
+              if (targetUpd !== undefined &amp;&amp; targetUpd !== ""){
                 if (!targetUpd.startsWith("https"))
                 {
                   targetUpd = INSTANCEURL.slice(0,-1)+":" + //INSTANCEURL minus slash
@@ -1042,8 +1070,8 @@ function update(req,res)
         });
 
       }
-      else if (req.body.data.doc.location && req.body.data.doc.location.insideOf !== undefined
-                && req.body.data.doc.location.insideOf !== "")
+      else if (req.body.data.doc.location &amp;&amp; req.body.data.doc.location.insideOf !== undefined
+                &amp;&amp; req.body.data.doc.location.insideOf !== "")
       {
             console.log("insideOf did not change but exists in new doc");
             let target = req.body.data.doc.location.insideOf;
@@ -1062,9 +1090,9 @@ function update(req,res)
 
       // SHARING / VISIBILITY UPDATES:
       // if other.visibility changed from last update:
-      if (oldDoc.other !== undefined &&
-          oldDoc.other.visibility !== undefined &&
-          req.body.data.doc.other.visibility !== undefined &&
+      if (oldDoc.other !== undefined &amp;&amp;
+          oldDoc.other.visibility !== undefined &amp;&amp;
+          req.body.data.doc.other.visibility !== undefined &amp;&amp;
           !compareArrays(oldDoc.other.visibility,req.body.data.doc.other.visibility))
       {
         console.log("VISIBILITY CHANGED!");
@@ -1079,7 +1107,7 @@ function update(req,res)
         })
       } // In case visibility did not change (or: this is an ADD operation:)
 
-      else if (req.body.data.doc.other !== undefined &&
+      else if (req.body.data.doc.other !== undefined &amp;&amp;
               req.body.data.doc.other.visibility !== undefined)
       {
           if (req.body.data.doc.other.visibility.includes("public") )
@@ -1130,7 +1158,7 @@ function update(req,res)
           //return res.send(DBres)
 
           /// pic attachment >>>>>
-          if (req.body.data.pic !== undefined && req.body.data.pic !== "")
+          if (req.body.data.pic !== undefined &amp;&amp; req.body.data.pic !== "")
           {
             console.log("\npicture UPDATE requested!");
             // add here: check filesize
@@ -1148,7 +1176,7 @@ function update(req,res)
                 console.log(err);
                 return err;
               })
-              /// <<<<<<< pic attachment
+              /// &lt;&lt;&lt;&lt;&lt;&lt;&lt; pic attachment
           }
           else {
             return DBres
@@ -1171,12 +1199,12 @@ function update(req,res)
 /////// DB LEVEL HELPER ///////
 
 /**
-database level function.<br>
+database level function.&lt;br>
 writes a borrow request notification into target user (defined by request
-url) database's &notifications doc.<br>
-includes infos from &config doc of user sending.
+url) database's &amp;notifications doc.&lt;br>
+includes infos from &amp;config doc of user sending.
 
-@TODO: change after &notifications doc became database
+@TODO: change after &amp;notifications doc became database
 
 @param {Object} req - request object from express app
 @param {Object} res - response object from express app
@@ -1189,7 +1217,7 @@ function borrow_request(req,res){
 
   let db = nanoAdmin.db.use('userdb-'+toHex(req.targets[0]));
 
-  return db.get("&notifications").then((notifications) => {
+  return db.get("&amp;notifications").then((notifications) => {
     console.log(notifications);
     // HERE LATER: check if already contacted about another thing. then just add to it
     // for now: add info to notifications.pending.info:
@@ -1198,9 +1226,9 @@ function borrow_request(req,res){
     let tel = req.body.data.contact_details.telnumber;
     let other = req.body.data.contact_details.other;
     let contact = `
-    <br> email: <b>${email}</b>
-    <br> tel: <b>${tel}</b>
-    <br> other: <b>${other}</b>`
+    &lt;br> email: &lt;b>${email}&lt;/b>
+    &lt;br> tel: &lt;b>${tel}&lt;/b>
+    &lt;br> other: &lt;b>${other}&lt;/b>`
     let newNoti = { ref: req.body.data.ref,
         text:`user ${req.username} wants to borrow ${req.body.data.ref} from
         ${req.body.data.from} till ${req.body.data.till} you can contact them via:
@@ -1218,7 +1246,7 @@ function borrow_request(req,res){
 }
 
 /**
-database level helper function.<br>
+database level helper function.&lt;br>
 checks if .other.visibility of doc is public and if so deletes and inserts copies
 of the doc into this instance's public database via {@link deleteItemCopies} and
 {@link insertItemCopies}
@@ -1229,7 +1257,7 @@ of public DB
 
 */
 function updatePublicDBIfPublic(req,doc){
-  if (doc.other && doc.other.visibility.includes("public") )
+  if (doc.other &amp;&amp; doc.other.visibility.includes("public") )
   {
     deleteItemCopies(req, nanoAdmin,doc)
     .then(function(){
@@ -1240,9 +1268,9 @@ function updatePublicDBIfPublic(req,doc){
 }
 
 /**
-database level helper function.<br>
+database level helper function.&lt;br>
 deletes all copies of doc defined in requests url from this instance's public DB
-<br><br>
+&lt;br>&lt;br>
 sister function of {@link insertItemCopies}
 
 @param {Object} req - request object from express app
@@ -1278,9 +1306,9 @@ function deleteItemCopies(req,nanoUser, oldDoc={other:{visibility:[]}})
 }
 
 /**
-database level helper function.<br>
+database level helper function.&lt;br>
 inserts a copy of doc defined in requests url from this instance's public DB
-<br><br>
+&lt;br>&lt;br>
 sister function of {@link deleteItemCopies}
 
 @param {Object} req - request object from express app
@@ -1297,7 +1325,7 @@ function insertItemCopies(req, nanoUser, oldDoc={other:{visibility:[]}})
         console.log("inside insertItemCopies");
         let publicDB = nanoUser.use("public");
 
-        if (/*!oldDoc.other.visibility.includes("public") &&*/
+        if (/*!oldDoc.other.visibility.includes("public") &amp;&amp;*/
             req.body.data.doc.other.visibility.includes("public"))
         {
           // copy item into public
@@ -1312,13 +1340,13 @@ function insertItemCopies(req, nanoUser, oldDoc={other:{visibility:[]}})
         else {
           console.log("insertItemCopies: "+req.body.data.doc._id+" : NOT PUBLIC ");
         }
-        if (!oldDoc.other.visibility.includes("friends") &&
+        if (!oldDoc.other.visibility.includes("friends") &amp;&amp;
             req.body.data.doc.other.visibility.includes("friends"))
         {
           // copy item into friends
           // TODO: fill or throw error for not yet implemented
         }
-        if (!oldDoc.other.visibility.includes("friends2nd") &&
+        if (!oldDoc.other.visibility.includes("friends2nd") &amp;&amp;
             req.body.data.doc.other.visibility.includes("friends2nd"))
         {
           // copy id from DB friends2nd
@@ -1329,11 +1357,11 @@ function insertItemCopies(req, nanoUser, oldDoc={other:{visibility:[]}})
 
 
 /**
-database level function.<br>
-adds item defined in requests payload to users Database.<br>
-<br>
-assigns uuid as _id, adds timestamp .created and other default fields to doc<br>
-adds a second sister document named <id>-containerOf to DB<br>
+database level function.&lt;br>
+adds item defined in requests payload to users Database.&lt;br>
+&lt;br>
+assigns uuid as _id, adds timestamp .created and other default fields to doc&lt;br>
+adds a second sister document named &lt;id>-containerOf to DB&lt;br>
 adds itemCopies of new doc into public DBs if .other.visibility field of doc
 requires that.
 
@@ -1403,8 +1431,8 @@ function addItem(req,res)
         insertItemCopies(req, nanoUser);
         // then update the thing this thing is in if it is inside of sth:
         console.log(req.body.data.doc);
-        if (req.body.data.doc.location !== undefined &&
-           req.body.data.doc.location.insideOf !== undefined && req.body.data.doc.location.insideOf !== "")
+        if (req.body.data.doc.location !== undefined &amp;&amp;
+           req.body.data.doc.location.insideOf !== undefined &amp;&amp; req.body.data.doc.location.insideOf !== "")
         {
           updateContainerOf(req,req.body.data.doc.location.insideOf,req.body.data.doc._id,req.DBAuthToken)
         }
@@ -1419,10 +1447,10 @@ function addItem(req,res)
 }
 
 /**
-database level function.<br>
+database level function.&lt;br>
 searches for items in Database defined by request url and returns list of items
-with most relevant fields of found docs/items.<br>
-uses {@link makeMango} to build a mango style search query to couchDBs find API<br>
+with most relevant fields of found docs/items.&lt;br>
+uses {@link makeMango} to build a mango style search query to couchDBs find API&lt;br>
 expects a payload .data.doc with all fields that should be included in the search.
 
 @TODO: find good size for query limit for find API (q.limit)
@@ -1442,15 +1470,15 @@ function findItems(req,res)
     return res.send('"error: no doc provided or no search params inside of doc "')
   }
 
-  if (req.body.data.doc["location.latitude"] !== undefined &&
-      req.body.data.doc["location.latitude"] !== "0" &&
+  if (req.body.data.doc["location.latitude"] !== undefined &amp;&amp;
+      req.body.data.doc["location.latitude"] !== "0" &amp;&amp;
       req.body.data.doc["location.latitude"] !== "" ){
     // get latitude down to only 3 decimal places.
     req.body.data.doc["location.latitude"] = parseFloat(
       trimFloatStringToNDecimalPlaces(req.body.data.doc["location.latitude"]));
   }
-  if (req.body.data.doc["location.longitude"] !== undefined &&
-      req.body.data.doc["location.longitude"] !== "0" &&
+  if (req.body.data.doc["location.longitude"] !== undefined &amp;&amp;
+      req.body.data.doc["location.longitude"] !== "0" &amp;&amp;
       req.body.data.doc["location.longitude"] !== "" ){
     // get longitude down to only 3 decimal places.
     req.body.data.doc["location.longitude"] = parseFloat(
@@ -1483,11 +1511,11 @@ function findItems(req,res)
 }
 
 /**
-database level function.<br>
-deletes single item in Database defined by request url<br>
-<br>
+database level function.&lt;br>
+deletes single item in Database defined by request url&lt;br>
+&lt;br>
 after deletion of target doc, also attempts to delete all copies of this doc within
-publicDBs as well as docs sister doc <id>-containerOf
+publicDBs as well as docs sister doc &lt;id>-containerOf
 
 @TODO: either change name to deleteItem or add possiblity to make batch deletes
 
@@ -1519,7 +1547,7 @@ function deleteItems(req,res)
        // now delete xxx-containerOf belonging to deleted item doc:
        deleteContainerOf(req,req.body.data.doc._id);
        // now get also rid of all entries in items container if inside one:
-       if(req.body.data.doc.insideOf !== undefined && req.body.data.doc.insideOf !== "")
+       if(req.body.data.doc.insideOf !== undefined &amp;&amp; req.body.data.doc.insideOf !== "")
        {
          updateContainerOf(req,req.body.data.doc.location.insideOf,req.body.data.doc._id,req.DBAuthToken,true)
        }
@@ -1533,7 +1561,7 @@ function deleteItems(req,res)
 }
 
 /**
-database level helper function.<br>
+database level helper function.&lt;br>
 deletes -containerOf sister document of targetID
 
 @param {Object} req - request object from express app
@@ -1557,7 +1585,7 @@ function deleteContainerOf(req, targetID)
 }
 
 /**
-helper function.<br>
+helper function.&lt;br>
 uses request and doc to create valid .hyperlink field and add it to doc provided
 
 @param {Object} req - request object from express app
@@ -1579,9 +1607,9 @@ function addHyperlink2Doc(req,doc)
 
 
 /**
-database level helper function.<br>
+database level helper function.&lt;br>
 updates -containerOf sister doc of target by adding thingInside to its
-.containerOf field via {@link addContainerOfDoc}<br>
+.containerOf field via {@link addContainerOfDoc}&lt;br>
 If delete_it flag is set true, will delete item instead of adding it.
 
 @param {Object} req - request object from express app
@@ -1591,7 +1619,7 @@ target-containerOf
 @param {string} authCookie - AuthSessionToken to be used as Auth in communication
 with DB
 @param {boolean} delete_it - flag. if true thingInside will be removed from
-<target>-containerOf
+&lt;target>-containerOf
 @param {callback} callback - callback. will get true or false depending on success or not
 */
 function updateContainerOf(req,target,thingInside,authCookie,delete_it=false,callback=console.log)
@@ -1687,9 +1715,9 @@ function updateContainerOf(req,target,thingInside,authCookie,delete_it=false,cal
 
 
 /**
-database level helper function.<br>
-creates new -containerOf sister doc to target doc.<br><br>
-only for compability:<br>
+database level helper function.&lt;br>
+creates new -containerOf sister doc to target doc.&lt;br>&lt;br>
+only for compability:&lt;br>
 tries to add an empty and fresh -containerOf doc to already existing doc
 needed in case of problems while add and (main reason:) in case a doc was
 added to dingsda before -containerOf became it's own doc on creation of every doc
@@ -1701,7 +1729,7 @@ but this way seemed less intrusive and hard to code
 @param {Object} req - request object from express app
 @param {string} target - _id of doc whose -containerOf sister doc to be created
 @param {string} [thingInside=[]] - array of ids of docs which should be added into
-<target>-containerOf
+&lt;target>-containerOf
 */
 function addContainerOfDoc(req,target,thingInside=[]){
 
@@ -1741,14 +1769,14 @@ function addContainerOfDoc(req,target,thingInside=[]){
 }
 
 /**
-helper function.<br>
-splits a request url into an array of "targets" defined by the url.<br>
+helper function.&lt;br>
+splits a request url into an array of "targets" defined by the url.&lt;br>
 this is helpful to later quickly find out which database and/or thing and/or attachment
-is addressed by a request.<br>
-the order of the returned Array defines which level the target addresses:<br>
-<li>targets[0] is database level
-<li>targets[1] is thing level
-<li>targets[2] is attachment level (atm handled in thinglevel as well)
+is addressed by a request.&lt;br>
+the order of the returned Array defines which level the target addresses:&lt;br>
+&lt;li>targets[0] is database level
+&lt;li>targets[1] is thing level
+&lt;li>targets[2] is attachment level (atm handled in thinglevel as well)
 
 @param {string} target - url to be split into targets of request
 
@@ -1762,7 +1790,7 @@ function getTargetsFromUrl(target){
 }
 
 /**
-database level function.<br>
+database level function.&lt;br>
 gets userDBs carnetATA view from couchDB which should return a csv formatted for
 the international customs form Carnet A.T.A and sends response including the csv
 string or an json prepared for client side conversion to pdf into responses payload.
@@ -1850,13 +1878,13 @@ function getCarnet(req,res)
 }
 
 /**
-helper function.<br>
+helper function.&lt;br>
 creates a mango styled find request for couchDB (see {@link
-https://github.com/cloudant/mango}) from input and ids2ignore<br>
-<br>
+https://github.com/cloudant/mango}) from input and ids2ignore&lt;br>
+&lt;br>
 will make Mango using regex caseinsensitive for all provided input fields that
 are strings and search with mango "$in" operator for all provided input fields
-that are Arrays<br><br>
+that are Arrays&lt;br>&lt;br>
 for more complex searches please check {@link search}
 
 @param {Object} input - object including all fields and values to be included in
@@ -1866,7 +1894,7 @@ to the mango query
 
 @returns {Object} query object in style of couchDBs mango js queries
 */
-function makeMango(input,ids2ignore=["config_one","&config","&notifications","&inMyPossession"])
+function makeMango(input,ids2ignore=["config_one","&amp;config","&amp;notifications","&amp;inMyPossession"])
 {
       //console.log(input);
       // do a thing, possibly async, then…
@@ -1896,7 +1924,7 @@ function makeMango(input,ids2ignore=["config_one","&config","&notifications","&i
           query.selector[item] = {"$in":input[item]};
         }
         // add ids to ignore in search:
-        if (ids2ignore.length > 0 && Array.isArray(ids2ignore)){
+        if (ids2ignore.length > 0 &amp;&amp; Array.isArray(ids2ignore)){
           query.selector["$and"] = [{"_id": {"$nor": ids2ignore}}]
         }
         // also exclude every item containing -containerOf in id
@@ -1913,11 +1941,11 @@ function makeMango(input,ids2ignore=["config_one","&config","&notifications","&i
 
 
 /**
-instance level function<br>
-not yet implemented. <br>
+instance level function&lt;br>
+not yet implemented. &lt;br>
 should become function to make more complex (completely client made?) search queries
-to database. either using map-reduce (meh) or mango queries<br>
-<br>
+to database. either using map-reduce (meh) or mango queries&lt;br>
+&lt;br>
 for an already working and easier way to find items take a look at {@link findItems}
 */
 function search(req,res)
@@ -1936,31 +1964,31 @@ function search(req,res)
 ///////////////////////////////////////*/
 
 /**
-express middleware function.<br>
-<br>
-validates read permissions of a request.<br>
+express middleware function.&lt;br>
+&lt;br>
+validates read permissions of a request.&lt;br>
 checks first how deep the request goes (meaning: if it is targeting the instance,
 userDatabase or a specific document/thing/item inside of the database) by checking
-the targets in request url.<br>
+the targets in request url.&lt;br>
 for requests to thinglevel or deeper it checks by going through the following steps:
-<br>
-<li>1.) is req.username trying to read her own DB? --> READ GRANTED
-<li>2.) is req.username in thing.owners? --> READ GRANTED
-<li>3.) is thing.visibility === "public"? --> READ GRANTED
+&lt;br>
+&lt;li>1.) is req.username trying to read her own DB? --> READ GRANTED
+&lt;li>2.) is req.username in thing.owners? --> READ GRANTED
+&lt;li>3.) is thing.visibility === "public"? --> READ GRANTED
 
-<li>4.) is req.username in thing.inPossessionOf (because owner borrowed it
+&lt;li>4.) is req.username in thing.inPossessionOf (because owner borrowed it
 out)? --> READ GRANTED
 
-<li>5.) is thing.visibility !== "private" && userdb-<targetuser>._security.
-<thing.other.visibility> does contain req.username? --> READ GRANTED
+&lt;li>5.) is thing.visibility !== "private" &amp;&amp; userdb-&lt;targetuser>._security.
+&lt;thing.other.visibility> does contain req.username? --> READ GRANTED
 
-<li>6.) (HARDEST maybe future science) (TO BE DONE):
-is thing.visibility === "friends2nd" && req.username is in friends
-of anybody who has <targetuser> in their userdb-<user>._security.friends
+&lt;li>6.) (HARDEST maybe future science) (TO BE DONE):
+is thing.visibility === "friends2nd" &amp;&amp; req.username is in friends
+of anybody who has &lt;targetuser> in their userdb-&lt;user>._security.friends
 list? --> READ GRANTED
 (unclear how to approach. So better first 1.-4. and this later)
 
-<li>7.) ELSE: --> NO READ GRANTED --> no such object.
+&lt;li>7.) ELSE: --> NO READ GRANTED --> no such object.
 
 @TODO: implement step 6)
 @TODO: doublecheck all steps and check if all besides TODOs are actually performed
@@ -1978,7 +2006,7 @@ function validateReadRights(req, res, next){
     */
     let urlAfterAPI = req.url.split(API_BASE_URL)[1].split("?")[0];
 
-    if (urlAfterAPI !== "" && urlAfterAPI !== undefined)
+    if (urlAfterAPI !== "" &amp;&amp; urlAfterAPI !== undefined)
     {
       console.log(urlAfterAPI);
       // targets[0]: targetDB or dingsda; targets[1]: targetItem or collection
@@ -2012,12 +2040,12 @@ function validateReadRights(req, res, next){
           4.) is req.username in thing.inPossessionOf (because owner borrowed it
           out)? --> READ GRANTED
 
-          5.) is thing.visibility !== "private" && userdb-<targetuser>._security.
-          <thing.other.visibility> does contain req.username? --> READ GRANTED
+          5.) is thing.visibility !== "private" &amp;&amp; userdb-&lt;targetuser>._security.
+          &lt;thing.other.visibility> does contain req.username? --> READ GRANTED
 
           6.) (HARDEST maybe future science) (TO BE DONE):
-          is thing.visibility === "friends2nd" && req.username is in friends
-          of anybody who has <targetuser> in their userdb-<user>._security.friends
+          is thing.visibility === "friends2nd" &amp;&amp; req.username is in friends
+          of anybody who has &lt;targetuser> in their userdb-&lt;user>._security.friends
           list? --> READ GRANTED
           (unclear how to approach. So better first 1.-4. and this later)
 
@@ -2025,7 +2053,7 @@ function validateReadRights(req, res, next){
         */
         console.log("is "+req.username+" permitted to read "+targets[1]+
           " inside of "+targets[0]+"'s DB?");
-        if (req.username == targets[0] && req.authenticated)
+        if (req.username == targets[0] &amp;&amp; req.authenticated)
         {
           // 1.) is req.username trying to read her own DB?
           console.log("user tries to read own database. should be ok.");
@@ -2055,22 +2083,22 @@ function validateReadRights(req, res, next){
                 }
           // 2.) is req.username in thing.owners?
                 //console.log(ding.owners.indexOf(req.username));
-                if (ding.owners && ding.owners.indexOf(req.username) > -1)
+                if (ding.owners &amp;&amp; ding.owners.indexOf(req.username) > -1)
                 {
                   console.log("is not owner of DB BUT owner of thing");
                   next();
                   return
                 }
           // 3.) is thing.visibility === "public"?
-                if (ding.other !== undefined && ding.other.visibility !== undefined
-                   && ding.other.visibility.includes("public"))
+                if (ding.other !== undefined &amp;&amp; ding.other.visibility !== undefined
+                   &amp;&amp; ding.other.visibility.includes("public"))
                 {
                   console.log("thing is public therefore can be READ");
                   next();
                   return
                 }
           // 4) is req.username in thing.inPossessionOf?
-                if( ding.inPossessionOf !== undefined &&
+                if( ding.inPossessionOf !== undefined &amp;&amp;
                     ding.inPossessionOf.includes(req.username) )
                 {
                   console.log(`${req.username} in ding.inPossessionOf therefore READ!`);
@@ -2078,7 +2106,7 @@ function validateReadRights(req, res, next){
                   return
                 }
           // 5a) is thing private?
-                if ( ding.other && ding.other.visibility && (
+                if ( ding.other &amp;&amp; ding.other.visibility &amp;&amp; (
                     ding.other.visibility.includes("private") ||
                     ding.other.visibility.includes("not") ||
                       ding.other.visibility === undefined  ) ){
@@ -2087,14 +2115,14 @@ function validateReadRights(req, res, next){
                   res.send('error: no such ding');
                 }
                 else {
-          // 5b) is userdb-<targetuser>._security in any of the groups listed?
+          // 5b) is userdb-&lt;targetuser>._security in any of the groups listed?
                   db.get("_security",function (err, DBres) {
                     if (err) {
                       console.log(err)
                       res.statusCode = 501;
                       res.send();
                       // SEND ERROR RESPONSE HERE without any infos!!!
-                    } else if (DBres.friends !== undefined &&
+                    } else if (DBres.friends !== undefined &amp;&amp;
                               req.username in DBres.friends)
                       {
                       //console.log(DBres)
@@ -2109,7 +2137,7 @@ function validateReadRights(req, res, next){
                       {
                         console.log("is in groups");
           /*
-            5c) <thing.other.visibility> does contain a group that
+            5c) &lt;thing.other.visibility> does contain a group that
               req.username is part of?
           */
                         if(arrayItemfoundInArray(groupsListingUser,ding.other.visibility))
@@ -2166,7 +2194,7 @@ function validateReadRights(req, res, next){
 
 
 /**
-helper function<br>
+helper function&lt;br>
 returns true if any of the items in itemArray are found in array
 
 @param {Array} itemArray - array of objects of which every item should be checked
@@ -2191,10 +2219,10 @@ function arrayItemfoundInArray(itemArray, array){
 }
 
 /**
-express middleware function.<br>
-<br>
-decides how to verify user Auth<br>
-<br>
+express middleware function.&lt;br>
+&lt;br>
+decides how to verify user Auth&lt;br>
+&lt;br>
 calls {@link verifyAuthToken}, {@link verifyByJsonPW} or {@link verifyByUrlPW}
 depending on request cookies, payload and/or HTTP method.
 
@@ -2208,14 +2236,14 @@ with request.
 function verifyUserCredibility(req, res, next){
 
       //console.log(req.body);
-      if (req.cookies.AuthSession !== undefined && req.cookies.AuthSession!=="")
+      if (req.cookies.AuthSession !== undefined &amp;&amp; req.cookies.AuthSession!=="")
       {
         //console.log("Cookie or Session Token provided.\nlets try to verify this session");
         verifyAuthToken(req,res,next); // will reject req if not valid
         //console.log(req);
         console.log("cookie req!");
       }
-      else if (req.body.username !== undefined && req.body.password !== undefined)
+      else if (req.body.username !== undefined &amp;&amp; req.body.password !== undefined)
       {
         console.log("No cookie but pw and username!\nlets try to login as "+ req.body.username);
         verifyByJsonPW(req,res,next);
@@ -2237,10 +2265,10 @@ function verifyUserCredibility(req, res, next){
 }
 
 /**
-express middleware helper function.<br>
-<br>
-verifies user Auth by testing for username and password inside of request payload.<br>
-<br>
+express middleware helper function.&lt;br>
+&lt;br>
+verifies user Auth by testing for username and password inside of request payload.&lt;br>
+&lt;br>
 calls {@link getSessionAndAuthToken}
 
 @param {Object} req - request object from express app
@@ -2253,14 +2281,14 @@ function verifyByJsonPW(req,res,next)
 }
 
 /**
-express middleware helper function.<br>
-<br>
-verifies user Auth by testing for username and password inside of request query parameter.<br>
-<br>
+express middleware helper function.&lt;br>
+&lt;br>
+verifies user Auth by testing for username and password inside of request query parameter.&lt;br>
+&lt;br>
 username and password can be query parameters or in json format inside of a query parameter
-calles json. e.g.: https://xxx.xxx/yyy?username=aaa&password=bbb or
+calles json. e.g.: https://xxx.xxx/yyy?username=aaa&amp;password=bbb or
 https://xxx.xxx/yyy?json='{"username":"aaa","password":"bbb"}'
-<br>
+&lt;br>
 calls {@link getSessionAndAuthToken}
 
 @param {Object} req - request object from express app
@@ -2276,7 +2304,7 @@ function verifyByUrlPW(req,res,next)
 
     getSessionAndAuthToken(req,res,next,getbody.username,getbody.password)
   }
-  else if (req.query.name !== undefined && req.query.password !== undefined)
+  else if (req.query.name !== undefined &amp;&amp; req.query.password !== undefined)
   {
     getSessionAndAuthToken(req,res,next,req.query.name,req.query.password)
   }
@@ -2292,8 +2320,8 @@ function verifyByUrlPW(req,res,next)
 }
 
 /**
-express middleware helper function.<br>
-<br>
+express middleware helper function.&lt;br>
+&lt;br>
 requests _session from couchDB using username and password and adds AuthSession
 cookie from couchDB response to the response object so user will be able to
 authenticate with cookie next time.
@@ -2310,7 +2338,7 @@ function getSessionAndAuthToken(req,res,next, username, password)
         method: "POST",
         url: DATABASEURL + "_session",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: "name=" + username + "&password=" + password
+        body: "name=" + username + "&amp;password=" + password
       }, function(err,resDB){
 
         if (!err)
@@ -2350,10 +2378,10 @@ function getSessionAndAuthToken(req,res,next, username, password)
 }
 
 /**
-express middleware function.<br>
-<br>
-verifies user Auth by using Cookie AuthSession provided in request.<br>
-<br>
+express middleware function.&lt;br>
+&lt;br>
+verifies user Auth by using Cookie AuthSession provided in request.&lt;br>
+&lt;br>
 calls {@link getSessionAndAuthToken}
 
 @param {Object} req - request object from express app
@@ -2408,8 +2436,8 @@ vvvvvvvvvvvvvvvvvvvvvvvvvv
 
 /**
 helper to extract Auth cookie from request and return couchDB nano instance and
-a nano db instance of the same user<br>
-<br>
+a nano db instance of the same user&lt;br>
+&lt;br>
 couchdb-nano: https://github.com/apache/couchdb-nano
 
 @param {Object} req - request object from express app
@@ -2449,8 +2477,8 @@ vvvvvvvvvvvvvvvvvvvvvvvvvv
 //////////////////////////*/
 
 /**
-helper function<br>
-<br>
+helper function&lt;br>
+&lt;br>
 turns string to Hex value
 
 @param {string} s - string to be transformed
@@ -2459,30 +2487,30 @@ function toHex(s) {
     // utf8 to latin1
     var s = unescape(encodeURIComponent(s))
     var h = ''
-    for (let i = 0; i < s.length; i++) {
+    for (let i = 0; i &lt; s.length; i++) {
         h += s.charCodeAt(i).toString(16)
     }
     return h
 }
 
 /**
-helper function<br>
-<br>
+helper function&lt;br>
+&lt;br>
 turns Hex value to string
 
 @param {string} h - hex value to be turned to string
 */
 function fromHex(h) {
     var s = ''
-    for (let i = 0; i < h.length; i+=2) {
+    for (let i = 0; i &lt; h.length; i+=2) {
         s += String.fromCharCode(parseInt(h.substr(i, 2), 16))
     }
     return decodeURIComponent(escape(s))
 }
 
 /**
-helper function<br>
-<br>
+helper function&lt;br>
+&lt;br>
 compares two arrays and returns if identical
 @param {Array} array1 - array to be tested
 @param {Array} array2 - array to be tested
@@ -2492,7 +2520,7 @@ function compareArrays(array1,array2)
 {
   if ( Array.isArray(array1) )
   {
-    return array1.length === array2.length && array1.sort()
+    return array1.length === array2.length &amp;&amp; array1.sort()
     .every(function(val,ind){return val === array2.sort()[ind]});
   }
   else {
@@ -2537,3 +2565,26 @@ function trimTrailingSlashes(input)
 GENERAL HELPER FUNCTIONS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 /////////////////////////*/
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#addContainerOfDoc">addContainerOfDoc</a></li><li><a href="global.html#addHyperlink2Doc">addHyperlink2Doc</a></li><li><a href="global.html#addItem">addItem</a></li><li><a href="global.html#addToArrayIfNotExist">addToArrayIfNotExist</a></li><li><a href="global.html#addToInMyPossession">addToInMyPossession</a></li><li><a href="global.html#arrayItemfoundInArray">arrayItemfoundInArray</a></li><li><a href="global.html#borrow_request">borrow_request</a></li><li><a href="global.html#compareArrays">compareArrays</a></li><li><a href="global.html#couch_getUserDB">couch_getUserDB</a></li><li><a href="global.html#DBCommander">DBCommander</a></li><li><a href="global.html#deleteContainerOf">deleteContainerOf</a></li><li><a href="global.html#deleteFromInMyPossession">deleteFromInMyPossession</a></li><li><a href="global.html#deleteItemCopies">deleteItemCopies</a></li><li><a href="global.html#deleteItems">deleteItems</a></li><li><a href="global.html#dingsCommander">dingsCommander</a></li><li><a href="global.html#fetch">fetch</a></li><li><a href="global.html#findItems">findItems</a></li><li><a href="global.html#fromHex">fromHex</a></li><li><a href="global.html#getCarnet">getCarnet</a></li><li><a href="global.html#getSessionAndAuthToken">getSessionAndAuthToken</a></li><li><a href="global.html#getTargetsFromUrl">getTargetsFromUrl</a></li><li><a href="global.html#handover">handover</a></li><li><a href="global.html#handover_announce">handover_announce</a></li><li><a href="global.html#handover_cancel">handover_cancel</a></li><li><a href="global.html#handover_deny">handover_deny</a></li><li><a href="global.html#insertItemCopies">insertItemCopies</a></li><li><a href="global.html#instanceCommander">instanceCommander</a></li><li><a href="global.html#makeMango">makeMango</a></li><li><a href="global.html#move">move</a></li><li><a href="global.html#search">search</a></li><li><a href="global.html#toHex">toHex</a></li><li><a href="global.html#trimFloatStringToNDecimalPlaces">trimFloatStringToNDecimalPlaces</a></li><li><a href="global.html#trimTrailingSlashes">trimTrailingSlashes</a></li><li><a href="global.html#update">update</a></li><li><a href="global.html#updateContainerOf">updateContainerOf</a></li><li><a href="global.html#updatePublicDBIfPublic">updatePublicDBIfPublic</a></li><li><a href="global.html#validateReadRights">validateReadRights</a></li><li><a href="global.html#verifyAuthToken">verifyAuthToken</a></li><li><a href="global.html#verifyByJsonPW">verifyByJsonPW</a></li><li><a href="global.html#verifyByUrlPW">verifyByUrlPW</a></li><li><a href="global.html#verifyUserCredibility">verifyUserCredibility</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Thu Jan 17 2019 12:08:36 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

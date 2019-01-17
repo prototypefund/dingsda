@@ -1,4 +1,4 @@
-# dingsda
+# dingsda #
 
 dingsda - ze internez of dings
 
@@ -8,13 +8,16 @@ test web UI (optimized for mobile): https://www.dingsda.org/two
 
 at the moment: invite only. Feel welcome to contact philip(_ät_)machinaex(_dot_)de to get a test account.
 
+## documentation ##
+
+function documentation (so far only of server.js not yet from the clients) can
+be found at https://dingsda.org/docs/
 
 ## API v0.1 ##
 
 HTTP API running from node script:
 
  *server.js*:
-
 
 **known issues**
 - not propper RESTful API because commands part of JSON payload instead of url endpoint. will be changed till v1.0.0, but atm not hightest priority (sorry, noob mistake)
@@ -30,7 +33,7 @@ HTTP API running from node script:
 - cors (^2.8.4)
 - http-proxy (^1.17.0)
 
-- web-push (^2.88.0)
+- web-push (^2.88.0) (not yet implemented but used in pushServer_test)
 
 **configuration**
 
@@ -44,14 +47,16 @@ please provide all necessary information before you start the server.
 
 the dingsda API knows **3 different entry levels:**
 
-1. **Instance Level** (http requests to URL instanceUrl + API_BASE_URL will be considered Instance Level and handled within server.js by the function **instanceCommander()**)
+1. **Instance Level** (http requests to URL instanceUrl + API_BASE_URL will be considered Instance Level and handled within server.js by the function **[instanceCommander()](https://dingsda.org/docs/global.html#instanceCommander)**)
   for example: https://dingsda.org:3000/api/v1
-2. **Database Level** (http requests to URL instanceUrl + API_BASE_URL + <username> will be considered DB level and handled by function **DBCommander()**)
+
+2. **Database Level** (http requests to URL instanceUrl + API_BASE_URL + <username> will be considered DB level and handled by function **[DBCommander()](https://dingsda.org/docs/global.html#DBCommander)**)
   for example: https://dingsda.org:3000/api/v1/machinaex
-3. **Ding Level** (http requests to URL instanceURL + API_BASE_URL + <username> + <item _id> will be considered dinglevel and be handled by function **dingsCommander()**)
+
+3. **Ding Level** (http requests to URL instanceURL + API_BASE_URL + <username> + <item _id> will be considered dinglevel and be handled by function **[dingsCommander()](https://dingsda.org/docs/global.html#dingsCommander)**)
   for example: https://dingsda.org:3000/api/v1/machinaex/29e5cf8f-a99c-571c-93ab-e24fad18d2be
 
-requests to API need AuthSessionToken within its cookies all times except for Authentication
+requests to API need AuthSessionToken within its cookies all times except for Authentication.
 
 Important: **All POST API endpoints** MUST be **JSON formatted** and follow this
 basic form:
@@ -77,6 +82,8 @@ parameter     | description
 ------------- | -------------
 name          | username to authenticate with
 password      | password
+
+see: [verifyUserCredibility()](https://dingsda.org/docs/global.html#verifyUserCredibility)
 
 examples:
 
@@ -125,7 +132,7 @@ print(response.text)
 #### POST: ####
 
 ###### SEARCH: ######
-(CURRENTLY BROKEN AND NOT USED. SEE dingslevel/findItems)
+(CURRENTLY NOT USED. SEE dingslevel/findItems)
 
 ```json
 {
@@ -133,6 +140,8 @@ print(response.text)
   "doc": {...}
 }
 ```
+
+see: [search()](https://dingsda.org/docs/global.html#search)
 
 examples:
 (...)
@@ -170,6 +179,10 @@ parameter     | description
 ------------- | -------------
 doc           | doc to be added.
 
+
+see: [addItem()](https://dingsda.org/docs/global.html#addItem)
+
+
 **behaviour:**
 
 --------------------------------
@@ -189,6 +202,8 @@ doc           | doc to be added.
 parameter     | description
 ------------- | -------------
 doc           | doc to be updated, including recent _rev(!)
+
+see: [update()](https://dingsda.org/docs/global.html#update)
 
 **behaviour:**
 
@@ -212,6 +227,8 @@ parameter     | description
 ------------- | -------------
 doc           | doc to be deleted, including recent _rev(!)
 
+see: [deleteItems()](https://dingsda.org/docs/global.html#deleteItems)
+
 **behaviour:**
 
 --------------------------------
@@ -232,6 +249,8 @@ parameter     | description
 ------------- | -------------
 doc           | searchQuery: object w/ ```{ key : searchvalue }```
 bookmark      | (OPTIONAL) bookmark string from last result.
+
+see: [update()](https://dingsda.org/docs/global.html#update)
 
 **behaviour:**
  Will search Database for documents matching the searchterm(s) specified in json-field data.doc
@@ -308,7 +327,9 @@ $.ajax(settings).done(function (response) {
     ],
     "bookmark": "g1AAAAB4eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYqrGKZamBkZmBvpJhmZW-qaJlmY6CYZpKboWlqkJieam6caGaYkgfRywPQSrSsLAGuGH_M"
 }
+
 ```
+--------------------------------
 --------------------------------
 
 ### json schema (work in progress NOT UP TO DATE!!!) ###
@@ -424,7 +445,7 @@ this simple example would pass validation:
 	"_id":"1",
     "name":"eins",
 	"location":{"name":"berlin","longitude":"52.51704","latitude":"13.38792"},
-    "owner":["e8edb946-3df0-57fd-afd7-07b5a7ac4d0d","77827d81-b80d-543f-967d-c81be310c999"],
+    "owner":["machinaex"],
     "other":{}
 }
 ```

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="de" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="./../node_modules/handsontable/dist/handsontable.full.min.css">
+    <link rel="stylesheet" href="./../node_modules/sweetalert2/dist/sweetalert2.min.css">
+    <style>
+      .handsontable table {
+        font-size: 0.8em;
+      }
+      .handsontable th {
+        white-space: normal !important;
+        word-wrap: break-word;
+        vertical-align: middle;
+      }
+
+      input[type="checkbox"] {
+          display:none;
+      }
+      input[type="checkbox"] + label {
+          font-family: sans-serif;
+          font-size: 0.8em
+      }
+      input[type="checkbox"] + label span {
+          display:inline-block;
+          width:19px;
+          height:19px;
+          margin:-2px 2px 0 20px;
+          vertical-align:middle;
+          background:url(check_sheet.png) left top no-repeat;
+          cursor:pointer;
+          transform: scale(1.1,1.1);
+      }
+      input[type="checkbox"]:checked + label span {
+          background:url(check_sheet.png) -19px top no-repeat;
+      }
+
+      #exampleConsole {
+          margin-left: 20px;
+          color: darkgreen;
+      }
+
+      #loadData {
+        height: 30px;
+        background-color: rgba(225,225,255,1)
+      }
+
+      #saveData {
+        height: 30px;
+        background-color: rgba(255,205,205,1)
+      }
+
+    </style>
+    <title>dingsda spreadsheet rimini</title>
+  </head>
+<body>
+
+<br>
+<button id="loadData">load data from server</button>
+<button id="saveData" style="margin-left:20px">save data to server</button>
+<input type="checkbox" id="autosave" />
+<label for="autosave"><span></span>autosave on</label>
+<span id="exampleConsole"></span>
+<br><br>
+<div id="example"></div>
+
+<script src="./../node_modules/handsontable/dist/handsontable.full.js" type="text/javascript"></script>
+<script src="./../node_modules/sweetalert2/dist/sweetalert2.min.js" type="text/javascript"></script>
+<script src="./../node_modules/xlsx/dist/xlsx.full.min.js" type="text/javascript"></script>
+<!--needed for xlsx dl-->
+<script src="./../node_modules/file-saver/dist/FileSaver.min.js" type="text/javascript"></script>
+<script src="./jquery-3.2.1.min.js" type="text/javascript"></script>
+<!-- CARNET ATA EXPORT PARTS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.0/jspdf.debug.js"></script>
+<script src="./carnet.js" type="text/javascript"></script>
+
+<script src="./alldocs.js" type="text/javascript"></script> <!-- JUST FOR TESTING -->
+<script>
+// this part is the frontend script part:
+  let getAllItemsURL = "https://dingsda.org:3000/api/v1/machinaex/"
+
+  document.getElementById("loadData").addEventListener("click",function(){
+    $.ajax({
+      type: "POST",
+      url: getAllItemsURL,
+      data: JSON.stringify({
+              "data":[{
+                "type":"findItems",
+                "doc":{_id:""}
+              }]
+            }),
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      success: function(result){
+         filltable(result.docs)
+      },
+      error: function(err){throw err},
+      contentType:"application/json"
+    });
+  })
+
+  $("#autosave").change(function(){
+    if ($('#autosave:checkbox:checked').length > 0)
+    {
+      swal({
+        html:`Vorsicht!<br><br> Ab jetzt wird jede Änderung in der Tabelle
+        sofort hochgeladen.<br> Da machst du schnell was kaputt. Mach vorsichtig!`
+      })
+    }
+  })
+
+  $("#saveData").click(function(){
+    console.log("saving!");
+    $("#saveData").hide();
+    for (i in dataObject)
+    {
+      if (dataObject[i]._id !== undefined && dataObject[i]._id !== "")
+      {
+        let j = i; // scope shizzle
+        let item = JSON.parse(JSON.stringify(dataObject[j]))
+        setTimeout(function(){
+          item = convertItemToItemWithArrays(item);
+          updateit(item,function(res){
+            console.log(res);
+            console.log(j);
+            if (res.ok)
+            {
+              dataObject[j]._rev = res.rev
+            }
+            else {
+              if(res.status.toString().startsWith("409")) { console.log("conflict"); }
+              else if(res.status.toString().startsWith("500")) { console.log("server error"); }
+              else if(res.status.toString().startsWith("4")) { console.log("other error"); }
+              alert("item with _id: "+item._id+"\n("+item.name+")\ncould not be updated.");
+              console.log(res);
+            }
+          });
+        },0)
+      }
+      else if (dataObject[i].name !== undefined && dataObject[i].location !== undefined)
+      {
+        dataObject[i] = addOwners2DocIfNoOwners(dataObject[i]);
+        addNewItemFromTable(dataObject[i],i)
+      }
+
+    }
+    setTimeout(function(){
+      console.log("reloading table");
+      $.ajax({
+        type: "POST",
+        url: getAllItemsURL,
+        data: JSON.stringify({
+                "data":[{
+                  "type":"findItems",
+                  "doc":{_id:""}
+                }]
+              }),
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        success: function(result){
+
+           filltable(result.docs)
+           $("#saveData").show()
+        },
+        error: function(err){throw err},
+        contentType:"application/json"
+      });
+    },5000)
+
+  })
+
+</script>
+<script type="text/javascript">
+
+  const API_BASE_URL = "https://dingsda.org:3000/api/v1/";
+  const UI_URL = "https://dingsda.org/two/";
+
+  let glb_username = "machinaex";
+
+  //let dataObject = testdocs;
+  let dataObject = [];
+
+  let container = document.getElementById('example');
+  let hot = new Handsontable(container, {
+    beforeRender: function(){
+      console.log("rendering");
+      // check which document has the most keys, get all keys & push longest item to front
+        for (doc of dataObject)
+        {
+          if (!doc.owners){return}
+          delete doc._attachments;
+          doc.owners = doc.owners.toString();
+          if (doc.other && doc.other.tags){
+            doc.other.tags = doc.other.tags.toString();
+          }
+          //doc.other.visibility = doc.other.visibility.toString();
+        }
+    },
+    data: dataObject,
+    columns: [{
+                data: "_id",
+                width: 50,
+                wordWrap:false
+              }, {
+                data: "other.rimini.receiptDate",
+                width: 50
+              }, {
+                data: "other.rimini.receiptNo",
+                width: 50
+              }, {
+                data: "other.rimini.boughtAt",
+                width: 70
+              }, {
+                data: "name",
+              //  width: "180%",
+              }, {
+                data: "other.rimini.priceNew",
+                width: 60
+              }, {
+                data: "location.description",
+                width: 60,
+                wordWrap:false
+              }, {
+                data: "other.count",
+                width: 60
+              }, {
+                data: "other.weight",
+                width: 60
+              }, {
+                data: "other.value",
+                width: 60
+              }, {
+                data: "other.madein",
+                width: 60
+              },{
+                data: "location.insideOf",
+                wordWrap:false,
+                width: 100
+              },{
+                data: "other.tags",
+                width: 100
+              }, {
+                data:" other.rimini.carnetWhere",
+              }],
+    colHeaders: ["ID","Beleg Datum",	"Beleg Nr.","Empfänger / Einzahler",
+      "Warenbezeichnung inkl.Seriennummer",	"Einkaufs preis",
+      "Ort Lager",	"Number of pieces",	"Gewicht",	"Carnet Wert",
+      "country of origin","insideOf item with id","tags / keywords","Carnet Ort d. Carnet",],
+    rowHeaders: true,
+    minSpareRows: 1,
+    autoWrapRow: true,
+    manualRowResize: true,
+    manualColumnResize: true,
+    contextMenu:{
+      items:{
+        "export_carnet_csv": { // Own custom option
+          name: 'export as Carnet.csv',
+          callback: function(inp,test) { // Callback for specific option
+            setTimeout(function() {
+              console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+              // here get all selected rows._id s and then build carnet from it
+              let carnetArrayNumbered = getCarnetFromRows(hot.getSelected())
+              renderCarnetATAcsv(carnetArrayNumbered); //works
+            }, 0);
+          }
+        },
+        "export_verwendungsnachweis_csv": { // Own custom option
+          name: 'export as Verwendungsnachweis.csv',
+          callback: function(inp,test) { // Callback for specific option
+            setTimeout(function() {
+              console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+              let array = getVerwendungsNachweisArray(hot.getSelected());
+              for (i in array)
+              {
+                array[i]=Object.values(array[i])
+                console.log(array[i]);
+              }
+              console.log(array);
+              renderCSV(["Datum","BelegNr","Empfänger*in/Einzahler*in",
+                "Warenbezeichnung inkl. Seriennummer","Einkaufspreis EUR",],
+                array,"Verwendungsnachweis.csv",true)
+            }, 0);
+          }
+        },
+        "export_carnet_pdf": { // Own custom option
+          name: 'export as Carnet.pdf',
+          callback: function(inp,test) { // Callback for specific option
+            setTimeout(function() {
+              console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+              // here get all selected rows._id s and then build carnet from it
+              let carnetArrayNumbered = getCarnetFromRows(hot.getSelected())
+              renderCarnetATApdf(carnetArrayNumbered) // works
+            }, 0);
+          }
+        },
+        "---------":{},
+        "row_above":{},
+        "row_below":{},
+        "remove_row":{},
+        "---------":{},
+        "alignment":{},
+        "make_read_only":{},
+      }
+    },
+    cells: function (row, col, prop)
+    {
+      let cellProperties = {}
+
+      if ( ["_id","id","containerOf","hyperlink"].includes(prop) )
+      {
+        cellProperties.readOnly = true;
+      }
+      return cellProperties;
+    },
+    afterChange: function (change, source) {
+      let autosave = document.getElementById("autosave");
+      let exampleConsole = document.getElementById("exampleConsole");
+      if (source === 'loadData') {
+        return; //don't save this change
+      }
+      if (!autosave.checked) {
+        return;
+      }
+      clearTimeout(autosaveNotification);
+      var autosaveNotification = setTimeout(function() {
+            exampleConsole.innerText ='Changes will be autosaved';
+            console.log("Changes will be autosaved");
+            saveChangesToServer(change)
+          }, 1000);
+
+    },
+    beforeRemoveRow: function(start,count){
+      console.log(start);
+      console.log(count);
+      // get items:
+      let items = [];
+      for (let i=start; i < start+count; i++)
+      {
+        items.push(dataObject[i])
+      }
+      console.log(items);
+
+      swal({
+          title:"DELETE ROW(S)?",
+          html:`Willst du die gerade entfernte(n)
+            items auch auf dem Server löschen?`,
+            showCancelButton: true,
+            focusConfirm: false,
+
+      }).then((result) => {
+        if (result.value) {
+          // TO DO: delete ITEMS via dingsda API!!!
+          for (var i = 0; i < items.length; i++) {
+            removeit(items[i]._id)
+          }
+          Swal(
+            'Deleted!',
+            'items wurden gelöscht.',
+            'success'
+          )
+        }
+      })
+      // to do: then: DELETE THOSE ITEMS
+    }
+
+  });
+
+
+  function getAllMarkedRows(chosen)
+  {
+    let data = []
+    for (var i in chosen)
+    {
+      let rows = chosen[i];
+      rows = [rows[0],rows[2]];
+      rows.sort(function(a, b){return a-b}); // sort array
+      //console.log(rows);
+      for (var j = rows[0]; j <= rows[1]; j++)
+      {
+        //console.log(dataObject[j]._id);
+        addToArrayIfNotExist(data,j)
+      }
+    }
+    console.log(data);
+    return data
+  }
+
+
+  function getVerwendungsNachweisArray(chosen)
+  {
+    let rows = getAllMarkedRows(chosen)
+
+    let nachweisArray = []
+    // prepare data for Carnet export:
+    for (i of rows)
+    {
+      console.log(dataObject[i]);
+      let item = {}
+      Object.assign(item, {
+        receiptDate:dataObject[i].other.rimini.receiptDate,
+        receiptNo:dataObject[i].other.rimini.receiptNo,
+        boughtAt:dataObject[i].other.rimini.boughtAt,
+        description : dataObject[i].name,
+        price: dataObject[i].other.rimini.priceNew,
+      });
+      if (item.receiptDate === undefined){ item.receiptDate = "";}
+      if (item.receiptNo === undefined){ item.receiptNo = "";}
+      if (item.boughtAt === undefined){ item.boughtAt = "";}
+      if (item.description === undefined){ item.description = " ";}
+      if (item.price === undefined){ item.price = "";}
+      nachweisArray.push(item);
+    }
+    console.log(nachweisArray);
+    return nachweisArray;
+  }
+
+
+  function getCarnetFromRows(chosen)
+  {
+    let rows = getAllMarkedRows(chosen)
+
+    let carnetArray = []
+    // prepare data for Carnet export:
+    for (i of rows)
+    {
+      console.log(dataObject[i]);
+      let item = {}
+      Object.assign(item, {
+        description:dataObject[i].name,
+        count : dataObject[i].other.count,
+        origin : dataObject[i].other.madein,
+        price : dataObject[i].other.value,
+        weight : dataObject[i].other.weight,
+      });
+      if (item.count === undefined){ item.count = "1";}
+      if (item.origin === undefined){ item.origin = "";}
+      if (item.price === undefined){ item.price = "";}
+      if (item.weight === undefined){ item.weight = "";}
+      carnetArray.push(item);
+    }
+    console.log(carnetArray);
+    let carnetArrayNumbered = numberItems(carnetArray);
+    console.log(carnetArrayNumbered);
+
+    return carnetArrayNumbered;
+  }
+
+  function renderCarnetATAcsv(array)
+  {
+    let header = ["no","description","count","weight","price","origin"]
+    renderCSV(header,array,"carnetATA.csv")
+  }
+
+  function renderCSV(header,array,filename="download.csv",inputIsArrayOfArrays=false)
+  {
+    let output = "";
+    output += header + "\n";
+    if (!inputIsArrayOfArrays)
+    {
+      for (i in array){
+        for (j in header)
+        {
+          output += array[i][header[j]]+","
+        }
+        output = output.slice(0,-1)
+        output += "\n"
+      }
+    }
+    else {
+      for (i in array){
+        for (j in array[i])
+        {
+          output += array[i][j]+","
+        }
+        output = output.slice(0,-1)
+        output += "\n"
+      }
+    }
+
+    console.log(output);
+    var a         = document.createElement('a');
+    a.download    = filename;
+    a.href        = 'data:attachment/csv,' +  encodeURIComponent(output);
+    a.target      = '_blank';
+
+    document.body.appendChild(a);
+    a.click();
+  }
+
+  function addOwners2DocIfNoOwners(doc)
+  {
+    if (!doc.owners)
+    {
+        doc.owners = [glb_username]
+    }
+    return doc
+  }
+
+  function saveChangesToServer(change)
+  {
+    console.log("saving to server from changes");
+    let updatedRowNums = [];
+    for (i in change)
+    {
+      console.log(change[i]);
+      addToArrayIfNotExist(updatedRowNums,change[i][0])
+    }
+    console.log(updatedRowNums);
+    // now update all the items on their own:
+    for (num of updatedRowNums){
+      let item2Upd = JSON.parse(JSON.stringify(dataObject[num]));
+      if (!item2Upd._id || item2Upd._id === undefined || item2Upd._id === ""){
+        console.log("adding new ITEM");
+        item2Upd = addOwners2DocIfNoOwners(item2Upd);
+        return addNewItemFromTable(item2Upd,num)
+      }
+      item2Upd = convertItemToItemWithArrays(item2Upd);
+      console.log(item2Upd);
+      updateit(item2Upd,function(res){
+        console.log(res);
+        if (res.ok)
+        {
+          dataObject[num]._rev = res.rev
+        }
+        else {
+          if(res.status.toString().startsWith("409")) { console.log("conflict"); }
+          else if(res.status.toString().startsWith("500")) { console.log("server error"); }
+          else if(res.status.toString().startsWith("4")) { console.log("other error"); }
+          alert("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.");
+          console.log(res);
+        }
+      });
+    }
+
+  }
+
+  function convertItemToItemWithArrays(item2Upd)
+  {
+    if (item2Upd.owners && !Array.isArray(item2Upd.owners)){ item2Upd.owners = item2Upd.owners.replace(' ', '').split(",") }
+    if (item2Upd.other.tags && !Array.isArray(item2Upd.other.tags)){item2Upd.other.tags = item2Upd.other.tags.split(",");}
+    //if (!Array.isArray(item2Upd.visibility)){ item2Upd.visibility = item2Upd.visibility.replace(' ', '').split(",") }
+    return item2Upd
+  }
+
+  function addNewItemFromTable(item2Upd,rowNum)
+  {
+    if (!(item2Upd.name && item2Upd.owners && item2Upd.location &&
+        (item2Upd.location.address || item2Upd.location.latitude ||
+        item2Upd.location.description)))
+    {
+      console.log("not adding cause sth missing");
+      return
+    }
+    console.log("adding it");
+    if (item2Upd.other){
+      item2Upd.other.visibility = ["friends"];
+    }
+    else {
+      item2Upd.other = { visibility : ["friends"] }
+    }
+
+    //return
+    addit(item2Upd,function(res){
+      console.log(res);
+      if (res.ok)
+      {
+        getSingleItem(res.id,function(res2){
+          dataObject[rowNum] = res2;
+          hot.render();
+        }), function(err){
+          throw err
+        }
+      }
+      else {
+        throw res
+      }
+    })
+
+  }
+
+  function filltable(data){
+    dataObject = data;
+    hot.loadData(dataObject); // fill it into table
+  }
+
+  function addToArrayIfNotExist(array,item){
+    array.indexOf(item) === -1 ? array.push(item) : console.log("item already exists");
+    return array;
+  }
+
+  function moveInsideArray( array, originalIndex, newIndex ) {
+    if ( newIndex >= array.length ) {
+        var i = newIndex - array.length + 1;
+        while (i--) {
+            array.push( undefined );
+        }
+    }
+    array.splice( newIndex, 0, array.splice( originalIndex, 1 )[0] );
+  };
+
+
+
+  function addit(obj,callback=console.log)
+  {
+    let data = {
+              "data":[{
+                "type":"addItems",
+                "doc":obj,
+              }]
+            };
+
+    console.log("attempting to add item to dingsda");
+    postAPI({
+        path:glb_username,
+        data:data,
+         callback: function(result){
+          callback(result)
+        }
+
+    });
+
+  }
+
+
+  function updateit(obj,callback=console.log)
+  {
+    console.log("trying to fetch originalObject from DB");
+    console.log(obj);
+
+    let path = API_BASE_URL+glb_username+"/"+obj._id;
+    if (obj.hyperlink !== undefined && obj.hyperlink != "")
+    { path = obj.hyperlink }
+
+    getSingleItem(path, function(res){
+        console.log("old and new obj:");
+        console.log(res);
+        //console.log("merging oldObj and formContents");
+        let newObj = Object.assign({}, res, obj);
+        //newObj._rev = res._rev;
+        console.log(newObj);
+        //console.log("attempting update of object");
+
+        let newdata = {
+            "data":[{
+              "type":"update",
+              "doc":newObj,
+              //pic:document.getElementById("preview_photo").src
+              //"doc":{_id:"33","other.visibility":["friends"]}
+            }]
+          }
+          let reloadAfterUpdate = false;
+          // photo upload:
+          /*if (document.getElementById("addPhoto").src.startsWith("data:image/jpeg;base64") )
+          {
+            console.log("PIC added to newdata!!!");
+            newdata.data[0].pic = document.getElementById("addPhoto").src;
+
+          }*/
+          //console.log(newdata);
+          // write into DB
+          $.ajax({
+            type: "POST",
+            url: path,
+            data: JSON.stringify(newdata),
+            success: function(res){
+              callback(res)
+            },
+            xhrFields: { withCredentials: true }, // to make AuthCookie ok
+            error: callback,
+            contentType:"application/json"
+          });
+      },
+      function(err){callback(err)}
+    )
+
+  }
+
+  function postAPI({path="", data =null, callback=console.log,
+                    error=function(err)
+                    {/*swal({text:err.responseText})*/;
+                    console.log(err.responseText);
+                    callback(err)
+                  }})
+  {
+
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL+path,
+      data: JSON.stringify(data),
+      success: callback,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: error
+      ,contentType:"application/json"
+    });
+
+  }
+
+  function getSingleItem(id,callback,error=console.log)
+  {
+      // transform id into hyperlink in case no hyperlink was passed:
+      if (!id.startsWith("https")){
+        id = API_BASE_URL+glb_username+"/"+id;
+      }
+      console.log("fetching single Item: "+id);
+      // get item json from DB
+      $.ajax({
+        type: "GET",
+        url: id,
+        success: callback,
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        error: error,
+        contentType:"application/json"
+      });
+
+  }
+
+  function removeit(id, callbackdel=console.log)
+  {
+    console.log("removeit function triggered!!!");
+    if (id == "" || id == undefined)
+    {
+      return
+    }
+
+    console.log("trying to fetch originalObject from DB");
+
+    getAPI({
+      path:glb_username+"/"+id,
+      data:{
+        "data":[{
+          "type":"fetch"
+        }]
+      },
+      callback: function(res){
+
+        console.log(res);
+        console.log("attempting DELETE of object");
+
+        let deletedata = {
+            "data":[{
+              "type":"deleteItems",
+              "doc":res,
+            }]
+          }
+
+        postAPI({
+            path:glb_username+"/"+id,
+            data:deletedata,
+              callback: function(result){
+              callbackdel(result)
+              console.log("DELETED "+id+" successfully");
+              console.log(result);
+            },
+            error: function(err){
+              console.log("error in deleteit delete");
+              callbackdel(err)
+            }
+
+        });
+      },
+      error: function(err){
+        console.log("error in deleteit prefetch");
+        callbackdel(err)
+      }
+    })
+
+  }
+
+  function getAPI({path="", data=null, callback=console.log, error=function(err)
+                    {console.log(err.responseText)}})
+  {
+
+    $.ajax({
+      type: "GET",
+      url: API_BASE_URL+path,
+      data: data,
+      success: callback,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: error
+      //,dataType: "application/json"
+      ,contentType:"application/json"
+    });
+
+  }
+
+function renderAndDownloadExcel( ws_data = [['empty','data']] )
+{
+  let wb = XLSX.utils.book_new();
+  wb.SheetNames.push("1");
+  let ws = XLSX.utils.aoa_to_sheet(ws_data);
+  wb.Sheets["1"] = ws;
+  let out = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
+
+  saveAs(new Blob([makeSpreadSheetBuffer(out)],{type:"application/octet-stream"}), 'test.xlsx');
+}
+
+
+  function makeSpreadSheetBuffer(inp) {
+      let buffer = new ArrayBuffer(inp.length);
+      let UintArray = new Uint8Array(buffer);
+      for (var i = 0; i < inp.length; i++) UintArray[i] = inp.charCodeAt(i) & 0xFF;
+      return buffer;
+  }
+
+</script>
+</body>
+</html>

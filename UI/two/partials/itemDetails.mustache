@@ -226,8 +226,9 @@ $(".borrow_handover_btn").click(function(){
       let newItem = itemDetails.itemInFocus;
       newItem.inPossessionOf = glb_username;
       handoverItem(newItem, callback=function(res){
+        console.log(res);
         showToast("item will be taken back from Possessor.",1000)
-        $.mobile.pageContainer.pagecontainer("change", "#collection",
+        $.mobile.pageContainer.pagecontainer("change", "#notifications",
                    {allowSamePageTransition:true,transition: "slidefade" });
         refreshCollection();
         setTimeout(updateItemBatch,1200);
@@ -322,7 +323,7 @@ $("#itemDetails").on( "swipeleft", function(e) {
   shiftItemFocus();
   showItemDetails();
 /*  $.mobile.pageContainer.pagecontainer("change", "#itemDetails",
-           {allowSamePageTransition:true,transition: "slidefade" });*/
+           {allowSamePageTransition:true,transition: "slidefade" }); */
  })
 
  $("#itemDetails").on( "swiperight", function(e) {
@@ -349,7 +350,7 @@ function shiftItemFocus(shift=-1){
      window.history.back();
   }
 }
-
+ 
 function showItemDetails(){
   let mydoc = itemDetails.itemInFocus;
   if (mydoc)
@@ -361,7 +362,8 @@ function showItemDetails(){
       console.log("seeting new pic: " +res.substring(0,8));
       $("#detailImg").attr("src","data:image/jpeg;base64,"+res)
     });*/
-    $("#detailImg").attr("src",id);
+    $("#containerOf").hide(); // hide containerOf. addNew.mustache code should show if needed
+    $("#detailImg").attr("src",id); // if no picture found: use standard icon:
     $("#detailImg").attr("onerror",'null;this.src="icons/icon_512.png"')
     $("#detailTitle").html(mydoc.name);
     $("#detailOwners").html(mydoc.owners.toString());

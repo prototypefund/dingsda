@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>dingsda user interface 2</title>
-
+ 
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.json">
@@ -17,6 +17,9 @@
   <script src="assets/jquery.mobile-1.4.5.min.js"></script>
   <script src="assets/sweetalert2.js"></script>
   <script src="assets/bootstrap-tagsinput.js"></script>
+  <script src="assets/jquery.easy-autocomplete.min.js"></script>
+
+  <link rel="stylesheet" href="assets/easy-autocomplete.min.css">
 
   <link rel="stylesheet" type="text/css" href="css/style.css" />
   <link rel="stylesheet" type="text/css" href="assets/bootstrap-tagsinput.css" />
@@ -197,13 +200,15 @@ function btn_collection_clicked(reload=false){
    refreshCollection();
 }
 
-function refreshCollection(callback=console.log){
+function refreshCollection(callback=console.log,draw=true){
   $("#loadingGif").show();
   $("#itemList .item").parent().remove();
   setTimeout(function(){
       searchDB(collection.searchDB,collection.searchquery,function(inp){
-        drawItemCards(inp);
-        callback();
+        if(draw){
+          drawItemCards(inp);
+        }
+        callback(inp);
       });
   },100)
 
@@ -211,6 +216,7 @@ function refreshCollection(callback=console.log){
 
 function getItemsInMyPossesion(callback=console.log){
   getSingleItem("&inMyPossession",function(inMyPossesion){
+    //updateBorrowItemsBatch(inMyPossesion.things.length)
     for (item of inMyPossesion.things)
     {
       getSingleItem(item,function(object){
@@ -222,7 +228,6 @@ function getItemsInMyPossesion(callback=console.log){
       })
     }
   })
-
 }
 
 function btn_searchpage_clicked(){
@@ -1138,6 +1143,11 @@ function getCheckedItems(){
   </div>
 </li>
 */
+/**
+builds list object from single dingsa item.
+
+@param: {object} object representing the dingsda item
+*/
 function makeItemCard(object){
   let item = document.createElement('li');
   $(item).addClass("itemInList");
@@ -1214,7 +1224,13 @@ function makeItemCard(object){
 }
 
 
+/**
+renders Item Cards and prepends them to DOMs #itemlist.
+usually used after searchQuery returned from Database using its return value.
+uses makeItemCard(item) to build DOM objects (listitems).
 
+@param {object} Array of dingsda objects to be rendered
+*/
 function drawItemCards(objects){
 
   //$("#itemList .item").parent().remove();
@@ -1225,8 +1241,17 @@ function drawItemCards(objects){
 
   for (i in objects)
   {
-    let fromMyOwnDB = (objects[i].hyperlink.split("/").slice(-2)[0] === glb_username);
+    let fromMyOwnDB = false;
+    try{
+      fromMyOwnDB = (objects[i].hyperlink.split("/").slice(-2)[0] === glb_username);
+    }catch(err){console.log("error: seems to be old account missing hyperlink in docs");}
 
+
+    /*  FIXME: documentation is guessed not sure if I miss sth.
+    render a new item Card with the objects data but
+    filter out users own items from publicDB view
+     (that is: items from their Database not merely items owned by them!)
+    */
     if ((!lookingAtPublicDB) || (lookingAtPublicDB && !fromMyOwnDB))
     {
       let item = makeItemCard(objects[i]);
@@ -1244,7 +1269,7 @@ function drawItemCards(objects){
 
   // set global variable collection.detailView
   if(collection){
-    
+
     collection.searchhistory.unshift(objects);
     // if more than 3 searches in history: delete oldest one:
     if (collection.searchhistory.length > 3){ collection.searchhistory.pop() }
@@ -1318,14 +1343,25 @@ function countItemsInDB(callback=console.log){
     url: API_BASE_URL+glb_username,
     xhrFields: { withCredentials: true }, // to make AuthCookie ok
     success: function(result){
-       callback(result.doc_count-2);
+      /*
+      divide by 2 because of every doc has a partner doc xxx-containerOf
+      minus 3 because there are (atm) 3 extra docs in every userdb:
+      &notifications and &inMyPossesion and &config
+      (should change to only &config after the other two become databases)
+      */
+       callback((result.doc_count-5)/2);
     },
     error: function(err){console.log(err);},
     contentType:"application/json"
   });
 }
 
+/**
+updates small batch in the header menu that indicates how many items are in users
+database.
+*/
 function updateItemBatch(){
+  updateBorrowItemsBatch();
   countItemsInDB(function(res){
     $(".collection_icon").addClass("anim_heartbeat");
     setTimeout(function(){
@@ -1335,6 +1371,20 @@ function updateItemBatch(){
       setTimeout(function(){$(".collection_badge").removeClass("anim_hop")},1050);
     },300);
   })
+}
+
+/**
+updates small batch in the header menu that indicates how many items the user has
+borrowed from other users.
+*/
+function updateBorrowItemsBatch()
+{
+  getSingleItem("&inMyPossession",function(inMyPossesion){
+    $(".borrowedthings").html(inMyPossesion.things.length);
+    $(".borrowedthings").addClass("anim_hop_left");
+    setTimeout(function(){$(".borrowedthings").removeClass("anim_hop_left")},1050);
+  })
+
 }
 
 function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log){
@@ -1762,8 +1812,9 @@ $(".borrow_handover_btn").click(function(){
       let newItem = itemDetails.itemInFocus;
       newItem.inPossessionOf = glb_username;
       handoverItem(newItem, callback=function(res){
+        console.log(res);
         showToast("item will be taken back from Possessor.",1000)
-        $.mobile.pageContainer.pagecontainer("change", "#collection",
+        $.mobile.pageContainer.pagecontainer("change", "#notifications",
                    {allowSamePageTransition:true,transition: "slidefade" });
         refreshCollection();
         setTimeout(updateItemBatch,1200);
@@ -1858,7 +1909,7 @@ $("#itemDetails").on( "swipeleft", function(e) {
   shiftItemFocus();
   showItemDetails();
 /*  $.mobile.pageContainer.pagecontainer("change", "#itemDetails",
-           {allowSamePageTransition:true,transition: "slidefade" });*/
+           {allowSamePageTransition:true,transition: "slidefade" }); */
  })
 
  $("#itemDetails").on( "swiperight", function(e) {
@@ -1885,7 +1936,7 @@ function shiftItemFocus(shift=-1){
      window.history.back();
   }
 }
-
+ 
 function showItemDetails(){
   let mydoc = itemDetails.itemInFocus;
   if (mydoc)
@@ -1897,7 +1948,8 @@ function showItemDetails(){
       console.log("seeting new pic: " +res.substring(0,8));
       $("#detailImg").attr("src","data:image/jpeg;base64,"+res)
     });*/
-    $("#detailImg").attr("src",id);
+    $("#containerOf").hide(); // hide containerOf. addNew.mustache code should show if needed
+    $("#detailImg").attr("src",id); // if no picture found: use standard icon:
     $("#detailImg").attr("onerror",'null;this.src="icons/icon_512.png"')
     $("#detailTitle").html(mydoc.name);
     $("#detailOwners").html(mydoc.owners.toString());
@@ -2134,6 +2186,12 @@ function getSingleItem(id,callback,error=console.log)
     .smallfont {font-size: 6px !important;line-height: 50%}
     .mediumfont {font-size: 12px !important;line-height: 100%}
 
+
+    /* overwriting eaysautocompletes behaviour */
+    .easy-autocomplete{
+      width:100% !important
+    }
+
   </style>
 
   <!-- HEADER TEMPLATE -->
@@ -2320,6 +2378,45 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
       })
       $("#btn_add_next").html("SAVE EDITS");
     }
+
+    // bind easyAutocomplete to insideOf
+    var options = {
+      //url: "alldocs.json",
+
+      data: collection.searchhistory[0],
+
+      getValue: "name",
+
+      list: {
+        match: {
+          enabled: true
+        },
+        maxNumberOfElements: 8,
+        onSelectItemEvent: function() {
+    			var value = $("#insideOf").getSelectedItemData()._id;
+          console.log("doing "+ value);
+    			$("#insideOf").val(value).trigger("change");
+    		}
+      },
+
+      template: {
+        type: "custom",
+        method: function(value, item) {
+          console.log(value);
+          console.log(item);
+          return "<span class='flag flag-" + item + "' ></span>" + value;
+        }
+      },
+
+      /*theme: "round",*/
+
+      ajaxSettings: {
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      }
+
+    };
+    $("#insideOf").easyAutocomplete(options);
+
 
 })
 
@@ -2890,27 +2987,39 @@ function fillForm(object)
     $('#other\\.count').val(object.other.count);
     $('#other\\.tags').val( object.other.tags);
 
-    if(object.other.containerOf !== undefined && object.other.containerOf.length > 0 )
-    {
-      $('#containerOf').show()
-      $('#other\\.containerOf').html("");
-      for (item in object.other.containerOf)
+    /*
+    fetch containerOf doc of this item
+    and show containerOf fields if not empty:
+    (changed with betterContainerOf branch)
+    */
+    console.log("fetching -containerOf");
+    getSingleItem(object.hyperlink+"-containerOf",function(res){
+      console.log("-containerOf:");console.log(res);
+      if(res.containerOf !== undefined && res.containerOf.length > 0 )
       {
-        let links = "";
-        links = links + '<a href=\'javascript:getSingleItem("'+
-        object.other.containerOf[item]+
-        '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();})\'>'+
-        object.other.containerOf[item]+' </a><br>'
-        getSingleItem(object.other.containerOf[item],function(res){
-            links = res.name + " : <br>" + links;
-            $('#other\\.containerOf').append(links);
-        });
+        $('#containerOf').show();
+        $('#other\\.containerOf').html("");
+        for (item in res.containerOf)
+        {
+          let links = "";
+          links = links + '<a href=\'javascript:getSingleItem("'+
+          res.containerOf[item]+
+          '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();})\'>'+
+          res.containerOf[item]+' </a><br>'
+          getSingleItem(res.containerOf[item],function(res2){
+              links = res2.name + " : <br>" + links;
+              $('#other\\.containerOf').append(links);
+          });
+        }
+      }else{
+        $('#containerOf').hide()
+        $('#other\\.containerOf').html("");
       }
-    }else{
-      $('#containerOf').hide()
-      $('#other\\.containerOf').html("");
-    }
 
+    });
+
+
+    $("#other\\.tags").tagsinput("removeAll");
     for (item in object.other.tags)
     {
         $('#other\\.tags').tagsinput('add', object.other.tags[item]);
@@ -3320,6 +3429,7 @@ $("#btn_handover_items").click(function(){
       handoverItem(value,function(res){
         if (!res.ok){
           console.log("item could not be announced for handover. probably already in process or race condition");
+          swal({html:"something went wrong.<br> did you spell the username correct?"});
         }
         else {
           updateNotificationsBatch();
@@ -3496,11 +3606,20 @@ $("#btn_send_item_request").click(function(){
   console.log(dataOut);
   $.ajax({
     type: "POST",
-    url: API_BASE_URL+dbOwner, //testing only
+    url: API_BASE_URL+dbOwner, //testing only <-- why testing only? it works!
     data: JSON.stringify(dataOut),
-    success: function(r){ console.log(r) },
+    success: function(r){
+      console.log("borrow request send");
+      console.log(r);
+      showToast("Borrow request send to "+dbOwner,1000);
+      window.history.back();
+    },
     xhrFields: { withCredentials: true }, // to make AuthCookie ok
-    error: console.log,
+    error: function(err){
+      console.log("borrow request error");
+      console.log(err);
+      showToast("borrow request ERROR",800);
+    },
     contentType:"application/json"
   });
 
@@ -3561,6 +3680,13 @@ function login (){
           updateItemBatch();
           updateNotificationsBatch();
           fetchConfig();
+
+          collection.searchQuery = {_id:""};
+          collection.searchDB = glb_username;
+          searchDB(collection.searchDB,collection.searchquery,function(inp){
+              collection.searchhistory.unshift(inp);
+          });
+
           $.mobile.pageContainer.pagecontainer("change", "#landing",
                      {allowSamePageTransition:true});
 
@@ -3613,6 +3739,13 @@ function login (){
             customClass:"whiteletters"})
             updateItemBatch();
             fetchConfig();
+
+            collection.searchQuery = {_id:""};
+            collection.searchDB = glb_username;
+            searchDB(collection.searchDB,collection.searchquery,function(inp){
+                collection.searchhistory.unshift(inp);
+            });
+
             $.mobile.pageContainer.pagecontainer("change", "#landing",
                        {allowSamePageTransition:true});
             //fetchConfig();

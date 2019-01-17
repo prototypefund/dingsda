@@ -79,6 +79,13 @@ function login (){
           updateItemBatch();
           updateNotificationsBatch();
           fetchConfig();
+
+          collection.searchQuery = {_id:""};
+          collection.searchDB = glb_username;
+          searchDB(collection.searchDB,collection.searchquery,function(inp){
+              collection.searchhistory.unshift(inp);
+          });
+
           $.mobile.pageContainer.pagecontainer("change", "#landing",
                      {allowSamePageTransition:true});
 
@@ -131,6 +138,13 @@ function login (){
             customClass:"whiteletters"})
             updateItemBatch();
             fetchConfig();
+
+            collection.searchQuery = {_id:""};
+            collection.searchDB = glb_username;
+            searchDB(collection.searchDB,collection.searchquery,function(inp){
+                collection.searchhistory.unshift(inp);
+            });
+
             $.mobile.pageContainer.pagecontainer("change", "#landing",
                        {allowSamePageTransition:true});
             //fetchConfig();

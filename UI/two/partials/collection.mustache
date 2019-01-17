@@ -377,6 +377,11 @@ function getCheckedItems(){
   </div>
 </li>
 */
+/**
+builds list object from single dingsa item.
+
+@param: {object} object representing the dingsda item
+*/
 function makeItemCard(object){
   let item = document.createElement('li');
   $(item).addClass("itemInList");
@@ -453,7 +458,13 @@ function makeItemCard(object){
 }
 
 
+/**
+renders Item Cards and prepends them to DOMs #itemlist.
+usually used after searchQuery returned from Database using its return value.
+uses makeItemCard(item) to build DOM objects (listitems).
 
+@param {object} Array of dingsda objects to be rendered
+*/
 function drawItemCards(objects){
 
   //$("#itemList .item").parent().remove();
@@ -464,8 +475,17 @@ function drawItemCards(objects){
 
   for (i in objects)
   {
-    let fromMyOwnDB = (objects[i].hyperlink.split("/").slice(-2)[0] === glb_username);
+    let fromMyOwnDB = false;
+    try{
+      fromMyOwnDB = (objects[i].hyperlink.split("/").slice(-2)[0] === glb_username);
+    }catch(err){console.log("error: seems to be old account missing hyperlink in docs");}
 
+
+    /*  FIXME: documentation is guessed not sure if I miss sth.
+    render a new item Card with the objects data but
+    filter out users own items from publicDB view
+     (that is: items from their Database not merely items owned by them!)
+    */
     if ((!lookingAtPublicDB) || (lookingAtPublicDB && !fromMyOwnDB))
     {
       let item = makeItemCard(objects[i]);
@@ -483,7 +503,7 @@ function drawItemCards(objects){
 
   // set global variable collection.detailView
   if(collection){
-    
+
     collection.searchhistory.unshift(objects);
     // if more than 3 searches in history: delete oldest one:
     if (collection.searchhistory.length > 3){ collection.searchhistory.pop() }
@@ -557,14 +577,25 @@ function countItemsInDB(callback=console.log){
     url: API_BASE_URL+glb_username,
     xhrFields: { withCredentials: true }, // to make AuthCookie ok
     success: function(result){
-       callback(result.doc_count-2);
+      /*
+      divide by 2 because of every doc has a partner doc xxx-containerOf
+      minus 3 because there are (atm) 3 extra docs in every userdb:
+      &notifications and &inMyPossesion and &config
+      (should change to only &config after the other two become databases)
+      */
+       callback((result.doc_count-5)/2);
     },
     error: function(err){console.log(err);},
     contentType:"application/json"
   });
 }
 
+/**
+updates small batch in the header menu that indicates how many items are in users
+database.
+*/
 function updateItemBatch(){
+  updateBorrowItemsBatch();
   countItemsInDB(function(res){
     $(".collection_icon").addClass("anim_heartbeat");
     setTimeout(function(){
@@ -574,6 +605,20 @@ function updateItemBatch(){
       setTimeout(function(){$(".collection_badge").removeClass("anim_hop")},1050);
     },300);
   })
+}
+
+/**
+updates small batch in the header menu that indicates how many items the user has
+borrowed from other users.
+*/
+function updateBorrowItemsBatch()
+{
+  getSingleItem("&inMyPossession",function(inMyPossesion){
+    $(".borrowedthings").html(inMyPossesion.things.length);
+    $(".borrowedthings").addClass("anim_hop_left");
+    setTimeout(function(){$(".borrowedthings").removeClass("anim_hop_left")},1050);
+  })
+
 }
 
 function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log){

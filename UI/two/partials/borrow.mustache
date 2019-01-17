@@ -101,11 +101,20 @@ $("#btn_send_item_request").click(function(){
   console.log(dataOut);
   $.ajax({
     type: "POST",
-    url: API_BASE_URL+dbOwner, //testing only
+    url: API_BASE_URL+dbOwner, //testing only <-- why testing only? it works!
     data: JSON.stringify(dataOut),
-    success: function(r){ console.log(r) },
+    success: function(r){
+      console.log("borrow request send");
+      console.log(r);
+      showToast("Borrow request send to "+dbOwner,1000);
+      window.history.back();
+    },
     xhrFields: { withCredentials: true }, // to make AuthCookie ok
-    error: console.log,
+    error: function(err){
+      console.log("borrow request error");
+      console.log(err);
+      showToast("borrow request ERROR",800);
+    },
     contentType:"application/json"
   });
 

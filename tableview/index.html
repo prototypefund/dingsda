@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="de" dir="ltr">
+  <head>
+    <link rel="stylesheet" href="./../node_modules/handsontable/dist/handsontable.full.min.css">
+    <style>
+    /*
+      .handsontable table {
+        font-size: 1.5em;
+        font-family: monospace;
+      }
+      .handsontable tr, th {
+        height: 1.6em;
+      }
+      */
+    </style>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+<body>
+
+<button id="loadData">loadData from Server</button>
+<div id="example"></div>
+
+<script src="./../node_modules/handsontable/dist/handsontable.full.js" type="text/javascript"></script>
+<script src="./jquery-3.2.1.min.js" type="text/javascript"></script>
+<script src="./alldocs.js" type="text/javascript"></script> <!-- JUST FOR TESTING -->
+<script>
+// this part is the frontend script part:
+
+  let getAllItemsURL = "https://dingsda.org:3000/api/v1/machinaex/"
+
+  document.getElementById("loadData").addEventListener("click",function(){
+    $.ajax({
+      type: "POST",
+      url: getAllItemsURL,
+      data: JSON.stringify({
+              "data":[{
+                "type":"findItems",
+                "doc":{_id:""}
+              }]
+            }),
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      success: function(result){
+         filltable(result.docs)
+      },
+      error: function(err){throw err},
+      contentType:"application/json"
+    });
+  })
+
+</script>
+<script type="text/javascript">
+
+  const API_BASE_URL = "https://dingsda.org:3000/api/v1/";
+  const UI_URL = "https://dingsda.org/two/";
+
+  let glb_username = "machinaex";
+
+  //let dataObject = testdocs;
+  let dataObject = [];
+
+  let container = document.getElementById('example');
+  let hot = new Handsontable(container, {
+    beforeRender: function(){
+      console.log("rendering");
+      // check which document has the most keys, get all keys & push longest item to front
+        for (doc of dataObject)
+        {
+          if (!doc.owners){return}
+          delete doc._attachments;
+          doc.owners = doc.owners.toString();
+          if (doc.other && doc.other.tags){
+            doc.other.tags = doc.other.tags.toString();
+          }
+          //doc.other.visibility = doc.other.visibility.toString();
+      /*
+          let docKeys = Object.keys(doc);
+
+          // push to front if more keys than first object:
+          if( docKeys.length > Object.keys(dataObject[0]).length)
+          {
+             moveInsideArray(dataObject,dataObject.indexOf(doc),0)
+          }
+      */
+        }
+    },
+    data: dataObject,
+    columns: [{
+                data: "_id",
+                width: "50px",
+                wordWrap:false
+              }, {
+                data: "name"
+              }, {
+                data: "other.value",
+              }, {
+                data: "other.weight",
+              }, {
+                data: "other.count",
+              }, {
+                data: "location.address",
+                width: 200,
+                wordWrap:false
+              }, {
+                data: "location.description",
+                width: 50,
+                wordWrap:false
+              }, {
+                data: "location.latitude",
+                width: 50,
+                wordWrap:false
+              }, {
+                data: "location.longitude",
+                width: 50,
+                wordWrap:false
+              }, {
+                data: "other.tags",
+              },{
+                data: "owners",
+              }, {
+                data: "hyperlink",
+                width: 100,
+                wordWrap:false
+              }, {
+                data: "lastedited",
+                width: 50,
+                wordWrap:false
+              }, {
+                data: "lasteditedBy",
+                width: 50,
+                wordWrap:false
+              }],
+    colHeaders: ["ID","NAME","VALUE","WEIGHT","COUNT","LOCA.ADDRESS",
+    "LOCA.DESCRIPTION","LOCA.LATITUDE","LOCA.LONGITUDE","TAGS","OWNERS",
+    "HYPERLINK","LAST EDIT","LAST EDITED BY"],
+    rowHeaders: true,
+    minSpareRows: 0,
+    autoWrapRow: true,
+    manualRowResize: true,
+    manualColumnResize: true,
+    contextMenu:true,
+    cells: function (row, col, prop)
+    {
+      let cellProperties = {}
+
+      if ( ["_id","id","containerOf","hyperlink"].includes(prop) )
+      {
+        cellProperties.readOnly = true;
+      }
+      return cellProperties;
+    },
+    afterChange: function (change, source) {
+      if (source === 'loadData') {
+        return; //don't save this change
+      }
+      /*if (!autosave.checked) {
+        return;
+      }
+      clearTimeout(autosaveNotification);
+      ajax('scripts/json/save.json', 'GET', JSON.stringify({data: change}), function (data) {
+        exampleConsole.innerText  = 'Autosaved (' + change.length + ' ' + 'cell' + (change.length > 1 ? 's' : '') + ')';
+        autosaveNotification = setTimeout(function() {
+          exampleConsole.innerText ='Changes will be autosaved';
+        }, 1000);
+      })*/;
+      //console.log(change);
+      saveChangesToServer(change)
+    },
+    beforeRemoveRow: function(start,count){
+      console.log(start);
+      console.log(count);
+      // to do: swal with "SURE????"
+      // to do: then: DELETE THOSE ITEMS
+    }
+
+  });
+
+  function saveChangesToServer(change)
+  {
+    let updatedRowNums = [];
+    for (i in change)
+    {
+      console.log(change[i]);
+      addToArrayIfNotExist(updatedRowNums,change[i][0])
+    }
+    console.log(updatedRowNums);
+    // now update all the items on their own:
+    for (num of updatedRowNums){
+      let item2Upd = JSON.parse(JSON.stringify(dataObject[num]));
+      if (!item2Upd._id){
+        return addNewItemFromTable(item2Upd,num)
+      }
+      if (item2Upd.owners && !Array.isArray(item2Upd.owners)){ item2Upd.owners = item2Upd.owners.replace(' ', '').split(",") }
+      if (item2Upd.owners && !Array.isArray(item2Upd.other.tags)){ item2Upd.other.tags = item2Upd.other.tags.split(",") }
+      //if (!Array.isArray(item2Upd.visibility)){ item2Upd.visibility = item2Upd.visibility.replace(' ', '').split(",") }
+      console.log(item2Upd);
+      updateit(item2Upd,function(res){
+        console.log(res);
+        if (res.ok)
+        {
+          dataObject[num]._rev = res.rev
+        }
+        else {
+          if(res.status.toString().startsWith("409")) { console.log("conflict"); }
+          else if(res.status.toString().startsWith("500")) { console.log("server error"); }
+          else if(res.status.toString().startsWith("4")) { console.log("other error"); }
+          alert("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.");
+          console.log(res);
+        }
+      });
+    }
+
+  }
+
+  function addNewItemFromTable(item2Upd,rowNum)
+  {
+    if (!(item2Upd.name && item2Upd.owners && item2Upd.location &&
+        (item2Upd.location.address || item2Upd.location.latitude ||
+        item2Upd.location.description)))
+    {
+      console.log("not adding cause sth missing");
+      return
+    }
+    console.log("adding it");
+    if (item2Upd.other){
+      item2Upd.other.visibility = ["friends"];
+    }
+    else {
+      item2Upd.other = {visibility : ["friends"]}
+    }
+
+    //return
+    addit(item2Upd,function(res){
+      console.log(res);
+      if (res.ok)
+      {
+        getSingleItem(res.id,function(res2){
+          dataObject[num] = res2;
+          hot.render();
+        }), function(err){
+          throw err
+        }
+      }
+      else {
+        throw res
+      }
+    })
+
+  }
+
+  function filltable(data){
+    dataObject = data;
+    hot.loadData(dataObject); // fill it into table
+  }
+
+  function addToArrayIfNotExist(array,item){
+    array.indexOf(item) === -1 ? array.push(item) : console.log("item already exists");
+    return array;
+  }
+
+  function moveInsideArray( array, originalIndex, newIndex ) {
+    if ( newIndex >= array.length ) {
+        var i = newIndex - array.length + 1;
+        while (i--) {
+            array.push( undefined );
+        }
+    }
+    array.splice( newIndex, 0, array.splice( originalIndex, 1 )[0] );
+  };
+
+
+
+  function addit(obj,callback=console.log)
+  {
+    let data = {
+              "data":[{
+                "type":"addItems",
+                "doc":obj,
+              }]
+            };
+
+    console.log("attempting to add item to dingsda");
+    postAPI({
+        path:glb_username,
+        data:data,
+         callback: function(result){
+          callback(result)
+        }
+
+    });
+
+  }
+
+
+  function updateit(obj,callback=console.log)
+  {
+    console.log("trying to fetch originalObject from DB");
+    console.log(obj);
+
+    let path = API_BASE_URL+glb_username+"/"+obj._id;
+    if (obj.hyperlink !== undefined && obj.hyperlink != "")
+    { path = obj.hyperlink }
+
+    getSingleItem(path, function(res){
+
+        console.log(res);
+        console.log("merging oldObj and formContents");
+        let newObj = Object.assign({}, res, obj);
+        console.log(newObj);
+        console.log("attempting update of object");
+
+        let newdata = {
+            "data":[{
+              "type":"update",
+              "doc":newObj,
+              //pic:document.getElementById("preview_photo").src
+              //"doc":{_id:"33","other.visibility":["friends"]}
+            }]
+          }
+          let reloadAfterUpdate = false;
+          // photo upload:
+          /*if (document.getElementById("addPhoto").src.startsWith("data:image/jpeg;base64") )
+          {
+            console.log("PIC added to newdata!!!");
+            newdata.data[0].pic = document.getElementById("addPhoto").src;
+
+          }*/
+          //console.log(newdata);
+          // write into DB
+          $.ajax({
+            type: "POST",
+            url: path,
+            data: JSON.stringify(newdata),
+            success: function(res){
+              callback(res)
+            },
+            xhrFields: { withCredentials: true }, // to make AuthCookie ok
+            error: callback,
+            contentType:"application/json"
+          });
+      },
+      function(err){callback(err)}
+    )
+
+  }
+
+  function postAPI({path="", data =null, callback=console.log,
+                    error=function(err)
+                    {/*swal({text:err.responseText})*/;
+                    console.log(err.responseText);
+                    callback(err)
+                  }})
+  {
+
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL+path,
+      data: JSON.stringify(data),
+      success: callback,
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: error
+      ,contentType:"application/json"
+    });
+
+  }
+
+  function getSingleItem(id,callback,error=console.log)
+  {
+      // transform id into hyperlink in case no hyperlink was passed:
+      if (!id.startsWith("https")){
+        id = API_BASE_URL+glb_username+"/"+id;
+      }
+      console.log("fetching single Item: "+id);
+      // get item json from DB
+      $.ajax({
+        type: "GET",
+        url: id,
+        success: callback,
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        error: error,
+        contentType:"application/json"
+      });
+
+  }
+
+</script>
+</body>
+</html>
