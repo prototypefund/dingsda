@@ -2,3 +2,5 @@
 node_modules
 package.json
 package-lock.json
+server_config.json
+config_UI.json
