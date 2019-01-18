@@ -49,6 +49,8 @@
 <p>at the moment: invite only. Feel welcome to contact philip(_ät_)machinaex(<em>dot</em>)de to get a test account.</p>
 <h2>documentation</h2><p>function documentation (so far only of server.js not yet from the clients) can
 be found at https://dingsda.org/docs/</p>
+<p>visual schematic documentation of the client - server - database flows and (later)
+the livecycle of an HTTP request against the dingsda API can be found further down at <a href="#markdown-header-schemata">schemata</a></p>
 <h2>API v0.1</h2><p>HTTP API running from node script:</p>
 <p> <em>server.js</em>:</p>
 <p><strong>known issues</strong></p>
@@ -57,23 +59,23 @@ be found at https://dingsda.org/docs/</p>
 </ul>
 <p><strong>dependencies:</strong></p>
 <ul>
-<li>nano (^7.1.0)</li>
-<li>https (^1.0.0)</li>
-<li>express (^4.16.4)</li>
-<li>request (^2.88.0)</li>
-<li>cookie-parser (^1.4.3)</li>
-<li>body-parser (^1.18.3)</li>
-<li>uuid/v5 // npm install uuid (^3.3.2)</li>
-<li>cors (^2.8.4)</li>
-<li><p>http-proxy (^1.17.0)</p>
+<li><a href="https://github.com/apache/couchdb-nano">nano (^7.1.0)</a></li>
+<li><a href="https://www.npmjs.com/package/https">https (^1.0.0)</a></li>
+<li><a href="https://github.com/expressjs/express">express (^4.16.4)</a></li>
+<li><a href="https://github.com/request/request">request (^2.88.0)</a></li>
+<li><a href="https://github.com/expressjs/cookie-parser">cookie-parser (^1.4.3)</a></li>
+<li><a href="https://github.com/expressjs/body-parser">body-parser (^1.18.3)</a></li>
+<li><a href="https://github.com/kelektiv/node-uuid">uuid/v5 (^3.3.2)</a></li>
+<li><a href="https://github.com/expressjs/cors">cors (^2.8.4)</a></li>
+<li><p><a href="https://github.com/nodejitsu/node-http-proxy">http-proxy (^1.17.0)</a></p>
 </li>
-<li><p>web-push (^2.88.0) (not yet implemented but used in pushServer_test)</p>
+<li><p><a href="https://github.com/web-push-libs/web-push">web-push (^2.88.0)</a> (not yet implemented   but used in pushServer_test)</p>
 </li>
 </ul>
 <p><strong>configuration</strong></p>
 <p>configuration for server.js and pushServer_test is to be found within the config_file server_config.json</p>
 <p>configuration for the UIs is found inside of UI/<ui number>/config_UI.json</p>
-<p>please provide all necessary information before you start the server.</p>
+<p>make sure to provide all necessary information before you start the server.</p>
 <p><strong>HTTP API</strong></p>
 <p>the dingsda API knows <strong>3 different entry levels:</strong></p>
 <ol>
@@ -257,7 +259,7 @@ print(response.text)</code></pre><hr>
 <p><strong>behaviour:</strong>
  Will search Database for documents matching the searchterm(s) specified in json-field data.doc</p>
 <p>This API will only simplify all requests to use either &quot;$regex&quot;:&quot;(?i)&quot; or &quot;$in&quot;: in front of the searchValue. So: Search for searchValue will be successfull if searchValue is in any way included (within array or as substring) inside doc.</p>
-<p>Also: in order to keep the API flat, it uses a dot notation (parent.child) for requests deeper down the object tree (e.g. parent.child:&quot;hans&quot; instead of parent:{child:&quot;hans&quot;}) (also: s.example below)</p>
+<p>Note: in order to keep the API flat, it uses a dot notation (parent.child) for requests deeper down the object tree (e.g. parent.child:&quot;hans&quot; instead of parent:{child:&quot;hans&quot;}) (also: s.example below)</p>
 <p>If you want to search more DBs at once and/or make real [mango queries] (https://github.com/cloudant/mango) to dingsda, use the search API endpoint on instance Level.</p>
 <p>The query response result is limited to a maximum of 50 found items.
 The <strong>optional bookmark</strong> field can be added to follow up query in order to get the next 50 items returned. (see <a href="https://docs.couchdb.org/en/stable/api/database/find.html?highlight=bookmark">couchDBs find()</a> API for more details on bookmarks behaviour)</p>
@@ -318,7 +320,14 @@ $.ajax(settings).done(function (response) {
     ],
     &quot;bookmark&quot;: &quot;g1AAAAB4eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYqrGKZamBkZmBvpJhmZW-qaJlmY6CYZpKboWlqkJieam6caGaYkgfRywPQSrSsLAGuGH_M&quot;
 }
-</code></pre><hr>
+</code></pre><p><div id="markdown-header-schemata"></p>
+<h2>schemata</h2><p>you find different visual documentations of the data flow and the client - server / database
+architecture of dingsda inside of /img</p>
+<p>chema client-server-db:
+<a href="https://drive.google.com/file/d/1pW1QeY8gtDGYSdhEBgnbmq6uOhYu_GGk/view?usp=sharing">schema client-server-db</a></p>
+<p>templating flow and dependencies of client two:
+<a href="https://drive.google.com/file/d/1Hj3rqdFng-oMDaZI2GvwObD1AM_WW8K2/view?usp=sharing">templating flow and dependencies of client two</a></p>
+<hr>
 <hr>
 <h3>json schema (work in progress NOT UP TO DATE!!!)</h3><p>explanation needed for:</p>
 <ul>
@@ -445,7 +454,7 @@ or the field &quot;inside_id&quot; to mark in which other item it can be found</
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Thu Jan 17 2019 12:08:36 GMT+0100 (Central European Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Fri Jan 18 2019 15:16:02 GMT+0100 (Central European Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

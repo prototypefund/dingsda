@@ -13,6 +13,9 @@ at the moment: invite only. Feel welcome to contact philip(_ät_)machinaex(_dot_
 function documentation (so far only of server.js not yet from the clients) can
 be found at https://dingsda.org/docs/
 
+visual schematic documentation of the client - server - database flows and (later)
+the livecycle of an HTTP request against the dingsda API can be found further down at [schemata](#markdown-header-schemata)
+
 ## API v0.1 ##
 
 HTTP API running from node script:
@@ -23,17 +26,17 @@ HTTP API running from node script:
 - not propper RESTful API because commands part of JSON payload instead of url endpoint. will be changed till v1.0.0, but atm not hightest priority (sorry, noob mistake)
 
 **dependencies:**
-- nano (^7.1.0)
-- https (^1.0.0)
-- express (^4.16.4)
-- request (^2.88.0)
-- cookie-parser (^1.4.3)
-- body-parser (^1.18.3)
-- uuid/v5 // npm install uuid (^3.3.2)
-- cors (^2.8.4)
-- http-proxy (^1.17.0)
+- [nano (^7.1.0)](https://github.com/apache/couchdb-nano)
+- [https (^1.0.0)](https://www.npmjs.com/package/https)
+- [express (^4.16.4)](https://github.com/expressjs/express)
+- [request (^2.88.0)](https://github.com/request/request)
+- [cookie-parser (^1.4.3)](https://github.com/expressjs/cookie-parser)
+- [body-parser (^1.18.3)](https://github.com/expressjs/body-parser)
+- [uuid/v5 (^3.3.2)](https://github.com/kelektiv/node-uuid)
+- [cors (^2.8.4)](https://github.com/expressjs/cors)
+- [http-proxy (^1.17.0)](https://github.com/nodejitsu/node-http-proxy)
 
-- web-push (^2.88.0) (not yet implemented but used in pushServer_test)
+- [web-push (^2.88.0)](https://github.com/web-push-libs/web-push) (not yet implemented   but used in pushServer_test)
 
 **configuration**
 
@@ -41,7 +44,7 @@ configuration for server.js and pushServer_test is to be found within the config
 
 configuration for the UIs is found inside of UI/<ui number>/config_UI.json
 
-please provide all necessary information before you start the server.
+make sure to provide all necessary information before you start the server.
 
 **HTTP API**
 
@@ -257,7 +260,7 @@ see: [update()](https://dingsda.org/docs/global.html#update)
 
 This API will only simplify all requests to use either "$regex":"(?i)" or "$in": in front of the searchValue. So: Search for searchValue will be successfull if searchValue is in any way included (within array or as substring) inside doc.
 
-Also: in order to keep the API flat, it uses a dot notation (parent.child) for requests deeper down the object tree (e.g. parent.child:"hans" instead of parent:{child:"hans"}) (also: s.example below)
+Note: in order to keep the API flat, it uses a dot notation (parent.child) for requests deeper down the object tree (e.g. parent.child:"hans" instead of parent:{child:"hans"}) (also: s.example below)
 
 If you want to search more DBs at once and/or make real [mango queries] (https://github.com/cloudant/mango) to dingsda, use the search API endpoint on instance Level.
 
@@ -329,6 +332,20 @@ $.ajax(settings).done(function (response) {
 }
 
 ```
+
+<div id="markdown-header-schemata">
+## schemata ##
+
+you find different visual documentations of the data flow and the client - server / database
+architecture of dingsda inside of /img
+
+chema client-server-db:
+[schema client-server-db](https://drive.google.com/file/d/1pW1QeY8gtDGYSdhEBgnbmq6uOhYu_GGk/view?usp=sharing)
+
+templating flow and dependencies of client two:
+[templating flow and dependencies of client two](https://drive.google.com/file/d/1Hj3rqdFng-oMDaZI2GvwObD1AM_WW8K2/view?usp=sharing)
+
+
 --------------------------------
 --------------------------------
 
