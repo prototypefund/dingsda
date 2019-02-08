@@ -41,10 +41,26 @@ function showNotifications(){
   updateNotificationsBatch();
 }
 
-function removeNotification(notification, e)
+function removeNotification(notification,e)
 {
   console.log("deleting simple notification"+notification.ref);
   $(e.srcElement).parent().parent().remove(); // remove notification div
+
+  let query = {"data":[{"type":"deleteNotification","_id":notification}]}
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    data: JSON.stringify(query),
+    contentType:"application/json",
+    success: function(res){
+      console.log(res);
+      updateNotificationsBatch();
+      updateBorrowItemsBatch();
+      //refreshCollection(console.log,true,true);
+    }
+  })
+  /*
   $.ajax({
     type: "GET",
     url: API_BASE_URL+glb_username+"/&notifications",
@@ -74,6 +90,7 @@ function removeNotification(notification, e)
       });
     }
   });
+  */
 }
 
 function cancelHandover(notification,e)
@@ -94,7 +111,8 @@ function cancelHandover(notification,e)
     url: API_BASE_URL+glb_username,
     data: JSON.stringify(dataOut),
     success: function(r){
-      showNotifications();
+      updateNotificationsBatch();
+      //showNotifications();
       console.log(r)
     },
     xhrFields: { withCredentials: true }, // to make AuthCookie ok
@@ -124,7 +142,10 @@ function confirmHandover(notification, confirmed, e)
       url: API_BASE_URL+glb_username,
       data: JSON.stringify(dataOut),
       success: function(r){
-        showNotifications();
+        //showNotifications();
+        updateNotificationsBatch();
+        updateBorrowItemsBatch();
+        refreshCollection(console.log,true,true);
         console.log(r)
       },
       xhrFields: { withCredentials: true }, // to make AuthCookie ok
@@ -180,8 +201,8 @@ function addNotification(noti)
       listitem = makeNotification({
           text:"<br>"+noti.text,
           wording_confirm:"OK",
-          cb_confirm:function(e){removeNotification(noti,e);
-            updateNotificationsBatch();showNotifications()}
+          cb_confirm:function(e){removeNotification(noti._id,e);
+            updateNotificationsBatch();/*showNotifications()*/}
         })
         break;
       default:
@@ -251,8 +272,23 @@ function makeNotification({text="",cb_confirm=null,cb_cancel=null,
   return notification
 }
 
+
 function getNotificationsFlat(callback=console.log)
 {
+  let query = {"data":[{"type":"getNotifications"}]}
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    data: JSON.stringify(query),
+    success: function(r){
+      console.log(r);
+      callback(r);
+    },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  });
+  /*
   getSingleItem("&notifications",function(notifications){
     // get number of total notifications (items 2nd step down the object tree:)
     let items = [];
@@ -272,6 +308,7 @@ function getNotificationsFlat(callback=console.log)
     callback(items);
 
   })
+  */
 }
 
 </script>

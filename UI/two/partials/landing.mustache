@@ -33,7 +33,7 @@
         <span>ADD NEW ITEMS</span>
       </a>
 
-      <a class="ui-btn btn_3rd" id="btn_searchpage" href="#collection" onclick="btn_searchpage_clicked()">
+      <a class="ui-btn btn_3rd" id="btn_searchpage" href="#search" onclick="btn_searchpage_clicked()">
         <span>THINGS<br>OTHER PEOPLE<br>SHARE</span>
       </a>
 
@@ -60,6 +60,9 @@ $( document ).on( "pageshow", "#landing", function(e,ui) {
 })
 
 function btn_collection_clicked(reload=false){
+
+  let lastSearchWasForUserDB = (collection.searchDB === glb_username);
+
   if(collection)
   {
     console.log("collection clicked. username will be target");
@@ -72,42 +75,144 @@ function btn_collection_clicked(reload=false){
        reloadPage: false
    });
 
-  }
-   refreshCollection();
+ }
+ // if most recent search was for userDB, just render again but dont get from server
+ if (lastSearchWasForUserDB && $("#itemList li").length>0)
+ {
+  console.log("last search was for userdb. so wont fetch and wont draw");
+  refreshCollection(console.log,false,false);
+ }
+ else // if last search was to a public or this is the first search: fetch and then render
+ {
+  refreshCollection(console.log,true,true);
+ }
+
 }
 
-function refreshCollection(callback=console.log,draw=true){
-  $("#loadingGif").show();
-  $("#itemList .item").parent().remove();
+function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=false){
+  //$("#loadingGif").show();
   setTimeout(function(){
-      searchDB(collection.searchDB,collection.searchquery,function(inp){
-        if(draw){
-          drawItemCards(inp);
+    if (fetchDataFromServer)
+    {
+      $("#loadingGif").show();
+      $("#itemList .item").parent().remove();
+      searchAndDoStepsInBetweenPages(glb_username,{_id:""},
+        (r)=>{ // callback each loop
+          if (draw){
+            drawItemCards(r.docs)
+          }
+        },
+        (r)=>{  // callback end
+          setNewCollectionSearchHistory(r);
+          callback(r.docs);
         }
-        callback(inp);
-      });
+      )
+      /*
+      searchDB(collection.searchDB,collection.searchquery,function(inp){
+
+        setNewCollectionSearchHistory(inp.docs)
+
+        if(draw){
+          drawItemCards(inp.docs);
+        }
+        callback(inp.docs);
+      });*/
+    }
+    else {
+      if (draw)
+      {
+        $("#itemList .item").parent().remove();
+        drawItemCards(collection.searchhistory[0])
+      }
+      callback(true)
+    }
+
   },100)
 
 }
 
-function getItemsInMyPossesion(callback=console.log){
+function getItemsInMyPossession(forceRender=false){
+
+// get inMyPossession via API:
+  let query = {"data":[{"type":"getInMyPossession"}]}
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    data: JSON.stringify(query),
+    success: function(inMyPossession){
+
+      /*
+      add every item references by docs inside of inMyPossession
+      to the itemlist in collection view:
+      */
+      console.log(inMyPossession);
+      for (item of inMyPossession)
+      {
+        console.log("CATCHING ITEMS");
+        getSingleItem(item._id,function(object){
+          // if already in searchhistory: don't draw again else: draw and update!
+           let itemAlreadyInSearchhistory = collection.searchhistory[0].find((o,i)=>{
+            return o.hyperlink === object.hyperlink
+          })
+          if (forceRender || itemAlreadyInSearchhistory === undefined)
+          {
+            let card = makeItemCard(object);
+            $("#itemList").prepend(card);
+            addItemCardClickListener();
+            if (!itemAlreadyInSearchhistory)
+            {
+              collection.searchhistory[0].push(object);
+            }
+            $("#itemList").listview('refresh');
+            lazyload(); // init lazy load (see head.mustache)
+            window.scrollTo(0, 0);
+          }
+
+        })
+      }
+
+
+    },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  })
+  /*
   getSingleItem("&inMyPossession",function(inMyPossesion){
     //updateBorrowItemsBatch(inMyPossesion.things.length)
     for (item of inMyPossesion.things)
     {
       getSingleItem(item,function(object){
-        let card = makeItemCard(object);
-        $("#itemList").prepend(card);
-        addItemCardClickListener();
-        collection.searchhistory[0].push(object);
-        $("#itemList").listview('refresh');
+        // if already in searchhistory: don't draw again else: draw and update!
+         let itemAlreadyInSearchhistory = collection.searchhistory[0].find((o,i)=>{
+          return o.hyperlink === item
+        })
+        if (forceRender || !itemAlreadyInSearchhistory)
+        {
+          let card = makeItemCard(object);
+          $("#itemList").prepend(card);
+          addItemCardClickListener();
+          if (!itemAlreadyInSearchhistory)
+          {
+            collection.searchhistory[0].push(object);
+          }
+          $("#itemList").listview('refresh');
+          lazyload(); // init lazy load (see head.mustache)
+          window.scrollTo(0, 0);
+        }
+
       })
     }
   })
+  */
 }
 
-function btn_searchpage_clicked(){
-  if(collection)
+function btn_searchpage_clicked()
+{
+  
+
+/*
+if(collection)
   {
     console.log("searchpage clicked. public is target");
     collection.searchQuery = {_id:""};
@@ -115,9 +220,18 @@ function btn_searchpage_clicked(){
 
     $("#loadingGif").show();
     $("#itemList .item").parent().remove();
-    searchDB(collection.searchDB,collection.searchquery,drawItemCards);
+    //searchDB(collection.searchDB,collection.searchquery,drawItemCards);
+    searchAndDoStepsInBetweenPages(collection.searchDB,collection.searchquery,
+      (r)=>{ // callback each loop
+          drawItemCards(r.docs)
+      },
+      (r)=>{  // callback end
+        setNewCollectionSearchHistory(r);
+      }
+    )
 
   }
+*/
 }
 
 </script>

@@ -4,14 +4,16 @@
       <h3 id="location_collapsible">
         location: <span class="locationdescription"></span></h3>
 
-      <div id="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true">
+      <div id="containerOf" class="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true">
       <h6>contains:</h6>
       <span class="mediumfont" id="other.containerOf"></span>
       </div>
 
       <div class="locationContainer">
-        <input type="text" class="form-control map_value" id="description"
-              placeholder="description/name of place"/>
+        <div class="map_description_container">
+          <input type="text" class="form-control map_value map_description" id="description"
+                placeholder="description/name of place"/>
+        </div>
 
         <input type="text" class="form-control map_value" id="address"
             placeholder="address"/>

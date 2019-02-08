@@ -81,7 +81,9 @@ $("#btn_move_items").click(function(){
     }
 
     showToast("items will be moved",800);
-    setTimeout(refreshCollection,1000);
+    setTimeout(function(){
+      refreshCollection(console.log,true,true);
+    },1000);
     window.history.back();
   }
 
@@ -141,7 +143,7 @@ function updateItem(obj,picIncluded=false,callback=console.log)
         }
 
         // excluded picupdate. should have its own function, i think
-
+        
         // write into DB
         $.ajax({
           type: "POST",

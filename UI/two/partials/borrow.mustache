@@ -35,7 +35,7 @@
 
   <!-- HEADER TEMPLATE -->
   {{>header}}
-  <!-- END HEADER -->
+    <!-- END HEADER -->
 
   <!-- CONTENT -->
   <div role="main" class="ui-content">
@@ -101,7 +101,7 @@ $("#btn_send_item_request").click(function(){
   console.log(dataOut);
   $.ajax({
     type: "POST",
-    url: API_BASE_URL+dbOwner, //testing only <-- why testing only? it works!
+    url: API_BASE_URL+dbOwner,
     data: JSON.stringify(dataOut),
     success: function(r){
       console.log("borrow request send");

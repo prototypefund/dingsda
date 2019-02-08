@@ -35,6 +35,7 @@ HTTP API running from node script:
 - [uuid/v5 (^3.3.2)](https://github.com/kelektiv/node-uuid)
 - [cors (^2.8.4)](https://github.com/expressjs/cors)
 - [http-proxy (^1.17.0)](https://github.com/nodejitsu/node-http-proxy)
+- [deepcopy ^1.0.0](https://github.com/sasaplus1/deepcopy.js)
 
 - [web-push (^2.88.0)](https://github.com/web-push-libs/web-push) (not yet implemented   but used in pushServer_test)
 
@@ -51,13 +52,23 @@ make sure to provide all necessary information before you start the server.
 the dingsda API knows **3 different entry levels:**
 
 1. **Instance Level** (http requests to URL instanceUrl + API_BASE_URL will be considered Instance Level and handled within server.js by the function **[instanceCommander()](https://dingsda.org/docs/global.html#instanceCommander)**)
-  for example: https://dingsda.org:3000/api/v1
 
-2. **Database Level** (http requests to URL instanceUrl + API_BASE_URL + <username> will be considered DB level and handled by function **[DBCommander()](https://dingsda.org/docs/global.html#DBCommander)**)
+  for example: https://dingsda.org:3000/api/v1
+This level is mainly to manage user Authentication, login, subscriptions etc
+
+2. **Database Level** (http requests to URL instanceUrl + API_BASE_URL + *username* will be considered DB level and handled by function **[DBCommander()](https://dingsda.org/docs/global.html#DBCommander)**)
+
   for example: https://dingsda.org:3000/api/v1/machinaex
+This level is the server endpoint users will interact the most with, as it represents the user's
+database and handles all requests that do concern more than one item. This also means: It will only be
+relevant for the user owning the DB addressed
 
 3. **Ding Level** (http requests to URL instanceURL + API_BASE_URL + <username> + <item _id> will be considered dinglevel and be handled by function **[dingsCommander()](https://dingsda.org/docs/global.html#dingsCommander)**)
+
   for example: https://dingsda.org:3000/api/v1/machinaex/29e5cf8f-a99c-571c-93ab-e24fad18d2be
+This level is only handling requests that aim for single items in a database. It usually concerns owners
+of the item and people who the item is shared with or anyone who is allowed to read the items info (e.g.
+if it is set to be publicly visible)
 
 requests to API need AuthSessionToken within its cookies all times except for Authentication.
 
@@ -79,7 +90,9 @@ basic form:
 
 #### GET: ####
 
-###### Authentication: ######
+#### Authentication: ####
+
+*GET:*
 
 parameter     | description
 ------------- | -------------
@@ -88,6 +101,11 @@ password      | password
 
 see: [verifyUserCredibility()](https://dingsda.org/docs/global.html#verifyUserCredibility)
 
+description: <br>verifies user Auth by testing for username and password inside of request query parameter.
+username and password can be query parameters or in json format inside of a query parameter calles json. e.g.: https://xxx.xxx/yyy?username=aaa&password=bbb or https://xxx.xxx/yyy?json='{"username":"aaa","password":"bbb"}'
+
+response: AuthSessionCookie that can and will be saved by the browser
+
 examples:
 
 curl:
@@ -95,41 +113,6 @@ curl:
 $ curl -X GET 'https://dingsda.org:3000/api/v1?name=jan&password=demopassword'
 ```
 
-client js/jquery:
-```js
-var settings = {
-  "url": "https://dingsda.org:3000/api/v1?name=jan&password=demopassword",
-  "method": "GET",
-  "headers": {
-    "Content-Type": "application/json",
-    "cache-control": "no-cache",
-  },
-  "data": ""
-}
-
-$.ajax(settings).done(function (response) {
-  console.log(response);
-});
-```
-
-python:
-```python
-import requests
-
-url = "https://dingsda.org:3000/api/v1"
-
-querystring = {"name":"jan","password":"demopassword"}
-
-payload = ""
-headers = {
-    'Content-Type': "application/json",
-    'cache-control': "no-cache"
-    }
-
-response = requests.request("GET", url, data=payload, headers=headers, params=querystring)
-
-print(response.text)
-```
 --------------------------------
 
 #### POST: ####

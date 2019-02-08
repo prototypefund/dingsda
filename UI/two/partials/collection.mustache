@@ -172,7 +172,7 @@
     }
 
     #btn_bulk_move {
-      width: 100%;
+      /*width: 100%;*/
     }
 
     #btn_mark_all{
@@ -215,7 +215,7 @@
 
   </style>
 
-  <!-- HEADER TEMPLATE -->
+  <!-- HEADER TEMPLATE-->
   {{>header}}
   <!-- END HEADER -->
   <div  id="filterform">
@@ -231,7 +231,7 @@
 
     <ul id="itemList" data-role="listview" data-filter="true" data-input="#filterinput">
 
-      <li style="color:pink">no more items...</li>
+      <!--<li style="color:pink">no more items...</li>-->
 
     </ul>
 
@@ -242,7 +242,8 @@
       <button id="btn_mark_all" class="overfooter">(un)check all</button>
       <button id="btn_bulk_carnet_pdf" class="overfooter">Carnet ATA PDF</button>
       <div class="overfooter ui-grid-a" style="width:100%">
-        <!--<button id="btn_bulk_handover" class="btn_bulk_action ui-block-a">HANDOVER ITEMS</button>-->
+        <button id="btn_bulk_handover"
+        class="btn_bulk_action ui-block-a">HANDOVER ITEMS</button>
         <button id="btn_bulk_move"
         class="btn_bulk_action bulk_main_action ui-block-b">MOVE ITEMS</button>
       </div>
@@ -259,12 +260,13 @@
 
 //// collection object is the global object containing all infos that other pages
 ////  want to handover to collection or collection wants to remember
-let collection = {
+var collection = {
     searchQuery : {_id:""},
     searchDB : "",
     searchhistory:[],
     chooseMode:false,
-    bulk:[]
+    bulk:[],
+    bookmark: undefined
 }
 
 function switchOffButtonListener()
@@ -318,6 +320,8 @@ $( document ).on( "pageshow", "#collection", function(e,ui) {
 
     // prevent default pop up on hold and stuff:
     $("body").on("contextmenu", "#itemList", function() { return false; });
+
+    lazyload(); // init lazy load (see head.mustache)
 })
 
 $("#collection").swipeleft(function(){window.history.forward()});
@@ -344,6 +348,17 @@ $.mobile.document.on( "filterablecreate", "#collection", function() {
         else {
           matches--
         }
+      }
+      /*
+      this is a bit hacked: here we check if "#scrollend" div exists in DOM and
+      if so we trigger scrollEndListenerSearch in order to load more search result
+      from the last search via bookmark. this makes sense to do when the filter returns
+      a list of items so short that the user cant scroll down (the scrolling down to
+      the end of the itemlist normally triggers this event --> see search.mustache
+      function searchAndShow()! )
+      */
+      if($("#scrollend").length > 0){
+        scrollEndListenerSearch(); // actually for search.mustache
       }
 
       if (matches == keywords.length)
@@ -396,6 +411,7 @@ function makeItemCard(object){
     }
   }
   let img = document.createElement('img');
+  $(img).addClass("lazyload");
   let behindImg = document.createElement('div');
   $(behindImg).addClass("behindImg");
   let div = document.createElement('div');
@@ -418,17 +434,23 @@ function makeItemCard(object){
   if (idOrLink == undefined || idOrLink == "")
   { idOrLink = API_BASE_URL+collection.searchDB+"/"+object._id }
   if (collection.searchDB !== "" && collection.searchDB !== undefined
-      && idOrLink !== undefined && !idOrLink.split("/").includes("undefined") )
+      && idOrLink !== undefined && !idOrLink.split("/").includes("undefined")
+      &&
+      (
+        collection.searchDB === "public"
+        || (object._attachments && object._attachments["pic_small.jpg"])
+      ) )
   {
-    img.src = idOrLink+"/pic_small.jpg";
-    $(img).attr("onerror",'null;this.src="icons/icon_512.png"');
+    $(img).attr("data-src", idOrLink+"/pic_small.jpg");
+    img.src = "icons/loading.png";
+    $(img).attr("onerror",'null;this.src="icons/singleheart.png"');
     /*getPicAttachment(idOrLink,function(res){
       img.src = "data:image/jpeg;base64,"+res;
     },function(err){console.log(err);});*/
   }
   else {
-    img.src = "icons/icon_512.png";
-    console.log("did not fetch a pic for: "+idOrLink+" from: "+collection.searchDB);
+    img.src = "icons/singleheart.png";
+    //console.log("did not fetch a pic for: "+idOrLink+" from: "+collection.searchDB);
   }
 
   name.appendChild(document.createTextNode(object.name));
@@ -458,6 +480,18 @@ function makeItemCard(object){
 }
 
 
+function setNewCollectionSearchHistory(objects)
+{
+    objects = objects.filter(function(val){return val}); // remove all undefined from array
+    // set global variable collection.detailView
+    if(collection){
+
+      collection.searchhistory.unshift(objects);
+      // if more than 3 searches in history: delete oldest one:
+      if (collection.searchhistory.length > 3){ collection.searchhistory.pop() }
+    }
+}
+
 /**
 renders Item Cards and prepends them to DOMs #itemlist.
 usually used after searchQuery returned from Database using its return value.
@@ -465,8 +499,11 @@ uses makeItemCard(item) to build DOM objects (listitems).
 
 @param {object} Array of dingsda objects to be rendered
 */
-function drawItemCards(objects){
+function drawItemCards(objects, fetchInMyPossession=true,bookmarklistener=undefined,alwaysAppend=false){
 
+  objects = objects.filter(function(val){return val}); // remove all undefined from array
+
+  $("#loadingGif").hide();
   //$("#itemList .item").parent().remove();
 
   // flag to  hide items with hyperlink containing users DB if we look at public items
@@ -489,7 +526,13 @@ function drawItemCards(objects){
     if ((!lookingAtPublicDB) || (lookingAtPublicDB && !fromMyOwnDB))
     {
       let item = makeItemCard(objects[i]);
-      $("#itemList").prepend(item);
+      if (!alwaysAppend){
+        $("#itemList").prepend(item);
+      }
+      else {
+        $("#itemList").append(item);
+      }
+
 
       $("#itemList").listview('refresh');
     }
@@ -499,27 +542,31 @@ function drawItemCards(objects){
     }
 
   }
-  objects = objects.filter(function(val){return val}); // remove all undefined from array
 
-  // set global variable collection.detailView
-  if(collection){
-
-    collection.searchhistory.unshift(objects);
-    // if more than 3 searches in history: delete oldest one:
-    if (collection.searchhistory.length > 3){ collection.searchhistory.pop() }
+  // listen for scrollend to get into view and trigger bookmark load then:
+  if (collection.bookmark !== undefined && bookmarklistener !== undefined)
+  {
+    addScrollEndListenerToCollection(bookmarklistener)
   }
-
-  $("#loadingGif").hide();
 
 // listen for clicks on listitems and open item in detailView:
   addItemCardClickListener();
 
-  if (!lookingAtPublicDB)
+  if (!lookingAtPublicDB && fetchInMyPossession)
   {
-    getItemsInMyPossesion(); // always???
+    getItemsInMyPossession(); // always???
   }
+  lazyload(); // init lazy load (see head.mustache)
 
 }
+
+function addScrollEndListenerToCollection(listener)
+{
+  $("#itemList").append("<div id='scrollend'></div>")
+
+  document.addEventListener("scroll",listener)
+}
+
 
 function addItemCardClickListener(){
   $(".itemInList").off("click");
@@ -583,7 +630,7 @@ function countItemsInDB(callback=console.log){
       &notifications and &inMyPossesion and &config
       (should change to only &config after the other two become databases)
       */
-       callback((result.doc_count-5)/2);
+       callback((result.doc_count-3)/2);
     },
     error: function(err){console.log(err);},
     contentType:"application/json"
@@ -613,15 +660,72 @@ borrowed from other users.
 */
 function updateBorrowItemsBatch()
 {
+  let query = {"data":[{"type":"getInMyPossession"}]}
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    data: JSON.stringify(query),
+    success: function(result){
+      console.log("items in my possession but not owned by me:");
+      console.log(result);
+      $(".borrowedthings").html(result.length);
+      $(".borrowedthings").addClass("anim_hop_left");
+      setTimeout(function(){$(".borrowedthings").removeClass("anim_hop_left")},1050);
+    },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  })
+  /* // out for new inMyPossession DB
   getSingleItem("&inMyPossession",function(inMyPossesion){
     $(".borrowedthings").html(inMyPossesion.things.length);
     $(".borrowedthings").addClass("anim_hop_left");
     setTimeout(function(){$(".borrowedthings").removeClass("anim_hop_left")},1050);
   })
+  */
+}
+
+// testing function for pagination
+/**
+searches db and checks if bookmark provided by API. if so, goes to next page
+ till return values are empty.
+ returns with two callbacks: callbackEach() gets called after every page with
+ only data from page inside. callbackEnd() gets only called after the last page
+ got read and returns all docs that have been returned in the process.
+*/
+function searchAndDoStepsInBetweenPages(
+          db="machinaex",searchTerm={_id:""},callbackEach=console.log,
+          callbackEnd=console.log,err=console.log,bookmark=null,outputEnd=[],stop=false)
+{
+    // send find() request to dingsda API:
+    searchDB(db,searchTerm,function(result){
+      /*
+      if a bookmark is returned and there were docs in the response from the
+      server, call the callbackEach() and then call this very function to flip
+      further through the pages of returns until no docs are returned anymore...
+      */
+      if (result.bookmark && result.docs.length > 0){
+        callbackEach(result)
+        console.log(result.bookmark);
+        outputEnd = outputEnd.concat(result.docs)
+        searchAndDoStepsInBetweenPages(db, searchTerm,callbackEach,
+          callbackEnd,err,result.bookmark,outputEnd)
+      }
+      else // ...then: stop looping and call the final callback:
+      {
+        console.log(outputEnd);
+        callbackEnd(outputEnd)
+      }
+    },console.log,bookmark);
 
 }
 
-function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log){
+/**
+sends HTTP request to dingsda API's find endpoint and passes response into callback
+
+@TODO: build in pagination if API returns bookmark
+*/
+function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log,bookmark=null){
     console.log(`sending find Request to ${db}`);
 
     $.ajax({
@@ -630,12 +734,13 @@ function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log){
       data: JSON.stringify({
             	"data":[{
             		"type":"findItems",
-            		"doc":searchTerm
+            		"doc":searchTerm,
+                "bookmark":bookmark
             	}]
             }),
       xhrFields: { withCredentials: true }, // to make AuthCookie ok
       success: function(result){
-         callback(result.docs)
+         callback(result)
       },
       error: err,
       contentType:"application/json"
@@ -792,6 +897,22 @@ function openCarnetPDF(ids=undefined)
   });
 }
 
+
+function isInView(elem)
+{
+  if($(elem).length > 0){
+    let docTop = $(window).scrollTop();
+    let docBottom = docTop + $(window).height();
+    let elemTop = $(elem).offset().top;
+    let elemBottom = elemTop + $(elem).height();
+
+    return ((elemBottom <= docBottom) && (elemTop >= docTop));
+  }
+  else {
+    return false
+  }
+
+}
 
 
 </script>

@@ -1,0 +1,490 @@
+<style>
+
+#search {
+  /*background-color: rgba(0, 159, 255, 0.38);*/
+  background-color: #fff2cd;
+  color: black;
+  margin-bottom: 9vh;
+
+}
+
+#locationEditor_Search .ui-collapsible-content{
+  background-color: #fff2cd;
+  text-shadow: 0px 0px 0px black !important;
+  width: 100%;
+  margin-left:-1em;
+  padding: 0 1em;
+}
+
+#locationEditor_Search #map{
+  height: 20vh;
+}
+
+#locationEditor_Search .ui-collapsible-heading{
+  display: none
+}
+
+#locationEditor_Search .ui-flipswitch{
+  display: none
+}
+
+#locationEditor_Search .map_description_container{
+  display: none
+}
+
+#locationEditor_Search .containerOf{
+  display: none
+}
+
+#locationEditor_Search .btn_getlocation{
+  height: 2.5em;
+}
+
+#locationEditor_Search table {
+    font-size: 0.8em !important;
+    line-height: 0.8em;
+    margin: 0;
+    padding: 0;
+    border-spacing: 0px
+}
+
+.flex-container-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+}
+.halfwidth {
+  width: 50%;
+}
+.thirdwidth {
+  width: 33%;
+}
+
+.btn_addSearchTerm{
+  width: 2em !important;
+  height: 2em !important;
+  text-align: center;
+  align-items: center;
+}
+
+.searchTerm .ui-input-btn /* overwriting jquery button container*/
+{
+  width: 2em !important;
+  padding: 0px !important;
+  height: 2em !important;
+}
+
+.select-km-container{
+  background-color: #a1d0c6;
+  text-shadow: none;
+  margin: 1em;
+}
+
+#searchTerms{
+
+}
+
+.searchTerm {
+  background-color: #fde7a3;
+  width: 90vw;
+  margin-left: -1em;
+  padding: 0em 1em;
+}
+
+.searchTerm input{
+      max-width: 50vw;
+      width: 50%;
+}
+
+.find_header {
+    background-color: #abcec6;
+    width: 100vw;
+    margin-left: -1em;
+    margin-top: -1em;
+    /*height: 10vh;*/
+    color: #fff2c9;
+    text-shadow: none;
+    align-items: center;
+}
+
+</style>
+
+<div data-role="page" id="search">
+
+  <!-- HEADER TEMPLATE -->
+  {{>header}}
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+
+    <div class="find_header">
+        <H1 align="center">FIND</H1>
+    </div>
+    <div id="searchTerms">
+    <!--<div class="flex-container-row searchTerm">
+        <input type="text" class="searchtext"></input>
+        <span style="margin-left:5px">in</span>
+        <div class="thirdwidth">
+          <select class="select-searchField" data-mini="true">
+            <option>name</option>
+            <option>id</option>
+            <option>tags</option>
+            <option>owners</option>
+          </select>
+        </div>
+        <button class="btn_addSearchTerm">+</button>
+      </div>-->
+    </div>
+
+    <div class="flex-container-row select-km-container">
+      <h3>within</h3>
+      <div class="halfwidth">
+        <select name="select-km" id="select-km" data-mini="false">
+          <option value="0.5" selected="selected">500m</option>
+          <option value="1">1km</option>
+          <option value="2">2km</option>
+          <option value="5">5km</option>
+          <option value="10">10km</option>
+          <option value="20">20km</option>
+          <option value="42">42km</option>
+          <!--<option value="50">50km</option>-->
+          <!--<option value="100">100km</option>-->
+        </select>
+      </div>
+      <h3>of</h3>
+    </div>
+
+    <div id="locationEditor_Search">
+
+    </div>
+
+    <div id="btn_search_public" class="btn_request ui-btn"
+      style="height:10vh;width:100%;left:-1em;bottom:-1em;background-color:#ff004c!important;
+      color:#fff2cd;z-index: 3;position:fixed;">
+      SEARCH</div>
+
+    </div>
+
+    </div>
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+<script>
+
+  $( document ).on("pageshow", "#search", function(e,ui) {
+    console.log("search loaded");
+
+    // move locationContainer here and open it:
+    $("#locationMoveable").appendTo("#locationEditor_Search");
+    $("#locationEditor_Search").trigger("create");
+    $("#locationMoveable").collapsible( "expand" );
+
+    updateInsideOfFlipSwitch(false)
+    //addSearchTermHandler()
+    $("#searchTerms").html("");
+    appendSearchTerm();
+  })
+
+
+
+/**
+gets all searchTerms from userinputs in textfields and dropdowns of search view
+and combines them to mango queries for further processing
+*/
+  $("#btn_search_public").click(function(){
+    makeSearch()
+  })
+
+
+  function makeSearch(){
+    let searchTerm = getSearchTerms();
+    let searchLocation = getSearchLocationAndKm();
+    if(searchLocation)
+    {
+      searchAndShow(searchLocation[0],searchLocation[1],searchLocation[2],console.log,"public",
+                            searchTerm)
+    }
+    else {
+      console.log("user did not provide geolocation");
+    }
+
+  }
+
+  function getSearchTerms(){
+
+    let searchTerms = $("#searchTerms").children();
+    let searchFields = $('#searchTerms span.select-searchField');
+
+    let selector = { "_id":{"$regex":""},"$and":[] }
+
+    for (item of searchTerms){
+
+      let searchField = $($(item).children()[2]).find("span.select-searchField").text()
+      let searchText = $(item).children()[0].value
+
+      let searchTerm = {};
+      searchTerm[searchField] = { "$regex":"(?i)"+searchText}
+      if (searchField === "owners" || searchField === "other.tags"){ // for arrays we have to check with $in
+        searchTerm[searchField] = { "$in":[searchText]}
+      }
+      selector["$and"].push(searchTerm)
+
+    }
+
+    console.log(selector);
+    return selector
+
+  }
+
+  function getSearchLocationAndKm(){
+    let lat = parseFloat($('#latitude').val());
+    let long = parseFloat($('#longitude').val());
+    let km = parseFloat($('#select-km').val());
+    console.log("searching within "+km+" kilometers");
+
+    if (lat === "" || long === "" || (lat === 0 && long === 0) || !km)
+    {
+      swal({html:"you need to gimme geodata!"})
+      return false;
+    }
+    else {
+      console.log("no problems on the geofront");
+      return [lat,long,km]
+    }
+
+  }
+
+  function appendSearchTerm(){
+
+
+    // get number of searchTerm:
+    let num = $('#searchTerms').children().length;
+    // Add a new div
+    $(`
+      <div class="flex-container-row searchTerm">
+        <input type="text" class="searchtext"></input>
+        <span style="margin-left:5px">in</span>
+        <div class="thirdwidth">
+          <select id="select_${num}" class="select-searchField" data-mini="true">
+            <option>name</option>
+            <option>id</option>
+            <option>other.tags</option>
+            <option>owners</option>
+          </select>
+        </div>
+        <button id="button_${num}" data-mini="true" class="btn_addSearchTerm">+</button>
+      </div>
+      `).appendTo('#searchTerms');
+    // Add a new select element
+    /*$('<select>').attr({'name':'select-choice-1','id':'select-choice-1'}).appendTo('');
+    $('<option>').attr({'value':'1'}).html('Value 1').appendTo('#select-choice-1');
+    $('<option>').attr({'value':'2'}).html('Value 2').appendTo('#select-choice-1');
+    */
+    // Enhance new select element
+    $('#select_'+num).selectmenu();
+    $('#button_'+num).button();
+    addSearchTermHandler()
+  }
+
+ function addSearchTermHandler(){
+   $(".btn_addSearchTerm").off("click");
+   $(".btn_addSearchTerm").on("click",function(){
+
+     appendSearchTerm();
+
+     addSearchTermHandler()
+   })
+ }
+
+  function searchAndShow(lat,long,km,callback=console.log,db=glb_username,
+                        searchTerm={"_id":{"$regex":""}},bookmark=null)
+  {
+      // save in collection global to find again for bookmark usage
+      collection.searchQuery = searchTerm;
+      collection.searchDB = db;
+      collection.latitude = lat;
+      collection.longitude = long;
+      collection.kilometers = km;
+
+      let cb = function(result){
+        callback(result)
+        setNewCollectionSearchHistory(result.docs)
+        collection.bookmark = result.bookmark
+        //if (collection.bookmark === "nil"){collection.bookmark = null}
+
+        // change page to show the searchResults:
+        $.mobile.changePage("#collection", {
+           reloadPage: false
+       });
+       console.log("BOOKMARK: " + bookmark);
+       if (bookmark === null){ // if this is the first query
+         // render without catching first:
+         console.log("first time is a charm");
+         $("#loadingGif").show();
+         $("#itemList .item").parent().remove();
+         drawItemCards(result.docs,false,scrollEndListenerSearch)
+       }
+       else { // if this is a follow up query using a bookmark:
+         if (result.docs.length === 0) // was the last response empty?
+         {
+           console.log("END OF SEARCH ");
+           // renderItemCards and add them instead of deleting the last ones but with no new scrollend:
+           drawItemCards(result.docs,false,null,true)
+           $("#scrollend").remove();
+         }
+         else {
+           console.log("AND ANOTHER ONE....");
+           $("#loadingGif").show();
+           // renderItemCards and add them instead of deleting the last ones:
+           drawItemCards(result.docs,false,scrollEndListenerSearch,true)
+
+           setTimeout(function(){
+             // then call eventhandler again in case scrollend is still in view (e.g. because too little items):
+             if ($("#scrollend").length > 0) // should not be true after END OF SEARCH
+             {
+               scrollEndListenerSearch()
+             }
+           },1000)
+         }
+
+       }
+
+      }
+
+      if (collection.bookmark === "nil"){
+        collection.bookmark = null;
+        return;
+      }
+      searchByKm(lat,long,km,cb,db,searchTerm,bookmark)
+  }
+
+  function scrollEndListenerSearch()
+  {
+      if (isInView("#scrollend"))
+      {
+        $("#scrollend").remove();
+        document.removeEventListener("scroll",scrollEndListenerSearch);
+        console.log("scrollend reached! triggering callback to scrollend...");
+
+        //load again with bookmark included and add instead of overwrite:
+        searchAndShow(collection.latitude,collection.longitude,collection.kilometers,
+          console.log,collection.searchDB,collection.searchQuery,collection.bookmark)
+
+      }
+  }
+
+  function searchByKm(lat,long,km,callback=console.log,db=glb_username,
+                      searchTerm={"_id":{"$regex":""}},bookmark=null)
+  {
+    let bounds = getBoundingBoxAroundGeoCoordByDistance(lat,long,km);
+    searchByBoundingBox(bounds.lowerLeftCorner,bounds.upperRightCorner,
+                                          callback,db,searchTerm,bookmark)
+  }
+
+
+  function searchByBoundingBox(lowerLeftCorner,upperRightCorner,callback=console.log,
+                      db=glb_username,searchTerm={"_id":{"$regex":""}},bookmark=null)
+  {
+    // build selector and add borders of the bounding box
+    let selector = {
+      "location.latitude": {
+         "$gte": lowerLeftCorner[0]
+      },
+      "$and": [
+         {
+            "location.longitude": {
+               "$gte": lowerLeftCorner[1]
+            }
+         },
+         {
+            "location.latitude": {
+               "$lte": upperRightCorner[0]
+            }
+         },
+         {
+            "location.longitude": {
+               "$lte": upperRightCorner[1]
+            }
+         }
+      ]
+   }
+   // add original searchTerm to selector:
+   selector["$and"].push(searchTerm)
+
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL,
+      data: JSON.stringify({
+            	"data":
+              [{
+            		"type":"search",
+                "db": db,
+            		"doc":selector,
+                "bookmark":bookmark
+            	}]
+            }),
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      success: function(result){
+         callback(result)
+         //console.log(result);
+      },
+      error: console.log,
+      contentType:"application/json"
+    });
+
+  }
+
+
+  /**
+  helper function. calculates new geocoordinates (latitude, longitude) from
+  input geoposition and the distances from it, provided in km
+  */
+  function latLongPlusKm(latitude,longitude,distancekmLat,distancekmLong)
+  {
+    let earthRadius = 6378;
+    let newlat = latitude+(distancekmLat / earthRadius)*(180/Math.PI);
+    let newlong = longitude+(distancekmLong / earthRadius)*(180/Math.PI)/Math.cos(latitude*Math.PI/180);
+
+    return [newlat,newlong];
+  }
+
+  /**
+  returns an object containing the fields "upperRightCorner" and "lowerLeftCorner"
+  (each an array of latitude and longitude in decimal) containing the information
+  needed for a bounding box around a geographic point defined by latitude and longitude.
+  It uses distancekm to calculate the edges.
+  */
+  function getBoundingBoxAroundGeoCoordByDistance(latitude,longitude,distancekm){
+
+    // edges of boundingBox:
+    let upperRightCorner = latLongPlusKm(latitude,longitude,distancekm,distancekm)
+    let lowerLeftCorner = latLongPlusKm(latitude,longitude,-distancekm,-distancekm)
+
+    return {upperRightCorner:upperRightCorner,lowerLeftCorner:lowerLeftCorner}
+  }
+
+  /**
+  helper function. checks if latitude and longitude are within a bounding box
+  defined by lowerLeftCorner and upperRightCorner coordinate arrays
+
+  not actually used, because these calculations are done through the searchquery.
+  but good to have. And to copy from
+
+  @returns {boolean} true if is within the bounds of the box.
+  */
+  function isInsideBoundingBox(latTest,longTest,lowerLeftCorner,upperRightCorner)
+  {
+    if (latTest > lowerLeftCorner[0] && latTest < upperRightCorner[0] &&
+        longTest > lowerLeftCorner[1] && longTest < upperRightCorner[1])
+        {
+          return true
+        }
+    return false
+  }
+
+</script>

@@ -541,8 +541,8 @@ document.getElementById("photo_upload").addEventListener("change",
           let ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0);
 
-          let MAX_WIDTH = 500;
-          let MAX_HEIGHT = 500;
+          let MAX_WIDTH = 400;
+          let MAX_HEIGHT = 400;
           let width = img.width;
           let height = img.height;
 
@@ -602,7 +602,7 @@ function btn_add_update()
                 shiftItemFocus(0);
                 showItemDetails();
                 window.history.back();
-              });
+              },true,true);
 
           });
         }
@@ -692,8 +692,8 @@ function getAllInputs()
   output.location = {
     address: $("#address").val(),
     description: $("#description").val(),
-    latitude: $("#latitude").val(),
-    longitude: $("#longitude").val(),
+    latitude: parseFloat($("#latitude").val()),
+    longitude: parseFloat($("#longitude").val()),
     insideOf: $("#insideOf").val()
   }
   output.other = {

@@ -27,6 +27,8 @@
 
     {{>borrow}}
 
+    {{>search}}
+
   </body>
 
 
@@ -37,7 +39,6 @@
   const UI_URL = "https://dingsda.org/two/";
 
   let glb_username = undefined;
-
 
   if (glb_username === undefined)
   {
@@ -76,24 +77,37 @@ function login (){
           swal({html:"logged in as <br><b>"+ glb_username+"</b>",
           toast:true, timer:1200,showConfirmButton:false, position:"center",
           customClass:"whiteletters"})
-          updateItemBatch();
-          updateNotificationsBatch();
           fetchConfig();
 
           collection.searchQuery = {_id:""};
           collection.searchDB = glb_username;
-          searchDB(collection.searchDB,collection.searchquery,function(inp){
-              collection.searchhistory.unshift(inp);
-          });
+          /*searchDB(collection.searchDB,collection.searchquery,function(inp){
+              collection.searchhistory.unshift(inp.docs);
+          });*/
+          searchAndDoStepsInBetweenPages(collection.searchDB,collection.searchquery,
+            (r)=>{ // callback each loop
+                //drawItemCards(r.docs)
+            },
+            (r)=>{  // callback end
+              setNewCollectionSearchHistory(r);
+              //callback(r.docs);
+            }
+          )
 
           $.mobile.pageContainer.pagecontainer("change", "#landing",
                      {allowSamePageTransition:true});
 
+         setTimeout(function(){
+           updateItemBatch();
+           updateNotificationsBatch()
+         },800)
+ 
           //fetchConfig();
         }
       },
       error: function(err){
         console.log(err);
+        logout();
         loginPopUp();
       },
       contentType:"application/json"
@@ -141,9 +155,18 @@ function login (){
 
             collection.searchQuery = {_id:""};
             collection.searchDB = glb_username;
-            searchDB(collection.searchDB,collection.searchquery,function(inp){
+            /*searchDB(collection.searchDB,collection.searchquery,function(inp){
                 collection.searchhistory.unshift(inp);
-            });
+            });*/
+            searchAndDoStepsInBetweenPages(collection.searchDB,collection.searchquery,
+              (r)=>{ // callback each loop
+                  //drawItemCards(r.docs)
+              },
+              (r)=>{  // callback end
+                setNewCollectionSearchHistory(r);
+                //callback(r.docs);
+              }
+            )
 
             $.mobile.pageContainer.pagecontainer("change", "#landing",
                        {allowSamePageTransition:true});
@@ -151,6 +174,7 @@ function login (){
           },
         error: function(err){
           console.log(err);
+          logout();
           loginPopUp({extra:"<br><span class='err'>you don't exist! Try again</span><br>"});
         },
         contentType:"application/json"
@@ -160,6 +184,7 @@ function login (){
 
   $(".registerlink").click(function(){
     console.log("register!");
+    logout();
     registerPopUp()
   });
 
@@ -209,6 +234,30 @@ function login (){
 
     console.log("fetching notifications from database");
 
+    getNotificationsFlat(function(notifications){
+      console.log("notifications infos:");
+      console.log(notifications);
+        // get number of total notifications (items 2nd step down the object tree:)
+        let length = notifications.length;
+        //console.log(length);
+        callback(length);
+      })
+  /*
+    $.ajax({
+      type: "GET",
+      url: API_BASE_URL+glb_username+"/_all_docs",
+      success: function(notifications){
+        // get number of total notifications (items 2nd step down the object tree:)
+        let length = notifications.total_rows;
+        //console.log(length);
+        callback(length);
+      },
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: console.log
+      ,contentType:"application/json"
+    });
+*/
+    /*
     getSingleItem("&notifications",function(notifications){
       // get number of total notifications (items 2nd step down the object tree:)
       let length = 0;
@@ -222,6 +271,7 @@ function login (){
       callback(length);
 
     })
+    */
 
   }
 

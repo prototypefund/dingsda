@@ -74,7 +74,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.0/jspdf.debug.js"></script>
 <script src="./carnet.js" type="text/javascript"></script>
 
-<script src="./alldocs.js" type="text/javascript"></script> <!-- JUST FOR TESTING -->
 <script>
 // this part is the frontend script part:
   let getAllItemsURL = "https://dingsda.org:3000/api/v1/machinaex/"
@@ -392,6 +391,8 @@
     // prepare data for Carnet export:
     for (i of rows)
     {
+      // default rimini to exist as emtpy object if undefined:
+      dataObject[i].other.rimini = dataObject[i].other.rimini || {};
       console.log(dataObject[i]);
       let item = {}
       Object.assign(item, {
@@ -494,40 +495,54 @@
     return doc
   }
 
+
+
+/**
+saves changes in table row by row to the database. <br>
+uses from handsontable change event to find rows that have been updated, checks
+if _id provided. Adds as new item if not, updates if provided.
+
+@param {object} change - change object from handsontable
+*/
   function saveChangesToServer(change)
   {
+    console.log(change);
     console.log("saving to server from changes");
     let updatedRowNums = [];
     for (i in change)
     {
-      console.log(change[i]);
+      //console.log(change[i]);
       addToArrayIfNotExist(updatedRowNums,change[i][0])
     }
-    console.log(updatedRowNums);
+    console.log("updateing rows: "+updatedRowNums);
     // now update all the items on their own:
     for (num of updatedRowNums){
+      console.log(`updating row #${num}`);
       let item2Upd = JSON.parse(JSON.stringify(dataObject[num]));
       if (!item2Upd._id || item2Upd._id === undefined || item2Upd._id === ""){
         console.log("adding new ITEM");
         item2Upd = addOwners2DocIfNoOwners(item2Upd);
-        return addNewItemFromTable(item2Upd,num)
+        addNewItemFromTable(item2Upd,num)
       }
-      item2Upd = convertItemToItemWithArrays(item2Upd);
-      console.log(item2Upd);
-      updateit(item2Upd,function(res){
-        console.log(res);
-        if (res.ok)
-        {
-          dataObject[num]._rev = res.rev
-        }
-        else {
-          if(res.status.toString().startsWith("409")) { console.log("conflict"); }
-          else if(res.status.toString().startsWith("500")) { console.log("server error"); }
-          else if(res.status.toString().startsWith("4")) { console.log("other error"); }
-          alert("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.");
+      else{
+        item2Upd = convertItemToItemWithArrays(item2Upd);
+        console.log(item2Upd);
+        updateit(item2Upd,function(res){
           console.log(res);
-        }
-      });
+          if (res.ok)
+          {
+            dataObject[num]._rev = res.rev
+          }
+          else {
+            if(res.status.toString().startsWith("409")) { console.log("conflict"); }
+            else if(res.status.toString().startsWith("500")) { console.log("server error"); }
+            else if(res.status.toString().startsWith("4")) { console.log("other error"); }
+            alert("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.");
+            console.log(res);
+          }
+        });
+      }
+
     }
 
   }
@@ -582,7 +597,7 @@
   }
 
   function addToArrayIfNotExist(array,item){
-    array.indexOf(item) === -1 ? array.push(item) : console.log("item already exists");
+    array.indexOf(item) === -1 ? array.push(item) : null/*console.log("item already exists")*/;
     return array;
   }
 

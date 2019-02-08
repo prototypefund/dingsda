@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>dingsda user interface 2</title>
- 
+
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.json">
@@ -18,11 +18,14 @@
   <script src="assets/sweetalert2.js"></script>
   <script src="assets/bootstrap-tagsinput.js"></script>
   <script src="assets/jquery.easy-autocomplete.min.js"></script>
+  <!-- https://github.com/tuupola/jquery_lazyload/tree/2.x -->
+  <script src="https://cdn.jsdelivr.net/npm/lazyload@2.0.0-beta.2/lazyload.js"></script>
 
   <link rel="stylesheet" href="assets/easy-autocomplete.min.css">
 
   <link rel="stylesheet" type="text/css" href="css/style.css" />
   <link rel="stylesheet" type="text/css" href="assets/bootstrap-tagsinput.css" />
+  <!--<link rel="stylesheet" href="nativedroid2/css/nativedroid2.css">-->
   <!-- MAPSCRIPT HEADER PARTS  -->
 
   <script type="text/javascript" src='https://maps.google.com/maps/api/js?key=AIzaSyAh_E5RUWU_48EPbSCkfIzwydNk1UEwZsQ&libraries=places'></script>
@@ -80,7 +83,7 @@
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -99,7 +102,7 @@
         <span>ADD NEW ITEMS</span>
       </a>
 
-      <a class="ui-btn btn_3rd" id="btn_searchpage" href="#collection" onclick="btn_searchpage_clicked()">
+      <a class="ui-btn btn_3rd" id="btn_searchpage" href="#search" onclick="btn_searchpage_clicked()">
         <span>THINGS<br>OTHER PEOPLE<br>SHARE</span>
       </a>
 
@@ -116,14 +119,16 @@
       <h3 id="location_collapsible">
         location: <span class="locationdescription"></span></h3>
 
-      <div id="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true">
+      <div id="containerOf" class="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true">
       <h6>contains:</h6>
       <span class="mediumfont" id="other.containerOf"></span>
       </div>
 
       <div class="locationContainer">
-        <input type="text" class="form-control map_value" id="description"
-              placeholder="description/name of place"/>
+        <div class="map_description_container">
+          <input type="text" class="form-control map_value map_description" id="description"
+                placeholder="description/name of place"/>
+        </div>
 
         <input type="text" class="form-control map_value" id="address"
             placeholder="address"/>
@@ -184,6 +189,9 @@ $( document ).on( "pageshow", "#landing", function(e,ui) {
 })
 
 function btn_collection_clicked(reload=false){
+
+  let lastSearchWasForUserDB = (collection.searchDB === glb_username);
+
   if(collection)
   {
     console.log("collection clicked. username will be target");
@@ -196,42 +204,144 @@ function btn_collection_clicked(reload=false){
        reloadPage: false
    });
 
-  }
-   refreshCollection();
+ }
+ // if most recent search was for userDB, just render again but dont get from server
+ if (lastSearchWasForUserDB && $("#itemList li").length>0)
+ {
+  console.log("last search was for userdb. so wont fetch and wont draw");
+  refreshCollection(console.log,false,false);
+ }
+ else // if last search was to a public or this is the first search: fetch and then render
+ {
+  refreshCollection(console.log,true,true);
+ }
+
 }
 
-function refreshCollection(callback=console.log,draw=true){
-  $("#loadingGif").show();
-  $("#itemList .item").parent().remove();
+function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=false){
+  //$("#loadingGif").show();
   setTimeout(function(){
-      searchDB(collection.searchDB,collection.searchquery,function(inp){
-        if(draw){
-          drawItemCards(inp);
+    if (fetchDataFromServer)
+    {
+      $("#loadingGif").show();
+      $("#itemList .item").parent().remove();
+      searchAndDoStepsInBetweenPages(glb_username,{_id:""},
+        (r)=>{ // callback each loop
+          if (draw){
+            drawItemCards(r.docs)
+          }
+        },
+        (r)=>{  // callback end
+          setNewCollectionSearchHistory(r);
+          callback(r.docs);
         }
-        callback(inp);
-      });
+      )
+      /*
+      searchDB(collection.searchDB,collection.searchquery,function(inp){
+
+        setNewCollectionSearchHistory(inp.docs)
+
+        if(draw){
+          drawItemCards(inp.docs);
+        }
+        callback(inp.docs);
+      });*/
+    }
+    else {
+      if (draw)
+      {
+        $("#itemList .item").parent().remove();
+        drawItemCards(collection.searchhistory[0])
+      }
+      callback(true)
+    }
+
   },100)
 
 }
 
-function getItemsInMyPossesion(callback=console.log){
+function getItemsInMyPossession(forceRender=false){
+
+// get inMyPossession via API:
+  let query = {"data":[{"type":"getInMyPossession"}]}
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    data: JSON.stringify(query),
+    success: function(inMyPossession){
+
+      /*
+      add every item references by docs inside of inMyPossession
+      to the itemlist in collection view:
+      */
+      console.log(inMyPossession);
+      for (item of inMyPossession)
+      {
+        console.log("CATCHING ITEMS");
+        getSingleItem(item._id,function(object){
+          // if already in searchhistory: don't draw again else: draw and update!
+           let itemAlreadyInSearchhistory = collection.searchhistory[0].find((o,i)=>{
+            return o.hyperlink === object.hyperlink
+          })
+          if (forceRender || itemAlreadyInSearchhistory === undefined)
+          {
+            let card = makeItemCard(object);
+            $("#itemList").prepend(card);
+            addItemCardClickListener();
+            if (!itemAlreadyInSearchhistory)
+            {
+              collection.searchhistory[0].push(object);
+            }
+            $("#itemList").listview('refresh');
+            lazyload(); // init lazy load (see head.mustache)
+            window.scrollTo(0, 0);
+          }
+
+        })
+      }
+
+
+    },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  })
+  /*
   getSingleItem("&inMyPossession",function(inMyPossesion){
     //updateBorrowItemsBatch(inMyPossesion.things.length)
     for (item of inMyPossesion.things)
     {
       getSingleItem(item,function(object){
-        let card = makeItemCard(object);
-        $("#itemList").prepend(card);
-        addItemCardClickListener();
-        collection.searchhistory[0].push(object);
-        $("#itemList").listview('refresh');
+        // if already in searchhistory: don't draw again else: draw and update!
+         let itemAlreadyInSearchhistory = collection.searchhistory[0].find((o,i)=>{
+          return o.hyperlink === item
+        })
+        if (forceRender || !itemAlreadyInSearchhistory)
+        {
+          let card = makeItemCard(object);
+          $("#itemList").prepend(card);
+          addItemCardClickListener();
+          if (!itemAlreadyInSearchhistory)
+          {
+            collection.searchhistory[0].push(object);
+          }
+          $("#itemList").listview('refresh');
+          lazyload(); // init lazy load (see head.mustache)
+          window.scrollTo(0, 0);
+        }
+
       })
     }
   })
+  */
 }
 
-function btn_searchpage_clicked(){
-  if(collection)
+function btn_searchpage_clicked()
+{
+  
+
+/*
+if(collection)
   {
     console.log("searchpage clicked. public is target");
     collection.searchQuery = {_id:""};
@@ -239,9 +349,18 @@ function btn_searchpage_clicked(){
 
     $("#loadingGif").show();
     $("#itemList .item").parent().remove();
-    searchDB(collection.searchDB,collection.searchquery,drawItemCards);
+    //searchDB(collection.searchDB,collection.searchquery,drawItemCards);
+    searchAndDoStepsInBetweenPages(collection.searchDB,collection.searchquery,
+      (r)=>{ // callback each loop
+          drawItemCards(r.docs)
+      },
+      (r)=>{  // callback end
+        setNewCollectionSearchHistory(r);
+      }
+    )
 
   }
+*/
 }
 
 </script>
@@ -252,14 +371,16 @@ function btn_searchpage_clicked(){
       <h3 id="location_collapsible">
         location: <span class="locationdescription"></span></h3>
 
-      <div id="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true">
+      <div id="containerOf" class="containerOf" data-role="collapsible" data-mini="true" data-collapsed-icon="bullets" data-expanded-icon="arrow-u" data-collapsed="true">
       <h6>contains:</h6>
       <span class="mediumfont" id="other.containerOf"></span>
       </div>
 
       <div class="locationContainer">
-        <input type="text" class="form-control map_value" id="description"
-              placeholder="description/name of place"/>
+        <div class="map_description_container">
+          <input type="text" class="form-control map_value map_description" id="description"
+                placeholder="description/name of place"/>
+        </div>
 
         <input type="text" class="form-control map_value" id="address"
             placeholder="address"/>
@@ -340,7 +461,7 @@ function btn_searchpage_clicked(){
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -396,7 +517,7 @@ function btn_searchpage_clicked(){
     })
   }
 
-  $("#logout").click(function(){
+  function logout(){
     // delete AuthSession Cookie (will only work if cookie from same URL)
     $.ajax({
         type: "DELETE",
@@ -414,6 +535,10 @@ function btn_searchpage_clicked(){
         },
         contentType:"application/json"
       });
+  }
+
+  $("#logout").click(function(){
+    logout();
   })
 
 
@@ -459,7 +584,7 @@ function btn_searchpage_clicked(){
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -507,10 +632,26 @@ function showNotifications(){
   updateNotificationsBatch();
 }
 
-function removeNotification(notification, e)
+function removeNotification(notification,e)
 {
   console.log("deleting simple notification"+notification.ref);
   $(e.srcElement).parent().parent().remove(); // remove notification div
+
+  let query = {"data":[{"type":"deleteNotification","_id":notification}]}
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    data: JSON.stringify(query),
+    contentType:"application/json",
+    success: function(res){
+      console.log(res);
+      updateNotificationsBatch();
+      updateBorrowItemsBatch();
+      //refreshCollection(console.log,true,true);
+    }
+  })
+  /*
   $.ajax({
     type: "GET",
     url: API_BASE_URL+glb_username+"/&notifications",
@@ -540,6 +681,7 @@ function removeNotification(notification, e)
       });
     }
   });
+  */
 }
 
 function cancelHandover(notification,e)
@@ -560,7 +702,8 @@ function cancelHandover(notification,e)
     url: API_BASE_URL+glb_username,
     data: JSON.stringify(dataOut),
     success: function(r){
-      showNotifications();
+      updateNotificationsBatch();
+      //showNotifications();
       console.log(r)
     },
     xhrFields: { withCredentials: true }, // to make AuthCookie ok
@@ -590,7 +733,10 @@ function confirmHandover(notification, confirmed, e)
       url: API_BASE_URL+glb_username,
       data: JSON.stringify(dataOut),
       success: function(r){
-        showNotifications();
+        //showNotifications();
+        updateNotificationsBatch();
+        updateBorrowItemsBatch();
+        refreshCollection(console.log,true,true);
         console.log(r)
       },
       xhrFields: { withCredentials: true }, // to make AuthCookie ok
@@ -646,8 +792,8 @@ function addNotification(noti)
       listitem = makeNotification({
           text:"<br>"+noti.text,
           wording_confirm:"OK",
-          cb_confirm:function(e){removeNotification(noti,e);
-            updateNotificationsBatch();showNotifications()}
+          cb_confirm:function(e){removeNotification(noti._id,e);
+            updateNotificationsBatch();/*showNotifications()*/}
         })
         break;
       default:
@@ -717,8 +863,23 @@ function makeNotification({text="",cb_confirm=null,cb_cancel=null,
   return notification
 }
 
+
 function getNotificationsFlat(callback=console.log)
 {
+  let query = {"data":[{"type":"getNotifications"}]}
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    data: JSON.stringify(query),
+    success: function(r){
+      console.log(r);
+      callback(r);
+    },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  });
+  /*
   getSingleItem("&notifications",function(notifications){
     // get number of total notifications (items 2nd step down the object tree:)
     let items = [];
@@ -738,6 +899,7 @@ function getNotificationsFlat(callback=console.log)
     callback(items);
 
   })
+  */
 }
 
 </script>
@@ -916,7 +1078,7 @@ function getNotificationsFlat(callback=console.log)
     }
 
     #btn_bulk_move {
-      width: 100%;
+      /*width: 100%;*/
     }
 
     #btn_mark_all{
@@ -959,7 +1121,7 @@ function getNotificationsFlat(callback=console.log)
 
   </style>
 
-  <!-- HEADER TEMPLATE -->
+  <!-- HEADER TEMPLATE-->
 
 <div data-role="header" data-position="fixed" class="header">
   <div data-role="navbar" class="ui-state-persist">
@@ -973,7 +1135,7 @@ function getNotificationsFlat(callback=console.log)
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -997,7 +1159,7 @@ function getNotificationsFlat(callback=console.log)
 
     <ul id="itemList" data-role="listview" data-filter="true" data-input="#filterinput">
 
-      <li style="color:pink">no more items...</li>
+      <!--<li style="color:pink">no more items...</li>-->
 
     </ul>
 
@@ -1008,7 +1170,8 @@ function getNotificationsFlat(callback=console.log)
       <button id="btn_mark_all" class="overfooter">(un)check all</button>
       <button id="btn_bulk_carnet_pdf" class="overfooter">Carnet ATA PDF</button>
       <div class="overfooter ui-grid-a" style="width:100%">
-        <!--<button id="btn_bulk_handover" class="btn_bulk_action ui-block-a">HANDOVER ITEMS</button>-->
+        <button id="btn_bulk_handover"
+        class="btn_bulk_action ui-block-a">HANDOVER ITEMS</button>
         <button id="btn_bulk_move"
         class="btn_bulk_action bulk_main_action ui-block-b">MOVE ITEMS</button>
       </div>
@@ -1025,12 +1188,13 @@ function getNotificationsFlat(callback=console.log)
 
 //// collection object is the global object containing all infos that other pages
 ////  want to handover to collection or collection wants to remember
-let collection = {
+var collection = {
     searchQuery : {_id:""},
     searchDB : "",
     searchhistory:[],
     chooseMode:false,
-    bulk:[]
+    bulk:[],
+    bookmark: undefined
 }
 
 function switchOffButtonListener()
@@ -1084,6 +1248,8 @@ $( document ).on( "pageshow", "#collection", function(e,ui) {
 
     // prevent default pop up on hold and stuff:
     $("body").on("contextmenu", "#itemList", function() { return false; });
+
+    lazyload(); // init lazy load (see head.mustache)
 })
 
 $("#collection").swipeleft(function(){window.history.forward()});
@@ -1110,6 +1276,17 @@ $.mobile.document.on( "filterablecreate", "#collection", function() {
         else {
           matches--
         }
+      }
+      /*
+      this is a bit hacked: here we check if "#scrollend" div exists in DOM and
+      if so we trigger scrollEndListenerSearch in order to load more search result
+      from the last search via bookmark. this makes sense to do when the filter returns
+      a list of items so short that the user cant scroll down (the scrolling down to
+      the end of the itemlist normally triggers this event --> see search.mustache
+      function searchAndShow()! )
+      */
+      if($("#scrollend").length > 0){
+        scrollEndListenerSearch(); // actually for search.mustache
       }
 
       if (matches == keywords.length)
@@ -1162,6 +1339,7 @@ function makeItemCard(object){
     }
   }
   let img = document.createElement('img');
+  $(img).addClass("lazyload");
   let behindImg = document.createElement('div');
   $(behindImg).addClass("behindImg");
   let div = document.createElement('div');
@@ -1184,17 +1362,23 @@ function makeItemCard(object){
   if (idOrLink == undefined || idOrLink == "")
   { idOrLink = API_BASE_URL+collection.searchDB+"/"+object._id }
   if (collection.searchDB !== "" && collection.searchDB !== undefined
-      && idOrLink !== undefined && !idOrLink.split("/").includes("undefined") )
+      && idOrLink !== undefined && !idOrLink.split("/").includes("undefined")
+      &&
+      (
+        collection.searchDB === "public"
+        || (object._attachments && object._attachments["pic_small.jpg"])
+      ) )
   {
-    img.src = idOrLink+"/pic_small.jpg";
-    $(img).attr("onerror",'null;this.src="icons/icon_512.png"');
+    $(img).attr("data-src", idOrLink+"/pic_small.jpg");
+    img.src = "icons/loading.png";
+    $(img).attr("onerror",'null;this.src="icons/singleheart.png"');
     /*getPicAttachment(idOrLink,function(res){
       img.src = "data:image/jpeg;base64,"+res;
     },function(err){console.log(err);});*/
   }
   else {
-    img.src = "icons/icon_512.png";
-    console.log("did not fetch a pic for: "+idOrLink+" from: "+collection.searchDB);
+    img.src = "icons/singleheart.png";
+    //console.log("did not fetch a pic for: "+idOrLink+" from: "+collection.searchDB);
   }
 
   name.appendChild(document.createTextNode(object.name));
@@ -1224,6 +1408,18 @@ function makeItemCard(object){
 }
 
 
+function setNewCollectionSearchHistory(objects)
+{
+    objects = objects.filter(function(val){return val}); // remove all undefined from array
+    // set global variable collection.detailView
+    if(collection){
+
+      collection.searchhistory.unshift(objects);
+      // if more than 3 searches in history: delete oldest one:
+      if (collection.searchhistory.length > 3){ collection.searchhistory.pop() }
+    }
+}
+
 /**
 renders Item Cards and prepends them to DOMs #itemlist.
 usually used after searchQuery returned from Database using its return value.
@@ -1231,8 +1427,11 @@ uses makeItemCard(item) to build DOM objects (listitems).
 
 @param {object} Array of dingsda objects to be rendered
 */
-function drawItemCards(objects){
+function drawItemCards(objects, fetchInMyPossession=true,bookmarklistener=undefined,alwaysAppend=false){
 
+  objects = objects.filter(function(val){return val}); // remove all undefined from array
+
+  $("#loadingGif").hide();
   //$("#itemList .item").parent().remove();
 
   // flag to  hide items with hyperlink containing users DB if we look at public items
@@ -1255,7 +1454,13 @@ function drawItemCards(objects){
     if ((!lookingAtPublicDB) || (lookingAtPublicDB && !fromMyOwnDB))
     {
       let item = makeItemCard(objects[i]);
-      $("#itemList").prepend(item);
+      if (!alwaysAppend){
+        $("#itemList").prepend(item);
+      }
+      else {
+        $("#itemList").append(item);
+      }
+
 
       $("#itemList").listview('refresh');
     }
@@ -1265,27 +1470,31 @@ function drawItemCards(objects){
     }
 
   }
-  objects = objects.filter(function(val){return val}); // remove all undefined from array
 
-  // set global variable collection.detailView
-  if(collection){
-
-    collection.searchhistory.unshift(objects);
-    // if more than 3 searches in history: delete oldest one:
-    if (collection.searchhistory.length > 3){ collection.searchhistory.pop() }
+  // listen for scrollend to get into view and trigger bookmark load then:
+  if (collection.bookmark !== undefined && bookmarklistener !== undefined)
+  {
+    addScrollEndListenerToCollection(bookmarklistener)
   }
-
-  $("#loadingGif").hide();
 
 // listen for clicks on listitems and open item in detailView:
   addItemCardClickListener();
 
-  if (!lookingAtPublicDB)
+  if (!lookingAtPublicDB && fetchInMyPossession)
   {
-    getItemsInMyPossesion(); // always???
+    getItemsInMyPossession(); // always???
   }
+  lazyload(); // init lazy load (see head.mustache)
 
 }
+
+function addScrollEndListenerToCollection(listener)
+{
+  $("#itemList").append("<div id='scrollend'></div>")
+
+  document.addEventListener("scroll",listener)
+}
+
 
 function addItemCardClickListener(){
   $(".itemInList").off("click");
@@ -1349,7 +1558,7 @@ function countItemsInDB(callback=console.log){
       &notifications and &inMyPossesion and &config
       (should change to only &config after the other two become databases)
       */
-       callback((result.doc_count-5)/2);
+       callback((result.doc_count-3)/2);
     },
     error: function(err){console.log(err);},
     contentType:"application/json"
@@ -1379,15 +1588,72 @@ borrowed from other users.
 */
 function updateBorrowItemsBatch()
 {
+  let query = {"data":[{"type":"getInMyPossession"}]}
+  $.ajax({
+    type: "POST",
+    url: API_BASE_URL+glb_username,
+    data: JSON.stringify(query),
+    success: function(result){
+      console.log("items in my possession but not owned by me:");
+      console.log(result);
+      $(".borrowedthings").html(result.length);
+      $(".borrowedthings").addClass("anim_hop_left");
+      setTimeout(function(){$(".borrowedthings").removeClass("anim_hop_left")},1050);
+    },
+    xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    error: console.log,
+    contentType:"application/json"
+  })
+  /* // out for new inMyPossession DB
   getSingleItem("&inMyPossession",function(inMyPossesion){
     $(".borrowedthings").html(inMyPossesion.things.length);
     $(".borrowedthings").addClass("anim_hop_left");
     setTimeout(function(){$(".borrowedthings").removeClass("anim_hop_left")},1050);
   })
+  */
+}
+
+// testing function for pagination
+/**
+searches db and checks if bookmark provided by API. if so, goes to next page
+ till return values are empty.
+ returns with two callbacks: callbackEach() gets called after every page with
+ only data from page inside. callbackEnd() gets only called after the last page
+ got read and returns all docs that have been returned in the process.
+*/
+function searchAndDoStepsInBetweenPages(
+          db="machinaex",searchTerm={_id:""},callbackEach=console.log,
+          callbackEnd=console.log,err=console.log,bookmark=null,outputEnd=[],stop=false)
+{
+    // send find() request to dingsda API:
+    searchDB(db,searchTerm,function(result){
+      /*
+      if a bookmark is returned and there were docs in the response from the
+      server, call the callbackEach() and then call this very function to flip
+      further through the pages of returns until no docs are returned anymore...
+      */
+      if (result.bookmark && result.docs.length > 0){
+        callbackEach(result)
+        console.log(result.bookmark);
+        outputEnd = outputEnd.concat(result.docs)
+        searchAndDoStepsInBetweenPages(db, searchTerm,callbackEach,
+          callbackEnd,err,result.bookmark,outputEnd)
+      }
+      else // ...then: stop looping and call the final callback:
+      {
+        console.log(outputEnd);
+        callbackEnd(outputEnd)
+      }
+    },console.log,bookmark);
 
 }
 
-function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log){
+/**
+sends HTTP request to dingsda API's find endpoint and passes response into callback
+
+@TODO: build in pagination if API returns bookmark
+*/
+function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log,bookmark=null){
     console.log(`sending find Request to ${db}`);
 
     $.ajax({
@@ -1396,12 +1662,13 @@ function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log){
       data: JSON.stringify({
             	"data":[{
             		"type":"findItems",
-            		"doc":searchTerm
+            		"doc":searchTerm,
+                "bookmark":bookmark
             	}]
             }),
       xhrFields: { withCredentials: true }, // to make AuthCookie ok
       success: function(result){
-         callback(result.docs)
+         callback(result)
       },
       error: err,
       contentType:"application/json"
@@ -1559,6 +1826,22 @@ function openCarnetPDF(ids=undefined)
 }
 
 
+function isInView(elem)
+{
+  if($(elem).length > 0){
+    let docTop = $(window).scrollTop();
+    let docBottom = docTop + $(window).height();
+    let elemTop = $(elem).offset().top;
+    let elemBottom = elemTop + $(elem).height();
+
+    return ((elemBottom <= docBottom) && (elemTop >= docTop));
+  }
+  else {
+    return false
+  }
+
+}
+
 
 </script>
 
@@ -1665,7 +1948,7 @@ function openCarnetPDF(ids=undefined)
     </style>
 
 
-  <!-- HEADER TEMPLATE -->
+    <!-- HEADER TEMPLATE -->
 
 <div data-role="header" data-position="fixed" class="header">
   <div data-role="navbar" class="ui-state-persist">
@@ -1679,7 +1962,7 @@ function openCarnetPDF(ids=undefined)
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -1689,7 +1972,7 @@ function openCarnetPDF(ids=undefined)
     </ul>
   </div>
 </div>
-  <!-- END HEADER -->
+    <!-- END HEADER -->
 
 
   <!-- CONTENT -->
@@ -1936,7 +2219,7 @@ function shiftItemFocus(shift=-1){
      window.history.back();
   }
 }
- 
+
 function showItemDetails(){
   let mydoc = itemDetails.itemInFocus;
   if (mydoc)
@@ -2208,7 +2491,7 @@ function getSingleItem(id,callback,error=console.log)
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -2608,8 +2891,8 @@ document.getElementById("photo_upload").addEventListener("change",
           let ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0);
 
-          let MAX_WIDTH = 500;
-          let MAX_HEIGHT = 500;
+          let MAX_WIDTH = 400;
+          let MAX_HEIGHT = 400;
           let width = img.width;
           let height = img.height;
 
@@ -2669,7 +2952,7 @@ function btn_add_update()
                 shiftItemFocus(0);
                 showItemDetails();
                 window.history.back();
-              });
+              },true,true);
 
           });
         }
@@ -2759,8 +3042,8 @@ function getAllInputs()
   output.location = {
     address: $("#address").val(),
     description: $("#description").val(),
-    latitude: $("#latitude").val(),
-    longitude: $("#longitude").val(),
+    latitude: parseFloat($("#latitude").val()),
+    longitude: parseFloat($("#longitude").val()),
     insideOf: $("#insideOf").val()
   }
   output.other = {
@@ -3174,7 +3457,7 @@ function insideOfUpdated(res)
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -3244,7 +3527,9 @@ $("#btn_move_items").click(function(){
     }
 
     showToast("items will be moved",800);
-    setTimeout(refreshCollection,1000);
+    setTimeout(function(){
+      refreshCollection(console.log,true,true);
+    },1000);
     window.history.back();
   }
 
@@ -3304,7 +3589,7 @@ function updateItem(obj,picIncluded=false,callback=console.log)
         }
 
         // excluded picupdate. should have its own function, i think
-
+        
         // write into DB
         $.ajax({
           type: "POST",
@@ -3369,7 +3654,7 @@ function getSingleItem(id,callback,error=console.log)
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -3530,7 +3815,7 @@ function handoverItem(obj, callback=console.log)
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
-    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked(true);">
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
       <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
@@ -3540,7 +3825,7 @@ function handoverItem(obj, callback=console.log)
     </ul>
   </div>
 </div>
-  <!-- END HEADER -->
+    <!-- END HEADER -->
 
   <!-- CONTENT -->
   <div role="main" class="ui-content">
@@ -3606,7 +3891,7 @@ $("#btn_send_item_request").click(function(){
   console.log(dataOut);
   $.ajax({
     type: "POST",
-    url: API_BASE_URL+dbOwner, //testing only <-- why testing only? it works!
+    url: API_BASE_URL+dbOwner,
     data: JSON.stringify(dataOut),
     success: function(r){
       console.log("borrow request send");
@@ -3628,6 +3913,519 @@ $("#btn_send_item_request").click(function(){
 
 </script>
 
+<style>
+
+#search {
+  /*background-color: rgba(0, 159, 255, 0.38);*/
+  background-color: #fff2cd;
+  color: black;
+  margin-bottom: 9vh;
+
+}
+
+#locationEditor_Search .ui-collapsible-content{
+  background-color: #fff2cd;
+  text-shadow: 0px 0px 0px black !important;
+  width: 100%;
+  margin-left:-1em;
+  padding: 0 1em;
+}
+
+#locationEditor_Search #map{
+  height: 20vh;
+}
+
+#locationEditor_Search .ui-collapsible-heading{
+  display: none
+}
+
+#locationEditor_Search .ui-flipswitch{
+  display: none
+}
+
+#locationEditor_Search .map_description_container{
+  display: none
+}
+
+#locationEditor_Search .containerOf{
+  display: none
+}
+
+#locationEditor_Search .btn_getlocation{
+  height: 2.5em;
+}
+
+#locationEditor_Search table {
+    font-size: 0.8em !important;
+    line-height: 0.8em;
+    margin: 0;
+    padding: 0;
+    border-spacing: 0px
+}
+
+.flex-container-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+}
+.halfwidth {
+  width: 50%;
+}
+.thirdwidth {
+  width: 33%;
+}
+
+.btn_addSearchTerm{
+  width: 2em !important;
+  height: 2em !important;
+  text-align: center;
+  align-items: center;
+}
+
+.searchTerm .ui-input-btn /* overwriting jquery button container*/
+{
+  width: 2em !important;
+  padding: 0px !important;
+  height: 2em !important;
+}
+
+.select-km-container{
+  background-color: #a1d0c6;
+  text-shadow: none;
+  margin: 1em;
+}
+
+#searchTerms{
+
+}
+
+.searchTerm {
+  background-color: #fde7a3;
+  width: 90vw;
+  margin-left: -1em;
+  padding: 0em 1em;
+}
+
+.searchTerm input{
+      max-width: 50vw;
+      width: 50%;
+}
+
+.find_header {
+    background-color: #abcec6;
+    width: 100vw;
+    margin-left: -1em;
+    margin-top: -1em;
+    /*height: 10vh;*/
+    color: #fff2c9;
+    text-shadow: none;
+    align-items: center;
+}
+
+</style>
+
+<div data-role="page" id="search">
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content">
+
+    <div class="find_header">
+        <H1 align="center">FIND</H1>
+    </div>
+    <div id="searchTerms">
+    <!--<div class="flex-container-row searchTerm">
+        <input type="text" class="searchtext"></input>
+        <span style="margin-left:5px">in</span>
+        <div class="thirdwidth">
+          <select class="select-searchField" data-mini="true">
+            <option>name</option>
+            <option>id</option>
+            <option>tags</option>
+            <option>owners</option>
+          </select>
+        </div>
+        <button class="btn_addSearchTerm">+</button>
+      </div>-->
+    </div>
+
+    <div class="flex-container-row select-km-container">
+      <h3>within</h3>
+      <div class="halfwidth">
+        <select name="select-km" id="select-km" data-mini="false">
+          <option value="0.5" selected="selected">500m</option>
+          <option value="1">1km</option>
+          <option value="2">2km</option>
+          <option value="5">5km</option>
+          <option value="10">10km</option>
+          <option value="20">20km</option>
+          <option value="42">42km</option>
+          <!--<option value="50">50km</option>-->
+          <!--<option value="100">100km</option>-->
+        </select>
+      </div>
+      <h3>of</h3>
+    </div>
+
+    <div id="locationEditor_Search">
+
+    </div>
+
+    <div id="btn_search_public" class="btn_request ui-btn"
+      style="height:10vh;width:100%;left:-1em;bottom:-1em;background-color:#ff004c!important;
+      color:#fff2cd;z-index: 3;position:fixed;">
+      SEARCH</div>
+
+    </div>
+
+    </div>
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+<script>
+
+  $( document ).on("pageshow", "#search", function(e,ui) {
+    console.log("search loaded");
+
+    // move locationContainer here and open it:
+    $("#locationMoveable").appendTo("#locationEditor_Search");
+    $("#locationEditor_Search").trigger("create");
+    $("#locationMoveable").collapsible( "expand" );
+
+    updateInsideOfFlipSwitch(false)
+    //addSearchTermHandler()
+    $("#searchTerms").html("");
+    appendSearchTerm();
+  })
+
+
+
+/**
+gets all searchTerms from userinputs in textfields and dropdowns of search view
+and combines them to mango queries for further processing
+*/
+  $("#btn_search_public").click(function(){
+    makeSearch()
+  })
+
+
+  function makeSearch(){
+    let searchTerm = getSearchTerms();
+    let searchLocation = getSearchLocationAndKm();
+    if(searchLocation)
+    {
+      searchAndShow(searchLocation[0],searchLocation[1],searchLocation[2],console.log,"public",
+                            searchTerm)
+    }
+    else {
+      console.log("user did not provide geolocation");
+    }
+
+  }
+
+  function getSearchTerms(){
+
+    let searchTerms = $("#searchTerms").children();
+    let searchFields = $('#searchTerms span.select-searchField');
+
+    let selector = { "_id":{"$regex":""},"$and":[] }
+
+    for (item of searchTerms){
+
+      let searchField = $($(item).children()[2]).find("span.select-searchField").text()
+      let searchText = $(item).children()[0].value
+
+      let searchTerm = {};
+      searchTerm[searchField] = { "$regex":"(?i)"+searchText}
+      if (searchField === "owners" || searchField === "other.tags"){ // for arrays we have to check with $in
+        searchTerm[searchField] = { "$in":[searchText]}
+      }
+      selector["$and"].push(searchTerm)
+
+    }
+
+    console.log(selector);
+    return selector
+
+  }
+
+  function getSearchLocationAndKm(){
+    let lat = parseFloat($('#latitude').val());
+    let long = parseFloat($('#longitude').val());
+    let km = parseFloat($('#select-km').val());
+    console.log("searching within "+km+" kilometers");
+
+    if (lat === "" || long === "" || (lat === 0 && long === 0) || !km)
+    {
+      swal({html:"you need to gimme geodata!"})
+      return false;
+    }
+    else {
+      console.log("no problems on the geofront");
+      return [lat,long,km]
+    }
+
+  }
+
+  function appendSearchTerm(){
+
+
+    // get number of searchTerm:
+    let num = $('#searchTerms').children().length;
+    // Add a new div
+    $(`
+      <div class="flex-container-row searchTerm">
+        <input type="text" class="searchtext"></input>
+        <span style="margin-left:5px">in</span>
+        <div class="thirdwidth">
+          <select id="select_${num}" class="select-searchField" data-mini="true">
+            <option>name</option>
+            <option>id</option>
+            <option>other.tags</option>
+            <option>owners</option>
+          </select>
+        </div>
+        <button id="button_${num}" data-mini="true" class="btn_addSearchTerm">+</button>
+      </div>
+      `).appendTo('#searchTerms');
+    // Add a new select element
+    /*$('<select>').attr({'name':'select-choice-1','id':'select-choice-1'}).appendTo('');
+    $('<option>').attr({'value':'1'}).html('Value 1').appendTo('#select-choice-1');
+    $('<option>').attr({'value':'2'}).html('Value 2').appendTo('#select-choice-1');
+    */
+    // Enhance new select element
+    $('#select_'+num).selectmenu();
+    $('#button_'+num).button();
+    addSearchTermHandler()
+  }
+
+ function addSearchTermHandler(){
+   $(".btn_addSearchTerm").off("click");
+   $(".btn_addSearchTerm").on("click",function(){
+
+     appendSearchTerm();
+
+     addSearchTermHandler()
+   })
+ }
+
+  function searchAndShow(lat,long,km,callback=console.log,db=glb_username,
+                        searchTerm={"_id":{"$regex":""}},bookmark=null)
+  {
+      // save in collection global to find again for bookmark usage
+      collection.searchQuery = searchTerm;
+      collection.searchDB = db;
+      collection.latitude = lat;
+      collection.longitude = long;
+      collection.kilometers = km;
+
+      let cb = function(result){
+        callback(result)
+        setNewCollectionSearchHistory(result.docs)
+        collection.bookmark = result.bookmark
+        //if (collection.bookmark === "nil"){collection.bookmark = null}
+
+        // change page to show the searchResults:
+        $.mobile.changePage("#collection", {
+           reloadPage: false
+       });
+       console.log("BOOKMARK: " + bookmark);
+       if (bookmark === null){ // if this is the first query
+         // render without catching first:
+         console.log("first time is a charm");
+         $("#loadingGif").show();
+         $("#itemList .item").parent().remove();
+         drawItemCards(result.docs,false,scrollEndListenerSearch)
+       }
+       else { // if this is a follow up query using a bookmark:
+         if (result.docs.length === 0) // was the last response empty?
+         {
+           console.log("END OF SEARCH ");
+           // renderItemCards and add them instead of deleting the last ones but with no new scrollend:
+           drawItemCards(result.docs,false,null,true)
+           $("#scrollend").remove();
+         }
+         else {
+           console.log("AND ANOTHER ONE....");
+           $("#loadingGif").show();
+           // renderItemCards and add them instead of deleting the last ones:
+           drawItemCards(result.docs,false,scrollEndListenerSearch,true)
+
+           setTimeout(function(){
+             // then call eventhandler again in case scrollend is still in view (e.g. because too little items):
+             if ($("#scrollend").length > 0) // should not be true after END OF SEARCH
+             {
+               scrollEndListenerSearch()
+             }
+           },1000)
+         }
+
+       }
+
+      }
+
+      if (collection.bookmark === "nil"){
+        collection.bookmark = null;
+        return;
+      }
+      searchByKm(lat,long,km,cb,db,searchTerm,bookmark)
+  }
+
+  function scrollEndListenerSearch()
+  {
+      if (isInView("#scrollend"))
+      {
+        $("#scrollend").remove();
+        document.removeEventListener("scroll",scrollEndListenerSearch);
+        console.log("scrollend reached! triggering callback to scrollend...");
+
+        //load again with bookmark included and add instead of overwrite:
+        searchAndShow(collection.latitude,collection.longitude,collection.kilometers,
+          console.log,collection.searchDB,collection.searchQuery,collection.bookmark)
+
+      }
+  }
+
+  function searchByKm(lat,long,km,callback=console.log,db=glb_username,
+                      searchTerm={"_id":{"$regex":""}},bookmark=null)
+  {
+    let bounds = getBoundingBoxAroundGeoCoordByDistance(lat,long,km);
+    searchByBoundingBox(bounds.lowerLeftCorner,bounds.upperRightCorner,
+                                          callback,db,searchTerm,bookmark)
+  }
+
+
+  function searchByBoundingBox(lowerLeftCorner,upperRightCorner,callback=console.log,
+                      db=glb_username,searchTerm={"_id":{"$regex":""}},bookmark=null)
+  {
+    // build selector and add borders of the bounding box
+    let selector = {
+      "location.latitude": {
+         "$gte": lowerLeftCorner[0]
+      },
+      "$and": [
+         {
+            "location.longitude": {
+               "$gte": lowerLeftCorner[1]
+            }
+         },
+         {
+            "location.latitude": {
+               "$lte": upperRightCorner[0]
+            }
+         },
+         {
+            "location.longitude": {
+               "$lte": upperRightCorner[1]
+            }
+         }
+      ]
+   }
+   // add original searchTerm to selector:
+   selector["$and"].push(searchTerm)
+
+    $.ajax({
+      type: "POST",
+      url: API_BASE_URL,
+      data: JSON.stringify({
+            	"data":
+              [{
+            		"type":"search",
+                "db": db,
+            		"doc":selector,
+                "bookmark":bookmark
+            	}]
+            }),
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      success: function(result){
+         callback(result)
+         //console.log(result);
+      },
+      error: console.log,
+      contentType:"application/json"
+    });
+
+  }
+
+
+  /**
+  helper function. calculates new geocoordinates (latitude, longitude) from
+  input geoposition and the distances from it, provided in km
+  */
+  function latLongPlusKm(latitude,longitude,distancekmLat,distancekmLong)
+  {
+    let earthRadius = 6378;
+    let newlat = latitude+(distancekmLat / earthRadius)*(180/Math.PI);
+    let newlong = longitude+(distancekmLong / earthRadius)*(180/Math.PI)/Math.cos(latitude*Math.PI/180);
+
+    return [newlat,newlong];
+  }
+
+  /**
+  returns an object containing the fields "upperRightCorner" and "lowerLeftCorner"
+  (each an array of latitude and longitude in decimal) containing the information
+  needed for a bounding box around a geographic point defined by latitude and longitude.
+  It uses distancekm to calculate the edges.
+  */
+  function getBoundingBoxAroundGeoCoordByDistance(latitude,longitude,distancekm){
+
+    // edges of boundingBox:
+    let upperRightCorner = latLongPlusKm(latitude,longitude,distancekm,distancekm)
+    let lowerLeftCorner = latLongPlusKm(latitude,longitude,-distancekm,-distancekm)
+
+    return {upperRightCorner:upperRightCorner,lowerLeftCorner:lowerLeftCorner}
+  }
+
+  /**
+  helper function. checks if latitude and longitude are within a bounding box
+  defined by lowerLeftCorner and upperRightCorner coordinate arrays
+
+  not actually used, because these calculations are done through the searchquery.
+  but good to have. And to copy from
+
+  @returns {boolean} true if is within the bounds of the box.
+  */
+  function isInsideBoundingBox(latTest,longTest,lowerLeftCorner,upperRightCorner)
+  {
+    if (latTest > lowerLeftCorner[0] && latTest < upperRightCorner[0] &&
+        longTest > lowerLeftCorner[1] && longTest < upperRightCorner[1])
+        {
+          return true
+        }
+    return false
+  }
+
+</script>
+
   </body>
 
 
@@ -3638,7 +4436,6 @@ $("#btn_send_item_request").click(function(){
   const UI_URL = "https://dingsda.org/two/";
 
   let glb_username = undefined;
-
 
   if (glb_username === undefined)
   {
@@ -3677,24 +4474,37 @@ function login (){
           swal({html:"logged in as <br><b>"+ glb_username+"</b>",
           toast:true, timer:1200,showConfirmButton:false, position:"center",
           customClass:"whiteletters"})
-          updateItemBatch();
-          updateNotificationsBatch();
           fetchConfig();
 
           collection.searchQuery = {_id:""};
           collection.searchDB = glb_username;
-          searchDB(collection.searchDB,collection.searchquery,function(inp){
-              collection.searchhistory.unshift(inp);
-          });
+          /*searchDB(collection.searchDB,collection.searchquery,function(inp){
+              collection.searchhistory.unshift(inp.docs);
+          });*/
+          searchAndDoStepsInBetweenPages(collection.searchDB,collection.searchquery,
+            (r)=>{ // callback each loop
+                //drawItemCards(r.docs)
+            },
+            (r)=>{  // callback end
+              setNewCollectionSearchHistory(r);
+              //callback(r.docs);
+            }
+          )
 
           $.mobile.pageContainer.pagecontainer("change", "#landing",
                      {allowSamePageTransition:true});
 
+         setTimeout(function(){
+           updateItemBatch();
+           updateNotificationsBatch()
+         },800)
+ 
           //fetchConfig();
         }
       },
       error: function(err){
         console.log(err);
+        logout();
         loginPopUp();
       },
       contentType:"application/json"
@@ -3742,9 +4552,18 @@ function login (){
 
             collection.searchQuery = {_id:""};
             collection.searchDB = glb_username;
-            searchDB(collection.searchDB,collection.searchquery,function(inp){
+            /*searchDB(collection.searchDB,collection.searchquery,function(inp){
                 collection.searchhistory.unshift(inp);
-            });
+            });*/
+            searchAndDoStepsInBetweenPages(collection.searchDB,collection.searchquery,
+              (r)=>{ // callback each loop
+                  //drawItemCards(r.docs)
+              },
+              (r)=>{  // callback end
+                setNewCollectionSearchHistory(r);
+                //callback(r.docs);
+              }
+            )
 
             $.mobile.pageContainer.pagecontainer("change", "#landing",
                        {allowSamePageTransition:true});
@@ -3752,6 +4571,7 @@ function login (){
           },
         error: function(err){
           console.log(err);
+          logout();
           loginPopUp({extra:"<br><span class='err'>you don't exist! Try again</span><br>"});
         },
         contentType:"application/json"
@@ -3761,6 +4581,7 @@ function login (){
 
   $(".registerlink").click(function(){
     console.log("register!");
+    logout();
     registerPopUp()
   });
 
@@ -3810,6 +4631,30 @@ function login (){
 
     console.log("fetching notifications from database");
 
+    getNotificationsFlat(function(notifications){
+      console.log("notifications infos:");
+      console.log(notifications);
+        // get number of total notifications (items 2nd step down the object tree:)
+        let length = notifications.length;
+        //console.log(length);
+        callback(length);
+      })
+  /*
+    $.ajax({
+      type: "GET",
+      url: API_BASE_URL+glb_username+"/_all_docs",
+      success: function(notifications){
+        // get number of total notifications (items 2nd step down the object tree:)
+        let length = notifications.total_rows;
+        //console.log(length);
+        callback(length);
+      },
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+      error: console.log
+      ,contentType:"application/json"
+    });
+*/
+    /*
     getSingleItem("&notifications",function(notifications){
       // get number of total notifications (items 2nd step down the object tree:)
       let length = 0;
@@ -3823,6 +4668,7 @@ function login (){
       callback(length);
 
     })
+    */
 
   }
 

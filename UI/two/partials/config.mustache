@@ -67,7 +67,7 @@
     })
   }
 
-  $("#logout").click(function(){
+  function logout(){
     // delete AuthSession Cookie (will only work if cookie from same URL)
     $.ajax({
         type: "DELETE",
@@ -85,6 +85,10 @@
         },
         contentType:"application/json"
       });
+  }
+
+  $("#logout").click(function(){
+    logout();
   })
 
 

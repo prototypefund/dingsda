@@ -1,7 +1,7 @@
 
 /*
     BUG: !!!!!: atm only check for read rights is done if thingrequest.
-    for find() we have to do that on DBLevel as well as on instanceLevel!!!!!
+    for find() and handover_xxx() we have to do that on DBLevel as well as on instanceLevel!!!!!
 
     TODO: have to exclude all private things on find() unless in own DB !!!!!
 
@@ -21,6 +21,11 @@ const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const uuidv5 = require('uuid/v5'); // npm install uuid
 const cors = require('cors')
+const deepcopy = require('deepcopy');
+const util = require('util');
+
+// make request() return promise:
+const requestPromise = util.promisify(request);
 
 /*
 the proxy is used for direct get requests to itemlevel only and everything below.
@@ -58,11 +63,11 @@ const options = {
 
 
 /*
-all nano operations are done by either nanoAdmin if requestLevel is instance (see README)
+all nano operations are done by either NANO_ADMIN if requestLevel is instance (see README)
 or several DBs or by a short term conncetion nanoUser if requestLevel is thing.
 we will use another nano Object. This is not needed but human error, ya know...
 */
-const nanoAdmin = require('nano')('http://admin:'+DBadminPW+'@'+DATABASEURL.split("://")[1]);
+const NANO_ADMIN = require('nano')('http://admin:'+DBadminPW+'@'+DATABASEURL.split("://")[1]);
 
 
 /*///////////////////////////////////////
@@ -223,7 +228,7 @@ function DBCommander(req,res)
   {
     console.log(`DBCommander getting infos about ${req.username}`);
 
-    nanoAdmin.db.get("userdb-"+toHex(req.username)).then((body) => {
+    NANO_ADMIN.db.get("userdb-"+toHex(req.username)).then((body) => {
       res.send(body);
     })
   }
@@ -232,6 +237,7 @@ function DBCommander(req,res)
     // does .data contain more than one query? if only array but one item put item into body.data
     if (!Array.isArray(req.body.data) || (req.body.data.length == 1 && (req.body.data=req.body.data[0])))
     {
+      console.log(req.body.data.type);
       switch(req.body.data.type.toLowerCase()) {
           case "finditems":
               findItems(req,res);
@@ -259,6 +265,15 @@ function DBCommander(req,res)
               break;
           case "handover_deny":
               handover_deny(req,res);
+              break;
+          case "getnotifications":
+              getNotifications(req,res);
+              break;
+          case "deletenotification":
+              deleteNotification(req,res);
+              break;
+          case "getinmypossession":
+              getItemsInMyPossession(req,res);
               break;
           default:
               res.statusCode = 400;
@@ -354,7 +369,7 @@ the attachment is added to the response payload instead of document
 function fetch(req,res)
 {
    // testing with Admin Rights here, for should be already authenticated at this point:
-   let nanoUser = nanoAdmin; let dbUser = nanoUser.db.use("userdb-"+toHex(req.targets[0]));
+   let nanoUser = NANO_ADMIN; let dbUser = nanoUser.db.use("userdb-"+toHex(req.targets[0]));
 
    dbUser.get(req.targets[1]).then(function(result) // uses nano to get doc
    {
@@ -403,6 +418,61 @@ function fetch(req,res)
        })
 }
 
+function deleteNotification(req,res)
+{
+  let dbNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0])+"-notifications");
+  return dbNotifications.get(req.body.data._id)
+  .then((notifi)=>{
+        return dbNotifications.destroy(req.body.data._id, notifi._rev)
+  })
+  .then((destroyRes)=>{
+    console.log(destroyRes);
+    res.send(destroyRes)
+  })
+  .catch((err)=>{
+    console.log("ERROR deleting Notification via deleteNotification()");
+    res.statusCode = 500;
+    res.send("ERROR: deleting Notification")
+  })
+}
+
+function getItemsInMyPossession(req,res){
+  let dbAdmin = NANO_ADMIN.db.use("userdb-"+toHex(req.username)+"-inmypossession");
+  let q = {"selector":{"_id":{"$regex":"(?i)"}}}
+  q.limit = 1000; /* TODO: change to pagination in client */
+  return dbAdmin.find(q).then((inMyPossession)=>{
+    return res.send(inMyPossession.docs)
+  })
+  .catch((err)=>{
+    console.log("error fetching inMyPossession:");
+    console.log(err);
+    return res.send("error fetching inMyPossession")
+  })
+}
+
+function getNotifications(req,res)
+{
+  getNotificationsAsAdmin(req.username).then((notifications)=>{
+    return res.send(notifications.docs)
+  })
+  .catch((err)=>{
+    console.log("error fetching notifications:");
+    console.log(err);
+    return res.send("error fetching notifications")
+  })
+}
+
+/**
+helper: gets all docs from userDB-notifications and returns a promise of the
+databases response
+*/
+function getNotificationsAsAdmin(username)
+{
+  let dbAdmin = NANO_ADMIN.db.use("userdb-"+toHex(username)+"-notifications");
+  let q = {"selector":{"_id":{"$regex":"(?i)"}}}
+  q.limit = 1000; /* TODO: change to pagination in client */
+  return dbAdmin.find(q)
+}
 
 /**
 thing level function.<br>
@@ -428,27 +498,32 @@ function handover_announce(req,res)
     return res.send('"error: no username provided"')
   }
 
-  let dbOwner = nanoAdmin.db.use('userdb-'+toHex(req.targets[0]));
-  let dbLender = nanoAdmin.db.use('userdb-'+toHex(req.username));
-  let dbBorrower = nanoAdmin.db.use('userdb-'+toHex(req.body.data.username));
+  let dbOwner = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0]));
+  let dbLender = NANO_ADMIN.db.use('userdb-'+toHex(req.username));
+  let dbLenderNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.username)+"-notifications");
+  let dbBorrower = NANO_ADMIN.db.use('userdb-'+toHex(req.body.data.username));
+  let dbBorrowerNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.body.data.username)+"-notifications");
+
+  // check if handover would be a return: is Borrower also Owner?
+  let isReturn = (req.body.data.username === req.targets[0]);
 
   /*
   check if dbOwner, dbLender and dbBorrower exist,
   if not send error, if so continue
   */
-  nanoAdmin.db.get('userdb-'+toHex(req.targets[0])).then((body) => {
+  NANO_ADMIN.db.get('userdb-'+toHex(req.targets[0])).then((body) => {
     console.log("vvvvvvvvvvvvvvvvvvvvvvvvv");
     console.log("checking if dbOwner exists");
     console.log(body);
     console.log("___________________________");
   }).then(function(){
-    return nanoAdmin.db.get('userdb-'+toHex(req.username)).then((body2) =>{
+    return NANO_ADMIN.db.get('userdb-'+toHex(req.username)).then((body2) =>{
       console.log("checking if dbLender exists");
       console.log(body2);
       console.log("___________________________");
     })
   }).then(function(){
-    return nanoAdmin.db.get('userdb-'+toHex(req.body.data.username)).then((body3) =>{
+    return NANO_ADMIN.db.get('userdb-'+toHex(req.body.data.username)).then((body3) =>{
       console.log("checking if dbBorrower exists");
       console.log(body3);
       console.log("^^^^^^^^^^^^^^^^^^^^^^^^^");
@@ -468,7 +543,62 @@ function handover_announce(req,res)
     // TODO:  CHECK IF OPEN OTHER handover annoncments in my and others Notifications and if delete those before continueing
           console.log("legal handover announcement by owner");
 
-          // if Lender has no pending handovers for this item, add this item to pending:
+          /*
+          writeNewNotificationsIntoLenderDB:
+          if Lender has no pending handovers for this item, add this item to pending:
+          */
+          return getNotificationsAsAdmin(req.username)
+          .then((notifications)=>{
+            notifications = notifications.docs;
+
+            let handoverAwait = notifications.find(function(entry){
+              return entry._id.startsWith("handover_await-")
+                    && entry._id.split("handover_await-")[1] === req.targets[1];
+            });
+
+            if (handoverAwait !== undefined){
+              console.log("ERROR updating Lenders notifications");
+              throw({
+                statusCode: 400,
+                reason:"ERROR updating Lenders notifications."+
+                " item is already awaiting handover confirmation"});
+            }
+            // add to Lender-notificationsDB:
+            handoverAwait = {
+              _id: "handover_await-"+req.targets[1],
+              to: req.body.data.username,
+              ref: req.targets[1],
+              type: "handover_await",
+              time:{ from: req.body.data.from, till: req.body.data.till}
+            }
+            return dbLenderNotifications.insert(handoverAwait)
+          })
+          /*
+          END writeNewNotificationsIntoLenderDB
+          */
+          .then((insertRes) => {
+            if (!insertRes.ok) {
+              throw({statusCode:500,reason:"ERROR updating Lender Notifications"});
+            }
+
+            // add counter notification to Borrowers DB as well:
+            let handoverConfirm = {
+              _id: "handover_confirm-"+req.targets[1],
+              from: req.username,
+              ref: req.targets[1],
+              type: "handover_confirm",
+              isReturn: isReturn,
+              time:{ from: req.body.data.from, till: req.body.data.till}
+            };
+            console.log("handover_annoucne attempting to insert confirm into"+
+                        "notificationsDB of borrower");
+            return dbBorrowerNotifications.insert(handoverConfirm)
+            .then((ok) => {
+              res.send(ok)
+            })
+          })
+
+/*
           return dbLender.get("&notifications").then((notifications) => {
             console.log(notifications);
             if (notifications.pending["handover_await"] !== undefined &&
@@ -514,7 +644,7 @@ function handover_announce(req,res)
                     " item is already awaiting handover confirmation"});
                 }
           })
-
+*/ //out for rebuild
         }
         else {
           res.statusCode = 400;
@@ -522,6 +652,7 @@ function handover_announce(req,res)
         }
       })
       .catch((err)=>{
+        console.log("ERROR inside handover_announce():");
         console.log(err);
         res.statusCode = err.statusCode;
         return res.send(""+err.reason)
@@ -538,8 +669,9 @@ function handover_announce(req,res)
 
 }
 
+
 /**
-thing level function.<br>
+DB level function.<br>
 cancels an announced handover set in {@link handover_announce}.<br>
 deletes notification entries with item reference defined by request payload .data.ref
 from &notifications doc of user sending as well as user defined by request payload .data.to
@@ -562,11 +694,59 @@ function handover_cancel(req,res)
     return res.send('"error: no username or from provided"')
   }
 
-  let db = nanoAdmin.db.use('userdb-'+toHex(req.targets[0]));
-  let dbBorrower = nanoAdmin.db.use('userdb-'+toHex(req.body.data.to));
+  let db = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0]));
+  let dbNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0])+"-notifications");
+  let dbBorrower = NANO_ADMIN.db.use('userdb-'+toHex(req.body.data.to));
+  let dbBorrowerNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.body.data.to)+"-notifications");
 
 // TODO: CHECK IF ALLOWED TO CANCEL FIRST!!!
 
+  return getNotificationsAsAdmin(req.targets[0])
+  .then((notifications)=>{
+    notifications = notifications.docs;
+
+    // check if already handover_await in notifications:
+    let handoverAwait = notifications.find(function(entry){
+      return entry._id.startsWith("handover_await-")
+            && entry._id.split("handover_await-")[1] === req.body.data.ref;
+    });
+    // if so: stop and throw error
+    if (handoverAwait === undefined){
+      console.log("ERROR cancelling Lenders notifications");
+      throw({
+        statusCode: 400,
+        reason:"ERROR cancelling Lenders notifications."+
+        " requested notification not found"});
+    }
+    // else go on:
+    // get notifications from Borrower:
+    return getNotificationsAsAdmin(req.body.data.to)
+    .then((notificationsBorrower)=>{
+      notificationsBorrower = notificationsBorrower.docs;
+      // get the notification in question:
+      let handoverConfirm = notificationsBorrower.find(function(entry){
+        return entry._id.startsWith("handover_confirm-")
+              && entry._id.split("handover_confirm-")[1] === req.body.data.ref;
+      });
+      // delete handover_await from Lender's notifications:
+      return dbNotifications.destroy('handover_await-'+req.body.data.ref, handoverAwait._rev)
+      .then((destroyRes) => {
+        if (!destroyRes.ok){throw({statusCode: 500,reason:"ERROR deleting handover_await"});}
+        return destroyRes;
+      })
+      .then(()=> {
+        // delete handover_confirm from Borrower's notifications:
+        return dbBorrowerNotifications.destroy(
+                      'handover_confirm-'+req.body.data.ref,handoverConfirm._rev)
+      }).then((destroyRes2)=>{
+        if (!destroyRes2.ok){throw({statusCode: 500,reason:"ERROR deleting handover_confirm"});}
+        res.send(destroyRes2)
+      })
+      //res.send(notificationsBorrower)
+    })
+
+  })
+/*
   return db.get("&notifications").then((notifications) => {
     console.log(notifications);
     let validHandover =
@@ -591,6 +771,7 @@ function handover_cancel(req,res)
        return res.send('"error: there is no matching handover pending"')
      }
   })
+  */
   .catch(function(err){
     res.statusCode = 500;
     return res.send(err)
@@ -623,11 +804,55 @@ function handover_deny(req,res)
     return res.send('"error: no username or from provided"')
   }
 
-  let dbBorrower = nanoAdmin.db.use('userdb-'+toHex(req.targets[0]));
-  let db = nanoAdmin.db.use('userdb-'+toHex(req.body.data.from));
-
+  let dbBorrower = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0]));
+  let db = NANO_ADMIN.db.use('userdb-'+toHex(req.body.data.from));
+  let dbBorrowerNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0])+"-notifications");
+  let dbNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.body.data.from)+"-notifications");
 // TODO: CHECK IF ALLOWED TO CANCEL FIRST!!!
+  return getNotificationsAsAdmin(req.body.data.from)
+  .then((notifications)=>{
+    notifications = notifications.docs;
 
+    // check if already handover_await in notifications:
+    let handoverAwait = notifications.find(function(entry){
+      return entry._id.startsWith("handover_await-")
+            && entry._id.split("handover_await-")[1] === req.body.data.ref;
+    });
+    // if so: stop and throw error
+    if (handoverAwait === undefined){
+      console.log("ERROR cancelling Lenders notifications");
+      throw({
+        statusCode: 400,
+        reason:"ERROR denying Lenders notifications. requested notification not found"});
+    }
+    return dbNotifications.destroy(handoverAwait._id,handoverAwait._rev)
+  })
+  .then((destroyRes) => {
+    if (!destroyRes.ok){throw({statusCode: 500,reason:"ERROR deleting handover_await"});}
+    return destroyRes
+  })
+  .then(()=>{
+    return dbBorrowerNotifications.get("handover_confirm-"+req.body.data.ref)
+  })
+  .then((handoverConfirm)=>{
+    return dbBorrowerNotifications.destroy(handoverConfirm._id,handoverConfirm._rev)
+  })
+  .then((destroyRes2)=>{
+    if (!destroyRes2.ok){throw({statusCode: 500,reason:"ERROR deleting handover_confirm"});}
+    return destroyRes2
+  })
+  .then(()=>{
+    // TODO: use req.body.data.ref to get name of item to include into message!
+    return dbNotifications.insert({
+      type: "info",
+      text: `user ${req.targets[0]} denied the handover of your item ${req.body.data.ref}`,
+      ref: req.body.data.ref
+    })
+  })
+  .then((insertRes)=>{
+    return res.send("ok: handover successfully cancelled")
+  })
+/*
   return db.get("&notifications").then((notifications) => {
     console.log(notifications);
     let validHandover =
@@ -656,6 +881,7 @@ function handover_deny(req,res)
        return res.send('"error: there is no matching handover pending"')
      }
   })
+*/
   .catch(function(err){
     res.statusCode = 500;
     return res.send(err)
@@ -681,12 +907,12 @@ writes username of new possessor into doc in questions field .inPossessionOf
 @returns {Object|string} sends response to client with either "ok: handover success"
 or error
 */
-function handover(req,res)  // not correct anymore!!!
+function handover(req,res)
 {
   console.log("HANDOVER ATTEMPT");
   console.log("handover to "+req.username);
 
-  if (req.body.data.from === undefined || req.body.data.ref === undefined)
+  if (/*req.body.data.from*/req.username === undefined || req.body.data.ref === undefined)
   {
     res.statusCode = 400;
     return res.send('"error: no username or from provided"')
@@ -697,10 +923,142 @@ function handover(req,res)  // not correct anymore!!!
   console.log("handover request data:");
   console.log(req.body.data);
 
-  let db = nanoAdmin.db.use('userdb-'+toHex(req.targets[0]));
-  let dbLender = nanoAdmin.db.use('userdb-'+toHex(req.body.data.from));
+  let db = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0]));
+  let dbNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0])+"-notifications");
+  let dbInMyPossession = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0])+"-inmypossession");
+  let dbLender; let dbLenderNotifications;
 
-  // check if alleged lender has notification of pending handover in DB:
+  let promConfirm = dbNotifications.get("handover_confirm-"+req.body.data.ref);
+
+  promConfirm.then((handoverConfirm)=>{
+    dbLender = NANO_ADMIN.db.use('userdb-'+toHex(handoverConfirm.from)); // CHANGED HERE
+    dbLenderNotifications = NANO_ADMIN.db.use('userdb-'+toHex(handoverConfirm.from)+"-notifications");
+  }).then(()=>{
+
+    // check if alleged lender has notification of pending handover in DB:
+    let promAwait = dbLenderNotifications.get("handover_await-"+req.body.data.ref);
+
+    Promise.all([promAwait,promConfirm])
+    .then((results)=>{
+      let handoverAwait = results[0];
+      let handoverConfirm = results[1];
+
+      if(!handoverAwait._id){throw({statusCode:500,reason:"ERROR no handoverAwait found"});}
+      if(!handoverConfirm._id){throw({statusCode:500,reason:"ERROR no handoverConfirm found"});}
+
+      let isReturn = handoverConfirm.isReturn;
+      // delete notifications
+      // first: inside lenders notifications:
+      dbLenderNotifications.destroy(handoverAwait._id,handoverAwait._rev)
+      .catch((err)=>{console.log("ERROR on deleting dbLenderNotifications");})
+      // second: inside borrowers notifications:
+      dbNotifications.destroy(handoverConfirm._id,handoverConfirm._rev)
+      .catch((err)=>{console.log("ERROR on deleting dbNotifications");})
+
+      console.log("handover notification delete was initiated");
+
+      // next: do the ACTUAL HANDOVER:
+      // assign correct db for ThingOwner depending on if handover is Return or not:
+      let dbThingOwner = dbLender;
+      let dbThingOwnerNotifications = dbLenderNotifications;
+      if (isReturn){
+        console.log("IS RETURN. will therefore fetch doc from owners DB");
+        dbThingOwner = db;
+        dbThingOwnerNotifications = dbNotifications;
+      }
+      return dbThingOwner.get(req.body.data.ref)
+
+      .then((item)=>{
+        console.log("handover item fetched from db:");
+        console.log(item);
+        // to do: check if Lender is allowed to do that operation again (for the kicks)
+        // set owner of db of thing as default if no inPossessionOf field found:
+        let oldPossessor =
+        (item.inPossessionOf === undefined) ? getTargetsFromUrl(item.hyperlink)[0] : item.inPossessionOf;
+        let dbOldPossessor = NANO_ADMIN.db.use('userdb-'+toHex(oldPossessor));
+        let dbOldPossessorNotifications = NANO_ADMIN.db.use('userdb-'+toHex(oldPossessor)+"-notifications");
+        let dbOldPossessorInMyPossession = NANO_ADMIN.db.use('userdb-'+toHex(oldPossessor)+"-inmypossession");
+
+        item.inPossessionOf = req.username;
+        console.log("(((((((((((((((((((((new item:)))))))))))))))))))))");
+        console.log(item);
+        console.log("(((((((((((((((((((((         )))))))))))))))))))))");
+        // this should be API not DB directly:
+        // get AuthCookie as admin:
+        return requestPromise({
+            method: 'GET',
+            url: REQUESTURL,
+            json: {
+                "username":"admin",
+                "password":DBadminPW
+              }
+          })
+          .then((r)=>{
+            console.log(">>>> handover got admin Cookie:");
+            console.log(r.headers["set-cookie"][0]);
+
+            let targetDBname = /*req.body.data.from*/handoverConfirm.from; // changed HERE
+            if (isReturn)
+            {
+              targetDBname = req.targets[0];
+              console.log("targetDB is "+ targetDBname);
+            }
+            console.log("sending update for item to inPossessionOf: " + item.inPossessionOf);
+            console.log("sending to: " + REQUESTURL+targetDBname+"/"+req.body.data.ref);
+            return requestPromise({
+                method: 'POST',
+                url: REQUESTURL+targetDBname+"/"+req.body.data.ref,
+                //url: "https://dingsda.org:3000/api/v1/"+targetDBname+"/"+req.body.data.ref,
+                json: {
+                    "data":[{
+                      "type":"update",
+                      "doc":item
+                    }]
+                },
+                headers: {'Cookie':r.headers["set-cookie"][0]}
+              })
+            // <<<<< HANDOVER OF ITEM ENDS HERE. following are inMyPossession operations
+            .then((updateRes)=>{
+              console.log("----> handover got answer after update of item:");
+              console.log(updateRes.body); // should have ok:true, i think
+              if (!item.owners.includes(req.username))
+              {
+                console.log("not owner of handover item. therefore new entry in inMyPossession");
+                  return addToInMyPossession(dbInMyPossession,item.hyperlink).then(function(){
+                    if (item.inPossessionOf !== undefined)
+                    {
+                      return deleteFromInMyPossession(dbOldPossessorInMyPossession, item.hyperlink)
+                      .then(function(){
+                        console.log("HANDOVER COMPLETE");
+                        return res.send("ok: handover success")
+                      })
+                    }
+                    else {
+                      console.log("NO item.inPossessionOf");
+                      console.log(item.inPossessionOf);
+                      console.log("HANDOVER COMPLETE");
+                      return res.send("ok: handover success")
+                    }
+                  })
+              }
+              else
+              {
+                return deleteFromInMyPossession(dbOldPossessorInMyPossession, item.hyperlink)
+                .then(function(){
+                  console.log("HANDOVER RETURN COMPLETE");
+                  return res.send("ok: handover return success")
+                })
+              }
+            })
+
+          })
+        })
+      })
+
+  })
+
+
+/*
   dbLender.get("&notifications").then((notifications) => {
 
     console.log(notifications);
@@ -735,10 +1093,15 @@ function handover(req,res)  // not correct anymore!!!
                 console.log("handover item fetched from db:");
                 console.log(item);
                 // to do: check if Lender is allowed to do that operation again (for the kicks)
-                let oldPossessor = item.inPossessionOf;
-                let dbOldPossessor = nanoAdmin.db.use('userdb-'+toHex(oldPossessor));
+                //let oldPossessor = item.inPossessionOf;
+                let oldPossessor =
+                (item.inPossessionOf === undefined) ? getTargetsFromUrl(item.hyperlink)[0] : item.inPossessionOf; // set owner of db of thing as default if no inPossessionOf field found
+                let dbOldPossessor = NANO_ADMIN.db.use('userdb-'+toHex(oldPossessor));
                 delete notifications.pending.handover_await[req.body.data.ref];
                 item.inPossessionOf = req.username;
+                console.log("(((((((((((((((((((((new item:)))))))))))))))))))))");
+                console.log(item);
+                console.log("(((((((((((((((((((((         )))))))))))))))))))))");
                 // this should be API not DB directly:
                 // get AuthCookie as admin:
 
@@ -752,63 +1115,66 @@ function handover(req,res)  // not correct anymore!!!
                   },function(err,r,body){
                     if(!err)
                     {
-                    console.log(r.headers["set-cookie"][0]);
+                      console.log(">>>> handover got admin Cookie:");
+                      console.log(r.headers["set-cookie"][0]);
 
-                    let targetDBname = req.body.data.from;
-                    if (isReturn)
-                    {
-                      targetDBname = req.targets[0];
-                      console.log("targetDB is "+ targetDBname);
-                    }
-
-                    request({
-                        method: 'POST',
-                        url: REQUESTURL+targetDBname+"/"+req.body.data.ref,
-                        //url: "https://dingsda.org:3000/api/v1/"+targetDBname+"/"+req.body.data.ref,
-                        json: {
-                            "data":[{
-                              "type":"update",
-                              "doc":item
-                            }]
-                          },
-                        headers: {'Cookie':r.headers["set-cookie"][0]}
-                      },function(err,r,body){
-                        if (!err){
-                          console.log(body);
-                          if (!item.owners.includes(req.username))
-                          {
-                            console.log("not owner of handover item. therefore new entry in inMyPossession");
-                              return addToInMyPossession(db,item.hyperlink).then(function(){
-                                if (item.inPossessionOf !== undefined)
-                                {
-                                  return deleteFromInMyPossession(dbOldPossessor, item.hyperlink)
-                                  .then(function(){
+                      let targetDBname = req.body.data.from;
+                      if (isReturn)
+                      {
+                        targetDBname = req.targets[0];
+                        console.log("targetDB is "+ targetDBname);
+                      }
+                      console.log("sending update for item to inPossessionOf: " + item.inPossessionOf);
+                      console.log("sending to: " + REQUESTURL+targetDBname+"/"+req.body.data.ref);
+                      request({
+                          method: 'POST',
+                          url: REQUESTURL+targetDBname+"/"+req.body.data.ref,
+                          //url: "https://dingsda.org:3000/api/v1/"+targetDBname+"/"+req.body.data.ref,
+                          json: {
+                              "data":[{
+                                "type":"update",
+                                "doc":item
+                              }]
+                            },
+                          headers: {'Cookie':r.headers["set-cookie"][0]}
+                        },function(err,r,body){
+                          if (!err){
+                            console.log("----> handover got answer after update of item:");
+                            console.log(body); // should have ok:true, i think
+                            if (!item.owners.includes(req.username))
+                            {
+                              console.log("not owner of handover item. therefore new entry in inMyPossession");
+                                return addToInMyPossession(db,item.hyperlink).then(function(){
+                                  if (item.inPossessionOf !== undefined)
+                                  {
+                                    return deleteFromInMyPossession(dbOldPossessor, item.hyperlink)
+                                    .then(function(){
+                                      console.log("HANDOVER COMPLETE");
+                                      return res.send("ok: handover success")
+                                    })
+                                  }
+                                  else {
+                                    console.log("NO item.inPossessionOf");
+                                    console.log(item.inPossessionOf);
                                     console.log("HANDOVER COMPLETE");
                                     return res.send("ok: handover success")
-                                  })
-                                }
-                                else {
-                                  console.log("NO item.inPossessionOf");
-                                  console.log(item.inPossessionOf);
-                                  console.log("HANDOVER COMPLETE");
-                                  return res.send("ok: handover success")
-                                }
+                                  }
+                                })
+                            }
+                            else {
+                              return deleteFromInMyPossession(dbOldPossessor, item.hyperlink)
+                              .then(function(){
+                                console.log("HANDOVER RETURN COMPLETE");
+                                return res.send("ok: handover return success")
                               })
+                            }
                           }
                           else {
-                            return deleteFromInMyPossession(dbOldPossessor, item.hyperlink)
-                            .then(function(){
-                              console.log("HANDOVER RETURN COMPLETE");
-                              return res.send("ok: handover return success")
-                            })
+                            console.log("HANDOVER ERROR");
+                            res.statusCode = 500;
+                            return res.send("error: while finishing handover")
                           }
-                        }
-                        else {
-                          console.log("HANDOVER ERROR");
-                          res.statusCode = 500;
-                          return res.send("error: while finishing handover")
-                        }
-                      })
+                        })
                     }
                     else {
                       console.log("HANDOVER ERROR");
@@ -828,6 +1194,7 @@ function handover(req,res)  // not correct anymore!!!
      }
 
   })
+  */
   .catch((err)=>{
     console.log(err);
     res.statusCode = err.statusCode;
@@ -850,13 +1217,16 @@ into inMyPossession
 
 @returns {Promise} returns nano promise to insert updated doc
 */
-function addToInMyPossession(db,itemHyperlink)
+function addToInMyPossession(db,itemHyperlink,time={})
 {
   console.log("adding to inMyPossession");
+  return db.insert({_id:itemHyperlink,timeBorrowed:time})
+  /*
   return db.get("&inMyPossession").then((inMyPossession) => {
     inMyPossession.things = addToArrayIfNotExist(inMyPossession.things,itemHyperlink);
     return db.insert(inMyPossession)
   })
+  */
 }
 
 /**
@@ -875,6 +1245,15 @@ into inMyPossession
 function deleteFromInMyPossession(db,itemHyperlink)
 {
   console.log("DELETING ITEM "+itemHyperlink+" FROM POSSESION OF OLD POSS ");
+  db.get(itemHyperlink).then((item)=>{
+    return db.destroy(itemHyperlink,item._rev)
+  }).catch((err)=>{
+    console.log("deleteFromInMyPossession() could not delete item:");
+    console.log(err.reason)
+  })
+  return new Promise((resolve,reject)=>{{resolve({ok:true,comment:"nothing to delete"});}})
+
+/*
   return db.get("&inMyPossession").then((inMyPossession) => {
     if (inMyPossession.things.includes(itemHyperlink))
     {
@@ -883,6 +1262,7 @@ function deleteFromInMyPossession(db,itemHyperlink)
     }
     return db.insert(inMyPossession)
   })
+  */
 }
 
 
@@ -909,7 +1289,7 @@ if (req.body.data.location == undefined)
   return res.send('"error: no location provided"'+req.body.data.location)
 }
 // TODO: validateMoveRights (couch via doc_validate_update?)
-  let db = nanoAdmin.db.use('userdb-'+toHex(req.targets[0]));
+  let db = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0]));
 
   db.get(req.targets[1]).then((doc) => {
     if (doc.inPossessionOf && doc.inPossessionOf.includes(req.username))
@@ -918,13 +1298,14 @@ if (req.body.data.location == undefined)
 
       console.log(doc);
       //res.send(doc._rev)
-      let newdoc = doc;
+      let newdoc = deepcopy(doc);
       newdoc.location = req.body.data.location;
       return db.insert(newdoc).then((DBres) => {
           if (DBres.ok)
           {
             updatePublicDBIfPublic(req,newdoc);
             // if insideOf provided in new location: update it's container:
+            /*
             if (newdoc.location && newdoc.location.insideOf && newdoc.location.insideOf !== "" )
             {
               updateContainerOf(req,newdoc.location.insideOf,newdoc._id,req.DBAuthToken,false,
@@ -933,7 +1314,8 @@ if (req.body.data.location == undefined)
                   console.log(updateRes);
                 }
               );
-            }
+            }*/
+            checkIfContainerOfUpdate(req, newdoc, doc) // is doc really olddoc like needed?
           }
           return res.send(DBres)
       })
@@ -961,6 +1343,68 @@ if (req.body.data.location == undefined)
     res.statusCode = err.statusCode;
     return res.send(""+err.reason)
   });
+}
+
+/**
+helper function prechecking if update of containerOf is necessary.
+if the case: updates via [@link updateContainerOf]
+*/
+function checkIfContainerOfUpdate(req,newDoc,oldDoc) // modified from parts within update() TODO: implement to update()
+{
+
+  // CONTAINER / INSIDEOF UPDATES:
+  // if item is inside of other item: update the other items conainerOf:
+  // function UpdateContainerOfIfUpdateNeeded(req, oldDoc, newDoc,target)
+  if (oldDoc.location !== undefined &&
+      oldDoc.location.insideOf !== undefined &&
+      oldDoc.location.insideOf != newDoc.location.insideOf)
+  {
+    console.log("insideOf changed");
+    let targetDel = oldDoc.location.insideOf;
+    let targetUpd = newDoc.location.insideOf;
+    if (!targetDel.startsWith("https"))
+    {
+      targetDel = INSTANCEURL.slice(0,-1)+":" + //INSTANCEURL minus slash
+                API_PORT+API_BASE_URL+req.username+"/"+targetDel;
+    }
+    // delete target from req Target (a.k.a. the item we are updating)
+    console.log( "deleting items id from " + targetDel );
+
+    updateContainerOf(req,targetDel,req.targets[1],req.DBAuthToken,true,function(){
+
+      console.log("CONTAINER SHOULD BE UPDATED NOW");
+          // update new container item
+          if (targetUpd !== undefined && targetUpd !== ""){
+            if (!targetUpd.startsWith("https"))
+            {
+              targetUpd = INSTANCEURL.slice(0,-1)+":" + //INSTANCEURL minus slash
+                        API_PORT+API_BASE_URL+req.username+"/"+targetUpd;
+            }
+            console.log("adding items id to "+targetUpd._id);
+            updateContainerOf(req,targetUpd,req.targets[1],req.DBAuthToken);
+          }else{console.log("no new container. thing is free now");}
+
+    });
+
+  }
+  else if (newDoc.location && newDoc.location.insideOf !== undefined
+            && newDoc.location.insideOf !== "")
+  {
+        console.log("insideOf did not change but exists in new doc");
+        let target = newDoc.location.insideOf;
+        if (!target.startsWith("https"))
+        {
+          target = INSTANCEURL.slice(0,-1)+":" + //INSTANCEURL minus slash
+                    API_PORT+API_BASE_URL+req.username+"/"+target;
+        }
+        // update new container item
+        updateContainerOf(req,target,req.targets[1],req.DBAuthToken);
+  }
+  else {
+    console.log("insideOf does not exist nor did it change");
+    console.log(newDoc.location);
+  }
+
 }
 
 
@@ -1007,6 +1451,8 @@ function update(req,res)
       //console.log("got old Doc back from DB before update:");
       //console.log(oldDoc);
 
+      checkIfContainerOfUpdate(req, req.body.data.doc, oldDoc) // new instead of uncommented stuff below
+/*
       // CONTAINER / INSIDEOF UPDATES:
       // if item is inside of other item: update the other items conainerOf:
       // function UpdateContainerOfIfUpdateNeeded(req, oldDoc, newDoc,target)
@@ -1059,7 +1505,7 @@ function update(req,res)
         console.log("insideOf does not exist nor did it change");
         console.log(req.body.data.doc.location);
       }
-
+*/
       // SHARING / VISIBILITY UPDATES:
       // if other.visibility changed from last update:
       if (oldDoc.other !== undefined &&
@@ -1109,6 +1555,14 @@ function update(req,res)
 
       /// ACTUAL UPDATE /////////////////
       // merge oldDoc with new Doc, giving newDoc higher importance:
+
+      // make sure latitude and longitude are floats
+      if (req.body.data.doc.location.latitude && req.body.data.doc.location.longitude)
+      {
+        req.body.data.doc.location.latitude = parseFloat(req.body.data.doc.location.latitude);
+        req.body.data.doc.location.longitude = parseFloat(req.body.data.doc.location.longitude);
+      }
+
 
       let newOther = {}
       if (oldDoc.other || req.body.data.doc.other)
@@ -1186,31 +1640,26 @@ includes infos from &config doc of user sending.
 function borrow_request(req,res){
   console.log(req.username + " asks to borrow thing "+req.body.data.ref);
 
+  let dbNotifications = NANO_ADMIN.db.use('userdb-'+toHex(req.targets[0])+"-notifications");
 
-  let db = nanoAdmin.db.use('userdb-'+toHex(req.targets[0]));
-
-  return db.get("&notifications").then((notifications) => {
-    console.log(notifications);
-    // HERE LATER: check if already contacted about another thing. then just add to it
-    // for now: add info to notifications.pending.info:
-    // make new Notification:
-    let email = req.body.data.contact_details.email;
-    let tel = req.body.data.contact_details.telnumber;
-    let other = req.body.data.contact_details.other;
-    let contact = `
-    <br> email: <b>${email}</b>
-    <br> tel: <b>${tel}</b>
-    <br> other: <b>${other}</b>`
-    let newNoti = { ref: req.body.data.ref,
-        text:`user ${req.username} wants to borrow ${req.body.data.ref} from
-        ${req.body.data.from} till ${req.body.data.till} you can contact them via:
-        ${contact}`}
-    if (notifications.pending.info === undefined){ notifications.pending.info = {} }
-        notifications.pending.info[req.username] = newNoti;
-    return db.insert(notifications).then(() =>{
+  // HERE LATER: check if already contacted about another thing. then just add to it
+  // for now: add info to notifications.pending.info:
+  // make new Notification:
+  let email = req.body.data.contact_details.email;
+  let tel = req.body.data.contact_details.telnumber;
+  let other = req.body.data.contact_details.other;
+  let contact = `
+  <br> email: <b>${email}</b>
+  <br> tel: <b>${tel}</b>
+  <br> other: <b>${other}</b>`
+  let newNoti = { ref: req.body.data.ref,type:"info",
+      text:`user ${req.username} wants to borrow ${req.body.data.ref} from
+      ${req.body.data.from} till ${req.body.data.till} you can contact them via:
+      ${contact}`}
+  return dbNotifications.insert(newNoti).then(() =>{
 
       return res.send("ok");
-    })
+
   }).catch(function(err){
     res.statusCode = 500;
     return res.send(err)
@@ -1231,10 +1680,10 @@ of public DB
 function updatePublicDBIfPublic(req,doc){
   if (doc.other && doc.other.visibility.includes("public") )
   {
-    deleteItemCopies(req, nanoAdmin,doc)
+    deleteItemCopies(req, NANO_ADMIN,doc)
     .then(function(){
       req.body.data.doc = doc;
-      return insertItemCopies(req, nanoAdmin)
+      return insertItemCopies(req, NANO_ADMIN)
     }).catch(console.log) // TODO: check if should return promise
   }
 }
@@ -1365,6 +1814,13 @@ function addItem(req,res)
       req.body.data.doc.other.visibility = "friends"
     }
 
+    // make sure latitude and longitude are floats
+    if (req.body.data.doc.location.latitude && req.body.data.doc.location.longitude)
+    {
+      req.body.data.doc.location.latitude = parseFloat(req.body.data.doc.location.latitude);
+      req.body.data.doc.location.longitude = parseFloat(req.body.data.doc.location.longitude);
+    }
+
     req.body.data.doc.created = Date.now();
     req.body.data.doc._id = uuidv5(INSTANCEURL+req.targets[0]+"/"+req.body.data.doc.created, uuidv5.URL);
     req.body.data.doc = addHyperlink2Doc(req,req.body.data.doc);
@@ -1465,8 +1921,8 @@ function findItems(req,res)
   let nanoUser = db[0]; let dbUser = db[1];
   let q = makeMango(req.body.data.doc);
   console.log(q);
-  q.limit = 150;
-  q.fields = ["_id","name","location","other","owners","hyperlink","inPossessionOf","_rev"];
+  q.limit = 50;
+  q.fields = ["_id","name","location","other","owners","hyperlink","inPossessionOf","_rev","_attachments"];
   //q.execution_stats = true; // maybe relevant later for easy pagination
   if (req.body.data.bookmark)
   {
@@ -1606,6 +2062,7 @@ function updateContainerOf(req,target,thingInside,authCookie,delete_it=false,cal
     target = INSTANCEURL.slice(0,-1)+":" + //INSTANCEURL minus slash
               API_PORT+API_BASE_URL+req.username+"/"+target;
   }
+  target = target.trim(" ")
 
         request({
             method: 'GET',
@@ -1670,7 +2127,7 @@ function updateContainerOf(req,target,thingInside,authCookie,delete_it=false,cal
             }
 
             let thingDB = getTargetsFromUrl(target)[0];
-            let db = nanoAdmin.db.use('userdb-'+toHex(thingDB));
+            let db = NANO_ADMIN.db.use('userdb-'+toHex(thingDB));
             db.insert(body).then((res) =>{
               console.log("- updateContainerOf success");
               callback(true);
@@ -1922,8 +2379,35 @@ for an already working and easier way to find items take a look at {@link findIt
 */
 function search(req,res)
 {
+  console.log("inside search");
+  console.log(req.body.data);
   //console.log(req.body.data.doc);
-  res.send("search API is not working yet.")
+  console.log( JSON.stringify(req.body.data.doc, null, 4));
+  //res.send("search API is not working yet.")
+
+  if (!req.body.data.db){res.statusCode=400;return res.send("provide .db in payload!")}
+
+  let db = couch_getUserDBFromUsername(req);
+  let nanoUser = db[0];
+  let dbUser = nanoUser.db.use("userdb-"+toHex(req.body.data.db));
+  if (req.body.data.db === "public"){ dbUser = nanoUser.db.use("public") }
+
+  let q = {selector: req.body.data.doc};
+  q.limit = 50;
+  q.fields = ["_id","name","location","other","owners","hyperlink","inPossessionOf","_rev","_attachments"];
+  q.execution_stats = true; // maybe relevant later for easy pagination
+  if (req.body.data.bookmark)
+  {
+    q.bookmark = req.body.data.bookmark
+  }
+  dbUser.find(q).then((doc) => {
+      //console.log(doc);
+      delete(doc.warning); // whats that?
+      return res.send(doc)
+    }).catch(function(err){
+      res.statusCode = 400;
+      return res.send(err)
+    });
 
 }
 
@@ -2032,6 +2516,13 @@ function validateReadRights(req, res, next){
           next();
           return
         }
+        // if user is admin and authenticated as admin: READ permission!
+        else if (req.username === "admin" && req.authenticated)
+        {
+          console.log("ADMIN tries to read database. therefore OKAY");
+          next();
+          return
+        }
         //  this is just an extra check against human error while coding!
         // the req should not even arrive here if not authenticated.
         // this shall be removed after testing
@@ -2039,7 +2530,7 @@ function validateReadRights(req, res, next){
         {
           console.log("user tries to read s/o elses data. we gotta check that!");
           // DB check as admin to check for READ permissions:
-          let db = nanoAdmin.db.use('userdb-'+toHex(targets[0]));
+          let db = NANO_ADMIN.db.use('userdb-'+toHex(targets[0]));
           console.log('userdb-'+toHex(targets[0]));
           if(targets[1] !== undefined) // REDUNDANT ????!!!!
           {
@@ -2096,7 +2587,7 @@ function validateReadRights(req, res, next){
                       // SEND ERROR RESPONSE HERE without any infos!!!
                     } else if (DBres.friends !== undefined &&
                               req.username in DBres.friends)
-                      {
+                    {
                       //console.log(DBres)
                       // HERE CHECK IF username in any of the DBres.friends
                       //console.log(Object.keys(DBres));
@@ -2315,7 +2806,8 @@ function getSessionAndAuthToken(req,res,next, username, password)
 
         if (!err)
         {
-          console.log(resDB);
+          console.log("getSessionAndAuthToken:");
+          //console.log(resDB);
           let body = JSON.parse(resDB.body);
 
           if ( body.ok )
@@ -2340,6 +2832,7 @@ function getSessionAndAuthToken(req,res,next, username, password)
           }
         }
         else {
+          console.log("##### ERROR. getSessionAndAuthToken() ##### ");
           console.log(err);
           req.authenticated = false;
           res.statusCode = 501;
@@ -2395,6 +2888,8 @@ function verifyAuthToken(req,res,next){
           res.statusCode = 401;
           // only 2ndary security. this should NEVER be the only verification:
           req.authenticated = false;
+          // delete cookie in case there was one:
+          res.set("Set-Cookie","AuthSession=; Version=1; Path=/; HttpOnly");
           res.send('error: no valid valid authtoken');
         }
       })
@@ -2432,6 +2927,19 @@ function couch_getUserDB(req)
   else {
     dbUser = nanoUser.db.use("userdb-"+toHex(req.targets[0]))
   }
+
+  return [nanoUser,dbUser]
+}
+
+function couch_getUserDBFromUsername(req)
+{
+  let nanoUser = require('nano')({
+    url:DATABASEURL,
+    cookie:req.DBAuthToken
+  })
+  let dbUser;
+
+  dbUser = nanoUser.db.use("userdb-"+toHex(req.username))
 
   return [nanoUser,dbUser]
 }
@@ -2531,6 +3039,12 @@ function trimTrailingSlashes(input)
 {
     return input.replace(/\/$/, "");
 }
+
+
+function isNumber(n) {
+  return (!isNaN( parseFloat(n) )  && isFinite(n) );
+}
+
 
 /*////////////////////////
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
