@@ -4,3 +4,6 @@ package.json
 package-lock.json
 server_config.json
 config_UI.json
+machina_backup.json
+UI/two/nativeDroid2
+log
