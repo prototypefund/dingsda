@@ -1,0 +1,497 @@
+<div data-role="page" id="barcode" data-dialog="true">
+
+  <style>
+  #barcode {
+    background-color: rgba(0,0,0,0.1)
+  }
+
+  .overlay__content video {
+      width: 100%;
+      height: 100%;
+  }
+
+  .overlay__content canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      left: 0;
+      top: 0;
+  }
+
+  #barcodeviewport.viewport {
+      position: relative;
+  }
+
+  #barcodeviewport.viewport > canvas, #barcodeviewport.viewport > video {
+      max-width: 100%;
+      width: 100%;
+      top: 0;
+  }
+
+  canvas.drawing, canvas.drawingBuffer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      border: 1px green solid;
+  }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+<!--  {{>header}}-->
+  <!-- END HEADER -->
+  <!-- CONTENT -->
+
+
+  <div role="main" class="ui-content" data-dialog="true">
+
+
+    <!--     quagga html     -->
+    <div id="bc_quagga">
+        <div id="barcodeviewport" class="viewport">
+        </div>
+        <!-- basic information displayed in any case -->
+        <span>
+          scan a <b>barcode</b> (EAN accepted).<br>
+        </span>
+        <span class="mediumfont">
+        we recommend to use a USB-Barcode scanner if you have access to one.<br>
+        </span>
+        <span class="mediumfont">(QR codes are atm available only on Android Chrome or via phonegap)</span>
+    </div>
+    <!-- <<< END quagga html -->
+
+    <!--       zxing js html    -->
+    <div id="bc_zxing">
+      <video id="zxingvideo"
+          width="100%"
+          style="border: 1px solid gray"
+      ></video>
+
+      <div id="sourceSelectPanel" style="display: block;">
+        <label for="sourceSelect">Change video source:</label>
+        <select id="sourceSelect" style="max-width:400px">
+        <!--<option value="2d9ba30ba9b3f3a7a2f2492c8e5ea7bd58f87109e658a528ea6b6040a4ba18dc">FaceTime HD Camera</option>-->
+        </select>
+      </div>
+      <span>
+        scan a <b>barcode</b> (EAN accepted)<br> or a <b>QR</b> code.<br>
+      </span>
+      <span class="mediumfont">
+        we recommend to use a USB-Barcode scanner if you have access to one.<br>
+      </span>
+
+    </div>
+    <!-- <<< END zxing js html -->
+    <button id="scan_cancel">cancel scan</button>
+  </div>
+
+  <!-- END CONTENT -->
+
+</div>
+
+<script>
+
+let barcode =
+{
+  api: "zxingjs",
+  targetinput : null
+}
+
+/* EAN DB response handler:
+  ATM PROOF OF CONCEPT!!!
+  TODO:
+  - rename Event
+  - swal asking if user wants to search for items EAN (first time)
+  - set config variable addItems.fetchItemInfosFromDB to true
+  - check on every successful scan if true
+  - check on every time RETURN is pressed inside #addItems #other.barcode
+  - if false: do nothing.
+  - if true: fetch data and fill name
+*/
+document.addEventListener("newMessage", newMessageHandler, false);
+
+function newMessageHandler(e)
+{
+
+  console.log(e.detail);
+
+  if (e.detail.id != undefined)
+  {
+    console.log(e);
+    let items = JSON.parse(e.detail.message).items;
+    console.log(items);
+    alert(JSON.stringify(items[0]));
+    $("#addName").val(items[0].title)
+
+  }
+
+}
+
+/// END EAN DB response handler
+
+
+// if iOS change api to quagga:
+if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i))
+{
+  barcode.api = "quagga";
+  $(".barcodebtn").hide() // hide all buttons till we fixed the issue with ios and quagga
+}
+// if browser is firefox, use quagga:
+if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+  barcode.api = "quagga"
+}
+// if running in phonegap and not as a homepage/in a browser, choose phonegap api:
+if ( document.URL.indexOf( 'http://' ) === -1 && document.URL.indexOf( 'https://' ) === -1 ) {
+    // running as PhoneGap application, so we want to use phonegap barcode api:
+  barcode.api = "phonegap_barcode_plugin"
+}
+
+
+// this happens after some api scanned a barcode successfully:
+document.addEventListener("barcodeScanned",function(e){
+  console.log(e.detail.barcode);
+  //alert(e.detail.barcode)
+  // if this is not null or undefined: fill input that this scanner was called for
+  if (barcode.targetinput)
+  {
+    if (barcode.api !== "phonegap_barcode_plugin") // phonegap plugin just returns on its own
+    {
+      // go back to the last page (will work without reload because jquery uses hash navigation.)
+      history.back();
+    }
+    setTimeout(function(){
+          $(barcode.targetinput).val(e.detail.barcode);
+          barcode.targetinput = null;
+          console.log("changing "+ barcode.targetinput+" to "+e.detail.barcode);
+
+          if (barcode.api.includes("phonegap_barcode_plugin")){
+            getUpcitemdb_com(e.detail.barcode)
+          }
+
+    },800)
+
+  }
+
+})
+
+$("#scan_cancel").click(function(){
+  cancelscan()
+})
+
+
+function cancelscan(){
+  codeReader.reset();
+  codeReaderBC.reset();
+  history.back()
+}
+
+/**
+the barcode and qr code scanners main function. starts the correct barcode reader
+and opens the barcode scanner page
+*/
+function scan(target=null) {
+
+  barcode.targetinput = target; // this will be checked on "barcodeScanned" event
+
+
+  switch(barcode.api) {
+    case "quagga":
+      $.mobile.changePage("#barcode", {
+         reloadPage: false
+      });
+      $("#bc_zxing").hide();
+      $("#bc_quagga").show();
+      startQuaggaScan();
+      break;
+    case "zxingjs":
+      $.mobile.changePage("#barcode", {
+         reloadPage: false
+      });
+      $("#bc_zxing").show();
+      $("#bc_quagga").hide();
+      startZxingJsScan()
+      startQuaggaScan();
+      break;
+    case "phonegap_barcode_plugin":
+        $("#bc_zxing").hide();
+        $("#bc_quagga").hide();
+        //alert("sorry. dingsdas phonegap version does not have a barcode/qr code plugin yet")
+        startPhoneGapScan();
+        break;
+    default:
+
+  }
+}
+
+
+function dispatchBarcodeEvent(barcode){
+  let bc_event = new CustomEvent(
+    "barcodeScanned",
+    {
+      detail: {
+        barcode: barcode,
+        time: new Date(),
+      },
+      bubbles: true,
+      cancelable: true
+    }
+  );
+  document.dispatchEvent(bc_event);
+}
+
+
+</script>
+
+
+<script type="text/javascript">
+
+///////////////////////////////////////////////////////////////////////////////
+/////// PHONEGAP CORDOVA Implementation (should work on iOS & Android) ////////
+///////////////////////////////////////////////////////////////////////////////
+
+function startPhoneGapScan(){
+
+  cordova.plugins.barcodeScanner.scan(
+      function (result) {
+          dispatchBarcodeEvent(result.text);
+          /*alert("We got a barcode\n" +
+                "Result: " + result.text + "\n" +
+                "Format: " + result.format + "\n" +
+                "Cancelled: " + result.cancelled);*/
+      },
+      function (error) {
+          alert("Scanning failed: " + error);
+      },
+      {
+          preferFrontCamera : false, // iOS and Android
+          showFlipCameraButton : true, // iOS and Android
+          showTorchButton : true, // iOS and Android
+          //torchOn: true, // Android, launch with the torch switched on (if available)
+          //saveHistory: true, // Android, save scan history (default false)
+          prompt : "Place a barcode inside the scan area", // Android
+          resultDisplayDuration: 500, // Android, display scanned text for X ms. 0 suppresses it entirely, default 1500
+          formats : "QR_CODE,EAN", // default: all but PDF_417 and RSS_EXPANDED
+          orientation : "portrait", // Android only (portrait|landscape), default unset so it rotates with the device
+          disableAnimations : true, // iOS
+          disableSuccessBeep: false // iOS and Android
+      }
+   );
+
+}
+
+
+</script>
+
+
+
+
+<script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
+
+<script>
+
+
+///////////////////////////////////////////////////////////////////////////////
+/////// ZXING-JS / TS Implementation ( works atm only on Android ) ////////////
+///////////////////////////////////////////////////////////////////////////////
+
+
+//window.addEventListener('load', function () {
+    let selectedDeviceId;
+
+    let codeReader = new ZXing.BrowserQRCodeReader()
+    let codeReaderBC = new ZXing.BrowserBarcodeReader()
+    //const codeReaderBC = new ZXing.BrowserCodeReader()
+
+
+    console.log('ZXing code reader initialized')
+
+    codeReaderBC.getVideoInputDevices()
+        .then((videoInputDevices) => {
+          console.log("VideoInputDevices:");
+          console.log(videoInputDevices);
+            const sourceSelect = document.getElementById('sourceSelect')
+            selectedDeviceId = videoInputDevices[0].deviceId
+            console.log(selectedDeviceId);
+            if (videoInputDevices.length >= 1) {
+                videoInputDevices.forEach((element) => {
+                    const sourceOption = document.createElement('option')
+                    sourceOption.text = element.label
+                    sourceOption.value = element.deviceId
+                    sourceSelect.appendChild(sourceOption)
+                })
+
+                sourceSelect.onchange = () => {
+                    selectedDeviceId = sourceSelect.value;
+                    cancelscan()
+                    //scan(barcode.targetinput)
+                  //  startZxingJsScan()
+                };
+
+
+                const sourceSelectPanel = document.getElementById('sourceSelectPanel')
+                sourceSelectPanel.style.display = 'block'
+            }
+        })
+        .catch((err) => {
+            console.error(err)
+        })
+
+        codeReader.getVideoInputDevices()
+            .then((videoInputDevices) => {
+              console.log("VideoInputDevices:");
+              console.log(videoInputDevices);
+                let sourceSelect = document.getElementById('sourceSelect')
+                selectedDeviceId = videoInputDevices[0].deviceId
+                console.log(selectedDeviceId)
+            })
+            .catch((err) => {
+                console.error(err)
+            })
+
+//})
+
+
+function startZxingJsScan(){
+  codeReader.reset();
+  codeReaderBC.reset();
+
+  let promise1 = codeReaderBC.decodeFromInputVideoDevice(selectedDeviceId, 'zxingvideo')
+  let promise2 = codeReader.decodeFromInputVideoDevice(selectedDeviceId, 'zxingvideo')
+
+  Promise.race([promise1, promise2]).then(function(value) {
+    console.log(value);
+    dispatchBarcodeEvent(value)
+    codeReader.reset();
+    codeReaderBC.reset();
+    Quagga.stop(); // atm because Quagga runs parallel
+    // Both resolve, but promise2 is faster
+  }).catch((err) => {
+      console.error(err)
+      // document.getElementById('result').textContent = err
+  })
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/////// <<< END ZXING-JS / TS Implementation ( works atm only on Android ) ////
+///////////////////////////////////////////////////////////////////////////////
+</script>
+
+
+<script type="text/javascript" src="assets/quagga.min.js"></script>
+
+<script>
+
+///////////////////////////////////////////////////////////////////////////////
+/////// QUAGGA JS Implementation (works best with iOS and okay in some Android)
+///////////////////////////////////////////////////////////////////////////////
+
+
+// to do: exports module stuff
+// to do: check config or mobile type if rather starting of barcode scanner
+//        app might be appropriate via appname:// thing like with zxing://
+
+function startQuaggaScan()
+{
+  let w = window.innerWidth;
+  let h = window.innerHeight;
+
+  Quagga.init({
+      inputStream : {
+        name : "Live",
+        type : "LiveStream",
+        target: document.querySelector('#barcodeviewport'),
+        constraints: {
+          width: {min: 360, max: 1080 /*w*/},
+					height: {min: 240, max: h},
+					aspectRatio: {min: 1, max: 100},
+          facingMode: "environment"
+        },
+        //singleChannel: true
+      },
+      locator: {
+      				patchSize: "medium",
+      				halfSample: true
+      			},
+      numOfWorkers: (navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4),
+      decoder: {
+      				"readers":[
+      					{"format":"ean_reader","config":{}},
+                {"format":"upc_reader","config":{}}
+      				]
+      			},
+      locate: true
+    }, function(err) {
+        if (err) {
+            console.log(err);
+            return
+        }
+        console.log("Barcode Quagga Initialization finished. Ready to start");
+        Quagga.start();
+    });
+}
+
+
+Quagga.lastResults = [];
+
+Quagga.onDetected(function(result){
+  //console.log(result.codeResult.code);
+/*
+ count and compare result.codeResult.code and if 10 of the same codes
+are detected, call Quagga.stop() and return the codeResult including code and
+format for further processing (e.g. putting it into Forms)
+*/
+  if (Quagga.lastResults.length < 4)
+  {
+    Quagga.lastResults.push(result.codeResult.code);
+  }
+  else
+  {
+    let nums = {};
+    Quagga.lastResults.forEach(function(x) { nums[x] = (nums[x] || 0) + 1; });
+    //console.log(nums);
+    let sorted = Object.keys(nums)
+      .sort(function(x,y){return nums[x]-nums[y]})
+    let barcode = sorted[sorted.length-1] // THIS IS THE BARCODE TO BE RETURNED!
+    console.log(barcode);
+    dispatchBarcodeEvent(barcode);
+    codeReader.reset();
+    codeReaderBC.reset();
+    Quagga.stop();
+
+    Quagga.lastResults = []; // empty lastResults again
+  }
+
+})
+
+Quagga.onProcessed(function(result) {
+        var drawingCtx = Quagga.canvas.ctx.overlay,
+            drawingCanvas = Quagga.canvas.dom.overlay;
+
+        if (result) {
+            if (result.boxes) {
+                drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")), parseInt(drawingCanvas.getAttribute("height")));
+                result.boxes.filter(function (box) {
+                    return box !== result.box;
+                }).forEach(function (box) {
+                    Quagga.ImageDebug.drawPath(box, {x: 0, y: 1}, drawingCtx, {color: "green", lineWidth: 2});
+                });
+            }
+
+            if (result.box) {
+                Quagga.ImageDebug.drawPath(result.box, {x: 0, y: 1}, drawingCtx, {color: "#00F", lineWidth: 2});
+            }
+
+            if (result.codeResult && result.codeResult.code) {
+                Quagga.ImageDebug.drawPath(result.line, {x: 'x', y: 'y'}, drawingCtx, {color: 'red', lineWidth: 3});
+            }
+        }
+    });
+
+function stopBarcode()
+{
+  Quagga.stop();
+}
+
+</script>

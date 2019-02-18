@@ -200,7 +200,7 @@ function addNotification(noti)
       case "info":
       listitem = makeNotification({
           text:"<br>"+noti.text,
-          wording_confirm:"OK",
+          wording_confirm:"I got it, DELETE!",
           cb_confirm:function(e){removeNotification(noti._id,e);
             updateNotificationsBatch();/*showNotifications()*/}
         })

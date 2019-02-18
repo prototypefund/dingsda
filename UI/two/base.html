@@ -29,8 +29,10 @@
 
     {{>search}}
 
-  </body>
+    {{>barcode}}
 
+
+  </body>
 
 
   <script>
@@ -59,6 +61,10 @@
   })
 
 
+//document.getElementById("test").onblur=message;
+$("input").blur(function(){
+  $(document).scrollTop($(document).scrollTop() + 1);
+})
 
 ///////////// METHODS ///////////////
 
@@ -101,7 +107,7 @@ function login (){
            updateItemBatch();
            updateNotificationsBatch()
          },800)
- 
+
           //fetchConfig();
         }
       },
@@ -281,6 +287,7 @@ function login (){
 
 
   </script>
+
 
 
 </html>

@@ -61,7 +61,7 @@ $( document ).on( "pageshow", "#landing", function(e,ui) {
 
 function btn_collection_clicked(reload=false){
 
-  let lastSearchWasForUserDB = (collection.searchDB === glb_username);
+  let lastSearchWasForUserDB = (collection.searchDB === glb_username && !collection.reloadOnNextClick);
 
   if(collection)
   {
@@ -81,10 +81,12 @@ function btn_collection_clicked(reload=false){
  {
   console.log("last search was for userdb. so wont fetch and wont draw");
   refreshCollection(console.log,false,false);
+  collection.reloadOnNextClick = false
  }
  else // if last search was to a public or this is the first search: fetch and then render
  {
   refreshCollection(console.log,true,true);
+  collection.reloadOnNextClick = false
  }
 
 }
@@ -104,6 +106,7 @@ function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=f
         },
         (r)=>{  // callback end
           setNewCollectionSearchHistory(r);
+          $("#loadingGif").hide();
           callback(r.docs);
         }
       )
@@ -209,7 +212,7 @@ function getItemsInMyPossession(forceRender=false){
 
 function btn_searchpage_clicked()
 {
-  
+
 
 /*
 if(collection)

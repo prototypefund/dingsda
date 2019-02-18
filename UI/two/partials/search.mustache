@@ -186,7 +186,17 @@
 
     updateInsideOfFlipSwitch(false)
     //addSearchTermHandler()
-    $("#searchTerms").html("");
+    if (barcode.targetinput)
+    {
+      if (!barcode.targetinput.includes("#searchinput_"))
+      {
+        $("#searchTerms").html("");
+      }
+    }
+    else {
+      $("#searchTerms").html("");
+    }
+
     appendSearchTerm();
   })
 
@@ -223,8 +233,8 @@ and combines them to mango queries for further processing
     let selector = { "_id":{"$regex":""},"$and":[] }
 
     for (item of searchTerms){
-
-      let searchField = $($(item).children()[2]).find("span.select-searchField").text()
+      //console.log($(item).children()[3]);
+      let searchField = $($(item).children()[3]).find("span.select-searchField").text()
       let searchText = $(item).children()[0].value
 
       let searchTerm = {};
@@ -264,11 +274,22 @@ and combines them to mango queries for further processing
 
     // get number of searchTerm:
     let num = $('#searchTerms').children().length;
+
+    // atm only add a barcodebtn if not on ios (see barcode.mustache for reasons):
+    let barcodebtn = `<img class="barcodebtn" src="./icons/barcode.png" onclick="scan('#searchinput_${num}')">`;
+    if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i))
+    {
+      barcodebtn=`<img hidden class="barcodebtn" src="./icons/barcode.png" onclick="scan('#searchinput_${num}')">`;
+    }
     // Add a new div
     $(`
       <div class="flex-container-row searchTerm">
-        <input type="text" class="searchtext"></input>
-        <span style="margin-left:5px">in</span>
+        <input id="searchinput_${num}" type="text" class="searchtext"></input>
+        `
+        +
+        barcodebtn
+        +
+        `<span style="margin-left:5px">in</span>
         <div class="thirdwidth">
           <select id="select_${num}" class="select-searchField" data-mini="true">
             <option>name</option>
@@ -313,7 +334,6 @@ and combines them to mango queries for further processing
 
       let cb = function(result){
         callback(result)
-        setNewCollectionSearchHistory(result.docs)
         collection.bookmark = result.bookmark
         //if (collection.bookmark === "nil"){collection.bookmark = null}
 
@@ -325,17 +345,21 @@ and combines them to mango queries for further processing
        if (bookmark === null){ // if this is the first query
          // render without catching first:
          console.log("first time is a charm");
+         setNewCollectionSearchHistory(result.docs); // and start new history
          $("#loadingGif").show();
          $("#itemList .item").parent().remove();
          drawItemCards(result.docs,false,scrollEndListenerSearch)
        }
        else { // if this is a follow up query using a bookmark:
+         collection.searchhistory[0].concat(result.docs)
          if (result.docs.length === 0) // was the last response empty?
          {
            console.log("END OF SEARCH ");
            // renderItemCards and add them instead of deleting the last ones but with no new scrollend:
            drawItemCards(result.docs,false,null,true)
            $("#scrollend").remove();
+           $("#no_items_left").appendTo("#itemList");
+           $("#no_items_left").show();
          }
          else {
            console.log("AND ANOTHER ONE....");
@@ -367,6 +391,7 @@ and combines them to mango queries for further processing
   {
       if (isInView("#scrollend"))
       {
+        $("#no_items_left").show()
         $("#scrollend").remove();
         document.removeEventListener("scroll",scrollEndListenerSearch);
         console.log("scrollend reached! triggering callback to scrollend...");
@@ -409,6 +434,11 @@ and combines them to mango queries for further processing
          {
             "location.longitude": {
                "$lte": upperRightCorner[1]
+            }
+         },
+         {
+            "owners":{
+              "$nin": [glb_username] // exclude users own items from search results TODO: make this work with hyperlink
             }
          }
       ]

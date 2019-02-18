@@ -10,7 +10,19 @@
   <link rel="manifest" href="manifest.json">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="../assets/jquery.mobile-1.4.5.min.css">
+  <link rel="stylesheet" href="assets/jquery.mobile-1.4.5.min.css">
+
+  <!-- only for debug with phonegap/cordova -->
+  <!--<script src="http://192.168.178.128:8080/target/target-script-min.js#anonymous"></script>-->
+  <!-- ONLY IF PACKED WITH PHONEGAP / CORDOVA: -->
+
+  <!--
+  <script src="cordova.js"></script>
+  -->
+  <!-- for 3rd party barcode lookup via phonegap -->
+  <!--
+  <script src="assets/barcodeCheck.js"></script>
+  -->
 
   <!--<script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
@@ -190,7 +202,7 @@ $( document ).on( "pageshow", "#landing", function(e,ui) {
 
 function btn_collection_clicked(reload=false){
 
-  let lastSearchWasForUserDB = (collection.searchDB === glb_username);
+  let lastSearchWasForUserDB = (collection.searchDB === glb_username && !collection.reloadOnNextClick);
 
   if(collection)
   {
@@ -210,10 +222,12 @@ function btn_collection_clicked(reload=false){
  {
   console.log("last search was for userdb. so wont fetch and wont draw");
   refreshCollection(console.log,false,false);
+  collection.reloadOnNextClick = false
  }
  else // if last search was to a public or this is the first search: fetch and then render
  {
   refreshCollection(console.log,true,true);
+  collection.reloadOnNextClick = false
  }
 
 }
@@ -233,6 +247,7 @@ function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=f
         },
         (r)=>{  // callback end
           setNewCollectionSearchHistory(r);
+          $("#loadingGif").hide();
           callback(r.docs);
         }
       )
@@ -338,7 +353,7 @@ function getItemsInMyPossession(forceRender=false){
 
 function btn_searchpage_clicked()
 {
-  
+
 
 /*
 if(collection)
@@ -791,7 +806,7 @@ function addNotification(noti)
       case "info":
       listitem = makeNotification({
           text:"<br>"+noti.text,
-          wording_confirm:"OK",
+          wording_confirm:"I got it, DELETE!",
           cb_confirm:function(e){removeNotification(noti._id,e);
             updateNotificationsBatch();/*showNotifications()*/}
         })
@@ -906,12 +921,27 @@ function getNotificationsFlat(callback=console.log)
 
 <div data-role="page" id="collection">
   <style>
+
+
+  #collection .barcodebtn {
+      height: 1.4em;
+      bottom: 1vh;
+      border: 0px dotted lightgrey;
+      position: fixed;
+      right: 10vw;
+    }
+
+
     #collection{
       margin-top: 0px;
     }
 
     #itemList{
       margin-bottom: 5vh;
+    }
+
+    #filterinput {
+      width: 90%;
     }
 
     #filterform {
@@ -1151,6 +1181,7 @@ function getNotificationsFlat(callback=console.log)
         <input id="filterinput" data-type="search"
           placeholder="Filter by keywords..." aria-label="search input field">
       </form>
+      <img class="barcodebtn" src="./icons/barcode.png" onclick="scan('#filterinput')">
   </div>
   <!-- CONTENT -->
   <div role="main" class="ui-content">
@@ -1159,7 +1190,7 @@ function getNotificationsFlat(callback=console.log)
 
     <ul id="itemList" data-role="listview" data-filter="true" data-input="#filterinput">
 
-      <!--<li style="color:pink">no more items...</li>-->
+      <div id="no_items_left" style="color:pink">no more items...</li>
 
     </ul>
 
@@ -1194,7 +1225,8 @@ var collection = {
     searchhistory:[],
     chooseMode:false,
     bulk:[],
-    bookmark: undefined
+    bookmark: undefined,
+    reloadOnNextClick: false
 }
 
 function switchOffButtonListener()
@@ -1256,6 +1288,11 @@ $("#collection").swipeleft(function(){window.history.forward()});
 
 $("#collection").swiperight(function(){window.history.back()});
 
+$("#filterinput").bind('keyup',function(e) {
+          if (e.keyCode === 13)
+          $("#filterinput").blur()
+     });
+
 
 // attach my own filter function to search input:
 $.mobile.document.on( "filterablecreate", "#collection", function() {
@@ -1288,6 +1325,7 @@ $.mobile.document.on( "filterablecreate", "#collection", function() {
       if($("#scrollend").length > 0){
         scrollEndListenerSearch(); // actually for search.mustache
       }
+
 
       if (matches == keywords.length)
       {
@@ -1328,6 +1366,7 @@ builds list object from single dingsa item.
 function makeItemCard(object){
   let item = document.createElement('li');
   $(item).addClass("itemInList");
+  $(item).attr("id",object._id);
   if (object.inPossessionOf && !object.owners.includes(object.inPossessionOf))
   {
     if (object.owners.includes(glb_username))
@@ -1344,6 +1383,7 @@ function makeItemCard(object){
   $(behindImg).addClass("behindImg");
   let div = document.createElement('div');
   let name = document.createElement('b');
+  $(name).addClass("itemname");
   let owners = document.createElement('i');
   let address = document.createElement('div');
   $(address).addClass("address");
@@ -1386,6 +1426,7 @@ function makeItemCard(object){
   owners.appendChild(document.createTextNode(" by "+object.owners))
   let addresslabel = object.location.address !== ""
   && object.location.address !== undefined ? object.location.address : object.location.insideOf;
+  if (addresslabel == undefined || addresslabel===""){addresslabel =object.location.description}
   address.appendChild(document.createTextNode("in "+addresslabel))
   description.appendChild(document.createTextNode(object.other.description))
 
@@ -1434,7 +1475,7 @@ function drawItemCards(objects, fetchInMyPossession=true,bookmarklistener=undefi
   $("#loadingGif").hide();
   //$("#itemList .item").parent().remove();
 
-  // flag to  hide items with hyperlink containing users DB if we look at public items
+  // flag to hide items with hyperlink containing users DB if we look at public items
   //  (where we do not want to see our own stuff, right?!)
   let lookingAtPublicDB = collection.searchDB.includes("public") || collection.searchDB.includes("friends")
 
@@ -1444,7 +1485,6 @@ function drawItemCards(objects, fetchInMyPossession=true,bookmarklistener=undefi
     try{
       fromMyOwnDB = (objects[i].hyperlink.split("/").slice(-2)[0] === glb_username);
     }catch(err){console.log("error: seems to be old account missing hyperlink in docs");}
-
 
     /*  FIXME: documentation is guessed not sure if I miss sth.
     render a new item Card with the objects data but
@@ -1490,7 +1530,7 @@ function drawItemCards(objects, fetchInMyPossession=true,bookmarklistener=undefi
 
 function addScrollEndListenerToCollection(listener)
 {
-  $("#itemList").append("<div id='scrollend'></div>")
+  $("#itemList").append("<div id='scrollend'>... end of list. scroll for more ...</div>")
 
   document.addEventListener("scroll",listener)
 }
@@ -1684,7 +1724,7 @@ function deleteItems(items)
   })).done(function(){
     showToast("items will be deleted",900);
     setTimeout(function(){
-      refreshCollection();
+      refreshCollection(console.log,true,true);
       updateItemBatch();
     },1000);
   })
@@ -1920,6 +1960,11 @@ function isInView(elem)
         border: 0px solid #f00 !important;
       }
 
+      #itemDetails .inputlabel
+      {
+        font-size: 1em;
+      }
+
       #itemDetails #getLocation{
         display: none;
       }
@@ -1942,6 +1987,20 @@ function isInView(elem)
 
       #itemDetails .ui-shadow-inset{
         border-color: transparent;
+      }
+
+      #itemDetails #other\.visibility-button::after {
+        display: none;
+      }
+
+      #itemDetails #other\.visibility-button{
+        background-color: rgba(0, 0, 0, 0);
+        border: 0px solid #f00 !important;
+        pointer-events: none;
+      }
+
+      #itemDetails .bootstrap-tagsinput span::after{
+        display: none;
       }
 
 
@@ -2205,7 +2264,9 @@ $("#itemDetails").on( "swipeleft", function(e) {
 
 
 function shiftItemFocus(shift=-1){
+  //console.log(itemDetails.itemInFocus._id);
   let position = collection.searchhistory[0].findIndex(i => i._id === itemDetails.itemInFocus._id);
+  console.log(position);
   if (position+shift > -1  && position+shift < collection.searchhistory[0].length)
   {
     position = position +shift;
@@ -2302,6 +2363,36 @@ function showItemDetails(){
   }
 }
 
+function updateSingleItemInCollection(id,setIntoFocus=true)
+{
+  // get item by id
+  getSingleItem(id,function(newDoc){
+    console.log("got new doc:");
+    console.log(newDoc);
+    // find item in latest searchhistory
+    collection.searchhistory[0].find((o, i) => {
+      if (o._id === id) {
+          // replace item in searchhistory with newer version:
+          console.log("found it!");
+          collection.searchhistory[0][i] = newDoc; // replace it in searchhistory
+
+          if (setIntoFocus){
+            itemDetails.itemInFocus = newDoc; // set it into focus
+            showItemDetails();
+          }
+          // update inside .hiddenJSON div inside rendered collection view:
+          console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+          $("#"+newDoc._id+ " .hiddenJSON").html(JSON.stringify(newDoc))
+          // update rendered name:
+          $("#"+newDoc._id+ " .itemname").html(newDoc.name)
+
+          return true; // stop searching
+      }
+    });
+
+  })
+
+}
 
 
 function getSingleItem(id,callback,error=console.log)
@@ -2329,6 +2420,12 @@ function getSingleItem(id,callback,error=console.log)
 <div data-role="page" id="addNew">
 
   <style>
+
+    .barcodebtn {
+      height: 1.2em;
+      float: right;
+      border: 1px dotted lightgrey;
+    }
 
     .back_btn {
       position: fixed;
@@ -2550,48 +2647,50 @@ function getSingleItem(id,callback,error=console.log)
               data-expanded-icon="arrow-u" data-collapsed="true" data-iconpos="none">
               <h3 style="width:100vw;">...</h3>
 
-              tags / keywords:
+              <span class="inputlabel">tags / keywords:</span>
               <input id="other.tags" type="text" placeholder="type tag and hit enter"
                 data-role="tagsinput" value="" />
 
-              barcode:
+              <span class="inputlabel">barcode:</span>
+                <img class="barcodebtn" src="./icons/barcode.png" onclick="scan('#other\\.barcode')">
               <input type="text" id="other.barcode" placeholder="EAN, ISBN or UPC"
                 />
 
-              count / number of pieces:
+              <span class="inputlabel">count / number of pieces:</span>
               <input type="text" id="other.count"
                 placeholder="how many items are summerized in this entry?"
                 />
 
-              weight per item:
+              <span class="inputlabel">weight per item:</span>
               <input type="text" id="other.weight"
                 placeholder="don't forget to include the unit (e.g. kg)"
                 />
 
-              value per item:
+              <span class="inputlabel">value per item:</span>
               <input type="text" id="other.value"
                 placeholder="EUR? USD? CHF?" />
 
-              country of origin:
+              <span class="inputlabel">country of origin:</span>
               <input type="text" id="other.madein"
                 placeholder="made in..." />
 
-              <br>
+              <!--<div data-role="collapsible" data-mini="true" data-collapsed-icon="heart">
+                <h3 class="mediumfont" style="width:100%">Visibility</h3>-->
+
+                  <select name="visibility" class="mediumfont" id="other.visibility">
+                    <option value="private">visible only to owners</option>
+                    <option value="friends">visible to friends <span class="smallfont">(atm: like private)</span></option>
+                    <option value="friends2nd" disabled>visible to friends of friends</option>
+                    <option value="public" selected>visible to friends in spe (public)</option>
+                  </select>
+
+            <!--  </div> -->
+            <br>
               unique id:
               <input type="text" id="_id" placeholder="no unique id so far" disabled>
               <div id="hyperlink" hidden></div>
 
-              <div data-role="collapsible" data-mini="true" data-collapsed-icon="heart">
-                <h3 class="mediumfont" style="width:100%">Visibility</h3>
 
-                  <select name="visibility" class="mediumfont" id="other.visibility">
-                    <option value="private">visible only to owners</option>
-                    <option value="friends" selected>visible to friends <span class="smallfont">(atm: like private)</span></option>
-                    <option value="friends2nd" disabled>visible to friends of friends</option>
-                    <option value="public">visible to friends in spe (public)</option>
-                  </select>
-
-              </div>
 
 
           <!-- END DETAILS -->
@@ -2623,6 +2722,15 @@ let addNew = {
 
 const gmapsExists = true;
 
+
+$("#addNew input").bind('keyup',function(e) {
+          if (e.keyCode === 13)
+          {
+            $(e.target).blur()
+          }
+
+     });
+
 $( document ).on( "pageshow", "#addNew", function(e,ui) {
     console.log(window.location.search);
     console.log("just loaded itemDetails");
@@ -2630,7 +2738,7 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
 
     $("#details").appendTo("#addNew_detailsContainer");
     $("#addNew_detailsContainer").trigger("create");
-    $("#details").collapsible( "collapse" )
+    //$("#details").collapsible( "collapse" )
     $("#addNew_detailsContainer :input").attr("disabled", false);
 
     clearForm();
@@ -2704,6 +2812,8 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
 })
 
 $(document).ready(function(){
+
+
 
   // init gmaps
   fillLocationForm({description: "",address: "",latitude:null,longitude:null})
@@ -2945,15 +3055,15 @@ function btn_add_update()
         console.log(res);
         if(res.ok == true)
         {
-          swal({text:"UPDATED SUCCESSFULLY\n(pic might need reload)", toast:true, timer:1200,
+          swal({text:"UPDATED SUCCESSFULLY\n(pic might need reload)", toast:true, timer:500,
             showConfirmButton:false, position:"center",customClass:"whiteletters"
           }).then(function(){
-              refreshCollection(function(){
-                shiftItemFocus(0);
-                showItemDetails();
-                window.history.back();
-              },true,true);
-
+              shiftItemFocus(0);
+              setTimeout(showItemDetails,500);
+              window.history.back();
+              updateSingleItemInCollection(basicout._id);
+            /*  refreshCollection(function(){
+            },true,true);*/
           });
         }
         else {
@@ -3139,7 +3249,7 @@ function clearForm(){
   updateInsideOfFlipSwitch(false);
 
   $("#other\\.tags").tagsinput("removeAll");
-  $("#other\\.visibility").val("friends").change();
+  $("#other\\.visibility").val("public").change();
 
   $("#addDescription").val("");
 
@@ -3192,6 +3302,7 @@ function addit(obj,callback=console.log)
       path:glb_username,
       data:data,
        callback: function(result){
+        collection.reloadOnNextClick = true;
         callback(result)
       }
 
@@ -3382,7 +3493,7 @@ function updateit(obj,callback=console.log)
             //"doc":{_id:"33","other.visibility":["friends"]}
           }]
         }
-        let reloadAfterUpdate = false;
+        //let reloadAfterUpdate = false;
         // photo upload:
         if (document.getElementById("addPhoto").src.startsWith("data:image/jpeg;base64") )
         {
@@ -3414,6 +3525,7 @@ function insideOfUpdated(res)
   if (res._id !== undefined)
   {
     $('#insideOf_name').html(res.name);
+    $('.locationdescription').html(res.name+" . "+res.location.description);
     $('#insideOf_name').attr("href", 'javascript:getSingleItem("'+res._id+
     '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();});')
   }
@@ -3668,7 +3780,7 @@ function getSingleItem(id,callback,error=console.log)
 
   <!-- CONTENT -->
   <div role="main" class="ui-content">
-    To whom do you want to hand these items over to ?
+    Who do you want to hand these items over to?
     <br>
     <input id="newPossessor" type="text"></input>
 
@@ -3718,16 +3830,16 @@ $("#btn_handover_items").click(function(){
         }
         else {
           updateNotificationsBatch();
-          $.mobile.pageContainer.pagecontainer("change", "#notifications",
-                     {allowSamePageTransition:true,transition: "slidefade" });
         }
       })
     }
 
     showToast("items will be handed over",800);
-    // TO DO:
-    // - update notifications
-    // -
+
+    setTimeout(function(){ // this could happen more after the first or last response received back if proper async. (see promise.all())
+      $.mobile.pageContainer.pagecontainer("change", "#notifications",
+                 {allowSamePageTransition:true,transition: "slidefade" });
+    },300)
 
   }
 
@@ -4123,7 +4235,17 @@ $("#btn_send_item_request").click(function(){
 
     updateInsideOfFlipSwitch(false)
     //addSearchTermHandler()
-    $("#searchTerms").html("");
+    if (barcode.targetinput)
+    {
+      if (!barcode.targetinput.includes("#searchinput_"))
+      {
+        $("#searchTerms").html("");
+      }
+    }
+    else {
+      $("#searchTerms").html("");
+    }
+
     appendSearchTerm();
   })
 
@@ -4160,8 +4282,8 @@ and combines them to mango queries for further processing
     let selector = { "_id":{"$regex":""},"$and":[] }
 
     for (item of searchTerms){
-
-      let searchField = $($(item).children()[2]).find("span.select-searchField").text()
+      //console.log($(item).children()[3]);
+      let searchField = $($(item).children()[3]).find("span.select-searchField").text()
       let searchText = $(item).children()[0].value
 
       let searchTerm = {};
@@ -4201,11 +4323,22 @@ and combines them to mango queries for further processing
 
     // get number of searchTerm:
     let num = $('#searchTerms').children().length;
+
+    // atm only add a barcodebtn if not on ios (see barcode.mustache for reasons):
+    let barcodebtn = `<img class="barcodebtn" src="./icons/barcode.png" onclick="scan('#searchinput_${num}')">`;
+    if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i))
+    {
+      barcodebtn=`<img hidden class="barcodebtn" src="./icons/barcode.png" onclick="scan('#searchinput_${num}')">`;
+    }
     // Add a new div
     $(`
       <div class="flex-container-row searchTerm">
-        <input type="text" class="searchtext"></input>
-        <span style="margin-left:5px">in</span>
+        <input id="searchinput_${num}" type="text" class="searchtext"></input>
+        `
+        +
+        barcodebtn
+        +
+        `<span style="margin-left:5px">in</span>
         <div class="thirdwidth">
           <select id="select_${num}" class="select-searchField" data-mini="true">
             <option>name</option>
@@ -4250,7 +4383,6 @@ and combines them to mango queries for further processing
 
       let cb = function(result){
         callback(result)
-        setNewCollectionSearchHistory(result.docs)
         collection.bookmark = result.bookmark
         //if (collection.bookmark === "nil"){collection.bookmark = null}
 
@@ -4262,17 +4394,21 @@ and combines them to mango queries for further processing
        if (bookmark === null){ // if this is the first query
          // render without catching first:
          console.log("first time is a charm");
+         setNewCollectionSearchHistory(result.docs); // and start new history
          $("#loadingGif").show();
          $("#itemList .item").parent().remove();
          drawItemCards(result.docs,false,scrollEndListenerSearch)
        }
        else { // if this is a follow up query using a bookmark:
+         collection.searchhistory[0].concat(result.docs)
          if (result.docs.length === 0) // was the last response empty?
          {
            console.log("END OF SEARCH ");
            // renderItemCards and add them instead of deleting the last ones but with no new scrollend:
            drawItemCards(result.docs,false,null,true)
            $("#scrollend").remove();
+           $("#no_items_left").appendTo("#itemList");
+           $("#no_items_left").show();
          }
          else {
            console.log("AND ANOTHER ONE....");
@@ -4304,6 +4440,7 @@ and combines them to mango queries for further processing
   {
       if (isInView("#scrollend"))
       {
+        $("#no_items_left").show()
         $("#scrollend").remove();
         document.removeEventListener("scroll",scrollEndListenerSearch);
         console.log("scrollend reached! triggering callback to scrollend...");
@@ -4346,6 +4483,11 @@ and combines them to mango queries for further processing
          {
             "location.longitude": {
                "$lte": upperRightCorner[1]
+            }
+         },
+         {
+            "owners":{
+              "$nin": [glb_username] // exclude users own items from search results TODO: make this work with hyperlink
             }
          }
       ]
@@ -4426,8 +4568,529 @@ and combines them to mango queries for further processing
 
 </script>
 
-  </body>
+<div data-role="page" id="barcode" data-dialog="true">
 
+  <style>
+  #barcode {
+    background-color: rgba(0,0,0,0.1)
+  }
+
+  .overlay__content video {
+      width: 100%;
+      height: 100%;
+  }
+
+  .overlay__content canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      left: 0;
+      top: 0;
+  }
+
+  #barcodeviewport.viewport {
+      position: relative;
+  }
+
+  #barcodeviewport.viewport > canvas, #barcodeviewport.viewport > video {
+      max-width: 100%;
+      width: 100%;
+      top: 0;
+  }
+
+  canvas.drawing, canvas.drawingBuffer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      border: 1px green solid;
+  }
+
+  </style>
+
+  <!-- HEADER TEMPLATE -->
+<!--  
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/friends.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
+      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+-->
+  <!-- END HEADER -->
+  <!-- CONTENT -->
+
+
+  <div role="main" class="ui-content" data-dialog="true">
+
+
+    <!--     quagga html     -->
+    <div id="bc_quagga">
+        <div id="barcodeviewport" class="viewport">
+        </div>
+        <!-- basic information displayed in any case -->
+        <span>
+          scan a <b>barcode</b> (EAN accepted).<br>
+        </span>
+        <span class="mediumfont">
+        we recommend to use a USB-Barcode scanner if you have access to one.<br>
+        </span>
+        <span class="mediumfont">(QR codes are atm available only on Android Chrome or via phonegap)</span>
+    </div>
+    <!-- <<< END quagga html -->
+
+    <!--       zxing js html    -->
+    <div id="bc_zxing">
+      <video id="zxingvideo"
+          width="100%"
+          style="border: 1px solid gray"
+      ></video>
+
+      <div id="sourceSelectPanel" style="display: block;">
+        <label for="sourceSelect">Change video source:</label>
+        <select id="sourceSelect" style="max-width:400px">
+        <!--<option value="2d9ba30ba9b3f3a7a2f2492c8e5ea7bd58f87109e658a528ea6b6040a4ba18dc">FaceTime HD Camera</option>-->
+        </select>
+      </div>
+      <span>
+        scan a <b>barcode</b> (EAN accepted)<br> or a <b>QR</b> code.<br>
+      </span>
+      <span class="mediumfont">
+        we recommend to use a USB-Barcode scanner if you have access to one.<br>
+      </span>
+
+    </div>
+    <!-- <<< END zxing js html -->
+    <button id="scan_cancel">cancel scan</button>
+  </div>
+
+  <!-- END CONTENT -->
+
+</div>
+
+<script>
+
+let barcode =
+{
+  api: "zxingjs",
+  targetinput : null
+}
+
+/* EAN DB response handler:
+  ATM PROOF OF CONCEPT!!!
+  TODO:
+  - rename Event
+  - swal asking if user wants to search for items EAN (first time)
+  - set config variable addItems.fetchItemInfosFromDB to true
+  - check on every successful scan if true
+  - check on every time RETURN is pressed inside #addItems #other.barcode
+  - if false: do nothing.
+  - if true: fetch data and fill name
+*/
+document.addEventListener("newMessage", newMessageHandler, false);
+
+function newMessageHandler(e)
+{
+
+  console.log(e.detail);
+
+  if (e.detail.id != undefined)
+  {
+    console.log(e);
+    let items = JSON.parse(e.detail.message).items;
+    console.log(items);
+    alert(JSON.stringify(items[0]));
+    $("#addName").val(items[0].title)
+
+  }
+
+}
+
+/// END EAN DB response handler
+
+
+// if iOS change api to quagga:
+if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i))
+{
+  barcode.api = "quagga";
+  $(".barcodebtn").hide() // hide all buttons till we fixed the issue with ios and quagga
+}
+// if browser is firefox, use quagga:
+if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+  barcode.api = "quagga"
+}
+// if running in phonegap and not as a homepage/in a browser, choose phonegap api:
+if ( document.URL.indexOf( 'http://' ) === -1 && document.URL.indexOf( 'https://' ) === -1 ) {
+    // running as PhoneGap application, so we want to use phonegap barcode api:
+  barcode.api = "phonegap_barcode_plugin"
+}
+
+
+// this happens after some api scanned a barcode successfully:
+document.addEventListener("barcodeScanned",function(e){
+  console.log(e.detail.barcode);
+  //alert(e.detail.barcode)
+  // if this is not null or undefined: fill input that this scanner was called for
+  if (barcode.targetinput)
+  {
+    if (barcode.api !== "phonegap_barcode_plugin") // phonegap plugin just returns on its own
+    {
+      // go back to the last page (will work without reload because jquery uses hash navigation.)
+      history.back();
+    }
+    setTimeout(function(){
+          $(barcode.targetinput).val(e.detail.barcode);
+          barcode.targetinput = null;
+          console.log("changing "+ barcode.targetinput+" to "+e.detail.barcode);
+
+          if (barcode.api.includes("phonegap_barcode_plugin")){
+            getUpcitemdb_com(e.detail.barcode)
+          }
+
+    },800)
+
+  }
+
+})
+
+$("#scan_cancel").click(function(){
+  cancelscan()
+})
+
+
+function cancelscan(){
+  codeReader.reset();
+  codeReaderBC.reset();
+  history.back()
+}
+
+/**
+the barcode and qr code scanners main function. starts the correct barcode reader
+and opens the barcode scanner page
+*/
+function scan(target=null) {
+
+  barcode.targetinput = target; // this will be checked on "barcodeScanned" event
+
+
+  switch(barcode.api) {
+    case "quagga":
+      $.mobile.changePage("#barcode", {
+         reloadPage: false
+      });
+      $("#bc_zxing").hide();
+      $("#bc_quagga").show();
+      startQuaggaScan();
+      break;
+    case "zxingjs":
+      $.mobile.changePage("#barcode", {
+         reloadPage: false
+      });
+      $("#bc_zxing").show();
+      $("#bc_quagga").hide();
+      startZxingJsScan()
+      startQuaggaScan();
+      break;
+    case "phonegap_barcode_plugin":
+        $("#bc_zxing").hide();
+        $("#bc_quagga").hide();
+        //alert("sorry. dingsdas phonegap version does not have a barcode/qr code plugin yet")
+        startPhoneGapScan();
+        break;
+    default:
+
+  }
+}
+
+
+function dispatchBarcodeEvent(barcode){
+  let bc_event = new CustomEvent(
+    "barcodeScanned",
+    {
+      detail: {
+        barcode: barcode,
+        time: new Date(),
+      },
+      bubbles: true,
+      cancelable: true
+    }
+  );
+  document.dispatchEvent(bc_event);
+}
+
+
+</script>
+
+
+<script type="text/javascript">
+
+///////////////////////////////////////////////////////////////////////////////
+/////// PHONEGAP CORDOVA Implementation (should work on iOS & Android) ////////
+///////////////////////////////////////////////////////////////////////////////
+
+function startPhoneGapScan(){
+
+  cordova.plugins.barcodeScanner.scan(
+      function (result) {
+          dispatchBarcodeEvent(result.text);
+          /*alert("We got a barcode\n" +
+                "Result: " + result.text + "\n" +
+                "Format: " + result.format + "\n" +
+                "Cancelled: " + result.cancelled);*/
+      },
+      function (error) {
+          alert("Scanning failed: " + error);
+      },
+      {
+          preferFrontCamera : false, // iOS and Android
+          showFlipCameraButton : true, // iOS and Android
+          showTorchButton : true, // iOS and Android
+          //torchOn: true, // Android, launch with the torch switched on (if available)
+          //saveHistory: true, // Android, save scan history (default false)
+          prompt : "Place a barcode inside the scan area", // Android
+          resultDisplayDuration: 500, // Android, display scanned text for X ms. 0 suppresses it entirely, default 1500
+          formats : "QR_CODE,EAN", // default: all but PDF_417 and RSS_EXPANDED
+          orientation : "portrait", // Android only (portrait|landscape), default unset so it rotates with the device
+          disableAnimations : true, // iOS
+          disableSuccessBeep: false // iOS and Android
+      }
+   );
+
+}
+
+
+</script>
+
+
+
+
+<script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
+
+<script>
+
+
+///////////////////////////////////////////////////////////////////////////////
+/////// ZXING-JS / TS Implementation ( works atm only on Android ) ////////////
+///////////////////////////////////////////////////////////////////////////////
+
+
+//window.addEventListener('load', function () {
+    let selectedDeviceId;
+
+    let codeReader = new ZXing.BrowserQRCodeReader()
+    let codeReaderBC = new ZXing.BrowserBarcodeReader()
+    //const codeReaderBC = new ZXing.BrowserCodeReader()
+
+
+    console.log('ZXing code reader initialized')
+
+    codeReaderBC.getVideoInputDevices()
+        .then((videoInputDevices) => {
+          console.log("VideoInputDevices:");
+          console.log(videoInputDevices);
+            const sourceSelect = document.getElementById('sourceSelect')
+            selectedDeviceId = videoInputDevices[0].deviceId
+            console.log(selectedDeviceId);
+            if (videoInputDevices.length >= 1) {
+                videoInputDevices.forEach((element) => {
+                    const sourceOption = document.createElement('option')
+                    sourceOption.text = element.label
+                    sourceOption.value = element.deviceId
+                    sourceSelect.appendChild(sourceOption)
+                })
+
+                sourceSelect.onchange = () => {
+                    selectedDeviceId = sourceSelect.value;
+                    cancelscan()
+                    //scan(barcode.targetinput)
+                  //  startZxingJsScan()
+                };
+
+
+                const sourceSelectPanel = document.getElementById('sourceSelectPanel')
+                sourceSelectPanel.style.display = 'block'
+            }
+        })
+        .catch((err) => {
+            console.error(err)
+        })
+
+        codeReader.getVideoInputDevices()
+            .then((videoInputDevices) => {
+              console.log("VideoInputDevices:");
+              console.log(videoInputDevices);
+                let sourceSelect = document.getElementById('sourceSelect')
+                selectedDeviceId = videoInputDevices[0].deviceId
+                console.log(selectedDeviceId)
+            })
+            .catch((err) => {
+                console.error(err)
+            })
+
+//})
+
+
+function startZxingJsScan(){
+  codeReader.reset();
+  codeReaderBC.reset();
+
+  let promise1 = codeReaderBC.decodeFromInputVideoDevice(selectedDeviceId, 'zxingvideo')
+  let promise2 = codeReader.decodeFromInputVideoDevice(selectedDeviceId, 'zxingvideo')
+
+  Promise.race([promise1, promise2]).then(function(value) {
+    console.log(value);
+    dispatchBarcodeEvent(value)
+    codeReader.reset();
+    codeReaderBC.reset();
+    Quagga.stop(); // atm because Quagga runs parallel
+    // Both resolve, but promise2 is faster
+  }).catch((err) => {
+      console.error(err)
+      // document.getElementById('result').textContent = err
+  })
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/////// <<< END ZXING-JS / TS Implementation ( works atm only on Android ) ////
+///////////////////////////////////////////////////////////////////////////////
+</script>
+
+
+<script type="text/javascript" src="assets/quagga.min.js"></script>
+
+<script>
+
+///////////////////////////////////////////////////////////////////////////////
+/////// QUAGGA JS Implementation (works best with iOS and okay in some Android)
+///////////////////////////////////////////////////////////////////////////////
+
+
+// to do: exports module stuff
+// to do: check config or mobile type if rather starting of barcode scanner
+//        app might be appropriate via appname:// thing like with zxing://
+
+function startQuaggaScan()
+{
+  let w = window.innerWidth;
+  let h = window.innerHeight;
+
+  Quagga.init({
+      inputStream : {
+        name : "Live",
+        type : "LiveStream",
+        target: document.querySelector('#barcodeviewport'),
+        constraints: {
+          width: {min: 360, max: 1080 /*w*/},
+					height: {min: 240, max: h},
+					aspectRatio: {min: 1, max: 100},
+          facingMode: "environment"
+        },
+        //singleChannel: true
+      },
+      locator: {
+      				patchSize: "medium",
+      				halfSample: true
+      			},
+      numOfWorkers: (navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4),
+      decoder: {
+      				"readers":[
+      					{"format":"ean_reader","config":{}},
+                {"format":"upc_reader","config":{}}
+      				]
+      			},
+      locate: true
+    }, function(err) {
+        if (err) {
+            console.log(err);
+            return
+        }
+        console.log("Barcode Quagga Initialization finished. Ready to start");
+        Quagga.start();
+    });
+}
+
+
+Quagga.lastResults = [];
+
+Quagga.onDetected(function(result){
+  //console.log(result.codeResult.code);
+/*
+ count and compare result.codeResult.code and if 10 of the same codes
+are detected, call Quagga.stop() and return the codeResult including code and
+format for further processing (e.g. putting it into Forms)
+*/
+  if (Quagga.lastResults.length < 4)
+  {
+    Quagga.lastResults.push(result.codeResult.code);
+  }
+  else
+  {
+    let nums = {};
+    Quagga.lastResults.forEach(function(x) { nums[x] = (nums[x] || 0) + 1; });
+    //console.log(nums);
+    let sorted = Object.keys(nums)
+      .sort(function(x,y){return nums[x]-nums[y]})
+    let barcode = sorted[sorted.length-1] // THIS IS THE BARCODE TO BE RETURNED!
+    console.log(barcode);
+    dispatchBarcodeEvent(barcode);
+    codeReader.reset();
+    codeReaderBC.reset();
+    Quagga.stop();
+
+    Quagga.lastResults = []; // empty lastResults again
+  }
+
+})
+
+Quagga.onProcessed(function(result) {
+        var drawingCtx = Quagga.canvas.ctx.overlay,
+            drawingCanvas = Quagga.canvas.dom.overlay;
+
+        if (result) {
+            if (result.boxes) {
+                drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")), parseInt(drawingCanvas.getAttribute("height")));
+                result.boxes.filter(function (box) {
+                    return box !== result.box;
+                }).forEach(function (box) {
+                    Quagga.ImageDebug.drawPath(box, {x: 0, y: 1}, drawingCtx, {color: "green", lineWidth: 2});
+                });
+            }
+
+            if (result.box) {
+                Quagga.ImageDebug.drawPath(result.box, {x: 0, y: 1}, drawingCtx, {color: "#00F", lineWidth: 2});
+            }
+
+            if (result.codeResult && result.codeResult.code) {
+                Quagga.ImageDebug.drawPath(result.line, {x: 'x', y: 'y'}, drawingCtx, {color: 'red', lineWidth: 3});
+            }
+        }
+    });
+
+function stopBarcode()
+{
+  Quagga.stop();
+}
+
+</script>
+
+
+  </body>
 
 
   <script>
@@ -4456,6 +5119,10 @@ and combines them to mango queries for further processing
   })
 
 
+//document.getElementById("test").onblur=message;
+$("input").blur(function(){
+  $(document).scrollTop($(document).scrollTop() + 1);
+})
 
 ///////////// METHODS ///////////////
 
@@ -4498,7 +5165,7 @@ function login (){
            updateItemBatch();
            updateNotificationsBatch()
          },800)
- 
+
           //fetchConfig();
         }
       },
@@ -4678,6 +5345,7 @@ function login (){
 
 
   </script>
+
 
 
 </html>

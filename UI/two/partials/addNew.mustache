@@ -2,6 +2,12 @@
 
   <style>
 
+    .barcodebtn {
+      height: 1.2em;
+      float: right;
+      border: 1px dotted lightgrey;
+    }
+
     .back_btn {
       position: fixed;
       z-index: 99;
@@ -200,48 +206,50 @@
               data-expanded-icon="arrow-u" data-collapsed="true" data-iconpos="none">
               <h3 style="width:100vw;">...</h3>
 
-              tags / keywords:
+              <span class="inputlabel">tags / keywords:</span>
               <input id="other.tags" type="text" placeholder="type tag and hit enter"
                 data-role="tagsinput" value="" />
 
-              barcode:
+              <span class="inputlabel">barcode:</span>
+                <img class="barcodebtn" src="./icons/barcode.png" onclick="scan('#other\\.barcode')">
               <input type="text" id="other.barcode" placeholder="EAN, ISBN or UPC"
                 />
 
-              count / number of pieces:
+              <span class="inputlabel">count / number of pieces:</span>
               <input type="text" id="other.count"
                 placeholder="how many items are summerized in this entry?"
                 />
 
-              weight per item:
+              <span class="inputlabel">weight per item:</span>
               <input type="text" id="other.weight"
                 placeholder="don't forget to include the unit (e.g. kg)"
                 />
 
-              value per item:
+              <span class="inputlabel">value per item:</span>
               <input type="text" id="other.value"
                 placeholder="EUR? USD? CHF?" />
 
-              country of origin:
+              <span class="inputlabel">country of origin:</span>
               <input type="text" id="other.madein"
                 placeholder="made in..." />
 
-              <br>
+              <!--<div data-role="collapsible" data-mini="true" data-collapsed-icon="heart">
+                <h3 class="mediumfont" style="width:100%">Visibility</h3>-->
+
+                  <select name="visibility" class="mediumfont" id="other.visibility">
+                    <option value="private">visible only to owners</option>
+                    <option value="friends">visible to friends <span class="smallfont">(atm: like private)</span></option>
+                    <option value="friends2nd" disabled>visible to friends of friends</option>
+                    <option value="public" selected>visible to friends in spe (public)</option>
+                  </select>
+
+            <!--  </div> -->
+            <br>
               unique id:
               <input type="text" id="_id" placeholder="no unique id so far" disabled>
               <div id="hyperlink" hidden></div>
 
-              <div data-role="collapsible" data-mini="true" data-collapsed-icon="heart">
-                <h3 class="mediumfont" style="width:100%">Visibility</h3>
 
-                  <select name="visibility" class="mediumfont" id="other.visibility">
-                    <option value="private">visible only to owners</option>
-                    <option value="friends" selected>visible to friends <span class="smallfont">(atm: like private)</span></option>
-                    <option value="friends2nd" disabled>visible to friends of friends</option>
-                    <option value="public">visible to friends in spe (public)</option>
-                  </select>
-
-              </div>
 
 
           <!-- END DETAILS -->
@@ -273,6 +281,15 @@ let addNew = {
 
 const gmapsExists = true;
 
+
+$("#addNew input").bind('keyup',function(e) {
+          if (e.keyCode === 13)
+          {
+            $(e.target).blur()
+          }
+
+     });
+
 $( document ).on( "pageshow", "#addNew", function(e,ui) {
     console.log(window.location.search);
     console.log("just loaded itemDetails");
@@ -280,7 +297,7 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
 
     $("#details").appendTo("#addNew_detailsContainer");
     $("#addNew_detailsContainer").trigger("create");
-    $("#details").collapsible( "collapse" )
+    //$("#details").collapsible( "collapse" )
     $("#addNew_detailsContainer :input").attr("disabled", false);
 
     clearForm();
@@ -354,6 +371,8 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
 })
 
 $(document).ready(function(){
+
+
 
   // init gmaps
   fillLocationForm({description: "",address: "",latitude:null,longitude:null})
@@ -595,15 +614,15 @@ function btn_add_update()
         console.log(res);
         if(res.ok == true)
         {
-          swal({text:"UPDATED SUCCESSFULLY\n(pic might need reload)", toast:true, timer:1200,
+          swal({text:"UPDATED SUCCESSFULLY\n(pic might need reload)", toast:true, timer:500,
             showConfirmButton:false, position:"center",customClass:"whiteletters"
           }).then(function(){
-              refreshCollection(function(){
-                shiftItemFocus(0);
-                showItemDetails();
-                window.history.back();
-              },true,true);
-
+              shiftItemFocus(0);
+              setTimeout(showItemDetails,500);
+              window.history.back();
+              updateSingleItemInCollection(basicout._id);
+            /*  refreshCollection(function(){
+            },true,true);*/
           });
         }
         else {
@@ -789,7 +808,7 @@ function clearForm(){
   updateInsideOfFlipSwitch(false);
 
   $("#other\\.tags").tagsinput("removeAll");
-  $("#other\\.visibility").val("friends").change();
+  $("#other\\.visibility").val("public").change();
 
   $("#addDescription").val("");
 
@@ -842,6 +861,7 @@ function addit(obj,callback=console.log)
       path:glb_username,
       data:data,
        callback: function(result){
+        collection.reloadOnNextClick = true;
         callback(result)
       }
 
@@ -1032,7 +1052,7 @@ function updateit(obj,callback=console.log)
             //"doc":{_id:"33","other.visibility":["friends"]}
           }]
         }
-        let reloadAfterUpdate = false;
+        //let reloadAfterUpdate = false;
         // photo upload:
         if (document.getElementById("addPhoto").src.startsWith("data:image/jpeg;base64") )
         {
@@ -1064,6 +1084,7 @@ function insideOfUpdated(res)
   if (res._id !== undefined)
   {
     $('#insideOf_name').html(res.name);
+    $('.locationdescription').html(res.name+" . "+res.location.description);
     $('#insideOf_name').attr("href", 'javascript:getSingleItem("'+res._id+
     '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();});')
   }

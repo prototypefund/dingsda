@@ -73,6 +73,11 @@
         border: 0px solid #f00 !important;
       }
 
+      #itemDetails .inputlabel
+      {
+        font-size: 1em;
+      }
+
       #itemDetails #getLocation{
         display: none;
       }
@@ -95,6 +100,20 @@
 
       #itemDetails .ui-shadow-inset{
         border-color: transparent;
+      }
+
+      #itemDetails #other\.visibility-button::after {
+        display: none;
+      }
+
+      #itemDetails #other\.visibility-button{
+        background-color: rgba(0, 0, 0, 0);
+        border: 0px solid #f00 !important;
+        pointer-events: none;
+      }
+
+      #itemDetails .bootstrap-tagsinput span::after{
+        display: none;
       }
 
 
@@ -336,7 +355,9 @@ $("#itemDetails").on( "swipeleft", function(e) {
 
 
 function shiftItemFocus(shift=-1){
+  //console.log(itemDetails.itemInFocus._id);
   let position = collection.searchhistory[0].findIndex(i => i._id === itemDetails.itemInFocus._id);
+  console.log(position);
   if (position+shift > -1  && position+shift < collection.searchhistory[0].length)
   {
     position = position +shift;
@@ -433,6 +454,36 @@ function showItemDetails(){
   }
 }
 
+function updateSingleItemInCollection(id,setIntoFocus=true)
+{
+  // get item by id
+  getSingleItem(id,function(newDoc){
+    console.log("got new doc:");
+    console.log(newDoc);
+    // find item in latest searchhistory
+    collection.searchhistory[0].find((o, i) => {
+      if (o._id === id) {
+          // replace item in searchhistory with newer version:
+          console.log("found it!");
+          collection.searchhistory[0][i] = newDoc; // replace it in searchhistory
+
+          if (setIntoFocus){
+            itemDetails.itemInFocus = newDoc; // set it into focus
+            showItemDetails();
+          }
+          // update inside .hiddenJSON div inside rendered collection view:
+          console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+          $("#"+newDoc._id+ " .hiddenJSON").html(JSON.stringify(newDoc))
+          // update rendered name:
+          $("#"+newDoc._id+ " .itemname").html(newDoc.name)
+
+          return true; // stop searching
+      }
+    });
+
+  })
+
+}
 
 
 function getSingleItem(id,callback,error=console.log)

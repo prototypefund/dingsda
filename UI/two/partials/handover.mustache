@@ -16,7 +16,7 @@
 
   <!-- CONTENT -->
   <div role="main" class="ui-content">
-    To whom do you want to hand these items over to ?
+    Who do you want to hand these items over to?
     <br>
     <input id="newPossessor" type="text"></input>
 
@@ -66,16 +66,16 @@ $("#btn_handover_items").click(function(){
         }
         else {
           updateNotificationsBatch();
-          $.mobile.pageContainer.pagecontainer("change", "#notifications",
-                     {allowSamePageTransition:true,transition: "slidefade" });
         }
       })
     }
 
     showToast("items will be handed over",800);
-    // TO DO:
-    // - update notifications
-    // -
+
+    setTimeout(function(){ // this could happen more after the first or last response received back if proper async. (see promise.all())
+      $.mobile.pageContainer.pagecontainer("change", "#notifications",
+                 {allowSamePageTransition:true,transition: "slidefade" });
+    },300)
 
   }
 

@@ -1,11 +1,26 @@
 <div data-role="page" id="collection">
   <style>
+
+
+  #collection .barcodebtn {
+      height: 1.4em;
+      bottom: 1vh;
+      border: 0px dotted lightgrey;
+      position: fixed;
+      right: 10vw;
+    }
+
+
     #collection{
       margin-top: 0px;
     }
 
     #itemList{
       margin-bottom: 5vh;
+    }
+
+    #filterinput {
+      width: 90%;
     }
 
     #filterform {
@@ -223,6 +238,7 @@
         <input id="filterinput" data-type="search"
           placeholder="Filter by keywords..." aria-label="search input field">
       </form>
+      <img class="barcodebtn" src="./icons/barcode.png" onclick="scan('#filterinput')">
   </div>
   <!-- CONTENT -->
   <div role="main" class="ui-content">
@@ -231,7 +247,7 @@
 
     <ul id="itemList" data-role="listview" data-filter="true" data-input="#filterinput">
 
-      <!--<li style="color:pink">no more items...</li>-->
+      <div id="no_items_left" style="color:pink">no more items...</li>
 
     </ul>
 
@@ -266,7 +282,8 @@ var collection = {
     searchhistory:[],
     chooseMode:false,
     bulk:[],
-    bookmark: undefined
+    bookmark: undefined,
+    reloadOnNextClick: false
 }
 
 function switchOffButtonListener()
@@ -328,6 +345,11 @@ $("#collection").swipeleft(function(){window.history.forward()});
 
 $("#collection").swiperight(function(){window.history.back()});
 
+$("#filterinput").bind('keyup',function(e) {
+          if (e.keyCode === 13)
+          $("#filterinput").blur()
+     });
+
 
 // attach my own filter function to search input:
 $.mobile.document.on( "filterablecreate", "#collection", function() {
@@ -360,6 +382,7 @@ $.mobile.document.on( "filterablecreate", "#collection", function() {
       if($("#scrollend").length > 0){
         scrollEndListenerSearch(); // actually for search.mustache
       }
+
 
       if (matches == keywords.length)
       {
@@ -400,6 +423,7 @@ builds list object from single dingsa item.
 function makeItemCard(object){
   let item = document.createElement('li');
   $(item).addClass("itemInList");
+  $(item).attr("id",object._id);
   if (object.inPossessionOf && !object.owners.includes(object.inPossessionOf))
   {
     if (object.owners.includes(glb_username))
@@ -416,6 +440,7 @@ function makeItemCard(object){
   $(behindImg).addClass("behindImg");
   let div = document.createElement('div');
   let name = document.createElement('b');
+  $(name).addClass("itemname");
   let owners = document.createElement('i');
   let address = document.createElement('div');
   $(address).addClass("address");
@@ -458,6 +483,7 @@ function makeItemCard(object){
   owners.appendChild(document.createTextNode(" by "+object.owners))
   let addresslabel = object.location.address !== ""
   && object.location.address !== undefined ? object.location.address : object.location.insideOf;
+  if (addresslabel == undefined || addresslabel===""){addresslabel =object.location.description}
   address.appendChild(document.createTextNode("in "+addresslabel))
   description.appendChild(document.createTextNode(object.other.description))
 
@@ -506,7 +532,7 @@ function drawItemCards(objects, fetchInMyPossession=true,bookmarklistener=undefi
   $("#loadingGif").hide();
   //$("#itemList .item").parent().remove();
 
-  // flag to  hide items with hyperlink containing users DB if we look at public items
+  // flag to hide items with hyperlink containing users DB if we look at public items
   //  (where we do not want to see our own stuff, right?!)
   let lookingAtPublicDB = collection.searchDB.includes("public") || collection.searchDB.includes("friends")
 
@@ -516,7 +542,6 @@ function drawItemCards(objects, fetchInMyPossession=true,bookmarklistener=undefi
     try{
       fromMyOwnDB = (objects[i].hyperlink.split("/").slice(-2)[0] === glb_username);
     }catch(err){console.log("error: seems to be old account missing hyperlink in docs");}
-
 
     /*  FIXME: documentation is guessed not sure if I miss sth.
     render a new item Card with the objects data but
@@ -562,7 +587,7 @@ function drawItemCards(objects, fetchInMyPossession=true,bookmarklistener=undefi
 
 function addScrollEndListenerToCollection(listener)
 {
-  $("#itemList").append("<div id='scrollend'></div>")
+  $("#itemList").append("<div id='scrollend'>... end of list. scroll for more ...</div>")
 
   document.addEventListener("scroll",listener)
 }
@@ -756,7 +781,7 @@ function deleteItems(items)
   })).done(function(){
     showToast("items will be deleted",900);
     setTimeout(function(){
-      refreshCollection();
+      refreshCollection(console.log,true,true);
       updateItemBatch();
     },1000);
   })

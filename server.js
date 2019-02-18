@@ -205,8 +205,11 @@ function dingsCommander(req,res)
 
   }
   else {
+    console.log("+++++ IS THERE A BODY? +++++");
+    console.log(req.body);
+    console.log("++++++++");
     res.statusCode = 400;
-    return res.send('"UNSUPPORTED HTTP VERB\nor empty request body"')
+    return res.send('"UNSUPPORTED HTTP VERB or empty request body"')
   }
 
 
@@ -288,6 +291,9 @@ function DBCommander(req,res)
   }
   else
   {
+    console.log("+++++ IS THERE A BODY? +++++");
+    console.log(req.body);
+    console.log("++++++++");
     res.statusCode = 400;
     return res.send('"UNSUPPORTED HTTP VERB\nor empty request body"')
   }
@@ -1391,6 +1397,7 @@ function checkIfContainerOfUpdate(req,newDoc,oldDoc) // modified from parts with
             && newDoc.location.insideOf !== "")
   {
         console.log("insideOf did not change but exists in new doc");
+
         let target = newDoc.location.insideOf;
         if (!target.startsWith("https"))
         {
@@ -1557,7 +1564,8 @@ function update(req,res)
       // merge oldDoc with new Doc, giving newDoc higher importance:
 
       // make sure latitude and longitude are floats
-      if (req.body.data.doc.location.latitude && req.body.data.doc.location.longitude)
+      if (req.body.data.doc.location &&
+        req.body.data.doc.location.latitude && req.body.data.doc.location.longitude)
       {
         req.body.data.doc.location.latitude = parseFloat(req.body.data.doc.location.latitude);
         req.body.data.doc.location.longitude = parseFloat(req.body.data.doc.location.longitude);
@@ -1579,36 +1587,67 @@ function update(req,res)
       newObj = addHyperlink2Doc(req,newObj);
       // TO DO: delete all actively deleted Elements (those with value null):
       //        (...)
-      // insert new Doc:
-      return dbUser.insert(newObj).then((DBres) => {
-          //return res.send(DBres)
 
-          /// pic attachment >>>>>
-          if (req.body.data.pic !== undefined && req.body.data.pic !== "")
-          {
-            console.log("\npicture UPDATE requested!");
-            // add here: check filesize
-            console.log("DBres:");
-            //console.log(DBres);
-            let picdata = req.body.data.pic.replace(/^data:image\/\w+;base64,/, '');
-            let data = Buffer.from(picdata, 'base64')
-            return dbUser.attachment.insert(req.targets[1], 'pic_small.jpg',
-              data ,'image/jpeg',{ rev: DBres.rev }).then(function(){
-                console.log("picture updated successfully");
-                return DBres;
-              })
-              .catch((err)=>{
-                console.log("error while updating picture:");
-                console.log(err);
-                return err;
-              })
-              /// <<<<<<< pic attachment
-          }
-          else {
-            return DBres
-          }
-        })
-      .then(function(DBres){ // pic attachment
+
+      /* FIXME: the next part might be better inside of getGeoDataFromContainer()
+          making getGeoDataFromContainer() accept obj instead of string...???
+      */
+      if (!newObj.location) // mainly for &config and other possible docs w/o location
+      {
+         // if no location.make empty one:
+         newObj.location = {};
+      }
+      /*
+      check if geolocation needs to be fetched from container of item (if it has one)
+      , then update:
+      */
+      return getGeoDataFromContainer(req,newObj.location.insideOf)
+      .then((containerGeoLocation)=>{
+
+        if(containerGeoLocation)
+        {
+          newObj.location = Object.assign(newObj.location,containerGeoLocation);
+        }
+
+        // insert new Doc:
+        return dbUser.insert(newObj).then((DBres) => {
+            //return res.send(DBres)
+
+            // after all is done: update items inside THIS item:
+            copyGeoDataFromContainerToAllItemsInside(req, newObj._id)
+
+
+            /// and add pic attachment  to DB if provided >>>>>
+            if (req.body.data.pic !== undefined && req.body.data.pic !== "")
+            {
+              console.log("\npicture UPDATE requested!");
+              // add here: check filesize
+              console.log("DBres:");
+              //console.log(DBres);
+              let picdata = req.body.data.pic.replace(/^data:image\/\w+;base64,/, '');
+              let data = Buffer.from(picdata, 'base64')
+              return dbUser.attachment.insert(req.targets[1], 'pic_small.jpg',
+                data ,'image/jpeg',{ rev: DBres.rev }).then(function(){
+                  console.log("picture updated successfully");
+                  return DBres;
+                })
+                .catch((err)=>{
+                  console.log("error while updating picture:");
+                  console.log(err);
+                  return err;
+                })
+                /// <<<<<<< pic attachment
+            }
+            else {
+              return DBres
+            }
+          })
+
+
+      })
+      .then(function(DBres){
+
+        // and of course send something back to the client:
         return res.send(DBres)
       })
     })
@@ -1620,6 +1659,83 @@ function update(req,res)
 }
 
 
+/**
+thing level helper function: gets container of thing (value of location.insideOf)
+and returns it's geolocation or undefined via promise resolve
+*/
+function getGeoDataFromContainer(req, idContainer ){
+  // TODO
+  return new Promise(function(resolve, reject) {
+
+    let db = couch_getUserDB(req);
+    let nanoUser = db[0]; let dbUser = db[1];
+
+    if(idContainer)
+    {
+      return dbUser.get(idContainer).then((dbRes)=>{
+        if (!dbRes.location)
+        {
+          resolve(null)
+        }
+        if (dbRes.location.insideOf)
+        { delete dbRes.location.insideOf; }
+        /*
+        console.log();
+        console.log("========= CONTAINER LOCATION =========");
+        console.log(dbRes.location);
+        console.log("======================================");
+        console.log();
+        */
+        resolve(dbRes.location)
+      })
+    }
+    else {
+      resolve(null)
+    }
+
+  });
+
+}
+
+/**
+thing level helper function: takes geoData from container and copies it into all
+docs listed in items -containerOf 's location field
+*/
+function copyGeoDataFromContainerToAllItemsInside(req, idContainer)
+{
+  // TODO
+  let nanoUser = NANO_ADMIN; let dbUser = nanoUser.db.use("userdb-"+toHex(req.targets[0]));
+
+  dbUser.get(idContainer+"-containerOf").then((DBres)=>{
+
+    if (DBres.containerOf)
+    {
+      return getGeoDataFromContainer(req,idContainer)
+      .then((containerGeoLocation)=>{
+
+
+          if(containerGeoLocation)
+          {
+
+            for (id of DBres.containerOf)
+            {
+              dbUser.get(id).then((doc)=>{
+                doc.location = Object.assign(doc.location,containerGeoLocation);
+                return dbUser.insert(doc)
+              })
+              .catch((err)=>{console.log("ERROR updating geolocation of item:"+err);})
+            }
+
+
+          }
+
+      })
+    }
+
+  })
+  .catch((err)=>{console.log("ERROR inside copyGeoDataFromContainerToAllItemsInside");})
+
+}
 
 ///////////////////////////////
 /////// DB LEVEL HELPER ///////
