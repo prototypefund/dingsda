@@ -40,7 +40,6 @@
         text-transform: lowercase;
       }
 
-
       #detailTitle{
         font-size: 1.1em;
         background-color: rgba(255, 0, 76, 1);
@@ -114,6 +113,26 @@
 
       #itemDetails .bootstrap-tagsinput span::after{
         display: none;
+      }
+
+      #detailOwners::after{
+        font-size: 0.8em;
+        font-style: oblique;
+        z-index: 99;
+        position: absolute;
+        /*color: blue;*/
+        content: attr(data-before);
+        background: rgba(255,255,255,1);
+        right: 20px;
+        padding: 3px;
+      }
+
+      .detailsLendout::after{
+        color:red
+      }
+
+      .detailsBorrowed::after{
+        color:blue
       }
 
 
@@ -373,6 +392,7 @@ function shiftItemFocus(shift=-1){
 }
 
 function showItemDetails(){
+
   let mydoc = itemDetails.itemInFocus;
   if (mydoc)
   {
@@ -389,6 +409,10 @@ function showItemDetails(){
     $("#detailTitle").html(mydoc.name);
     $("#detailOwners").html(mydoc.owners.toString());
 
+    $("#detailOwners").removeClass("detailsBorrowed");
+    $("#detailOwners").removeClass("detailsLendout");
+    $("#detailOwners").attr('data-before',''); //reset content value for #detailOwners:after (see below)
+
     // hide / show edit / move / delete buttons depending on edit/move rights:
     if (!mydoc.owners.includes(glb_username))
     {
@@ -403,14 +427,33 @@ function showItemDetails(){
           $(".moveSingleItem_btn").hide();
       }
 
+      // show name of user in possession of item in case it is ours but lent out:
+      if (mydoc.inPossessionOf && mydoc.inPossessionOf.includes(glb_username))
+      {
+        console.log("BORROWED !");
+        $("#detailOwners").addClass("detailsBorrowed");
+        $("#detailOwners").attr('data-before',`borrowed from ${mydoc.owners}`); //anything is the 'content' value
+      }
+
     }
     else {
       // full rights. show all buttons
       //$(".borrow_handover_btn").show(); // always the case so not needed here
-      $(".editSingleItem_btn").show();
+      $(".editSingleItem_btn").show(); 
       $(".moveSingleItem_btn").show();
       $(".deleteSingleItem_btn").show();
+
+      // show name of user this item is lend out to
+      if (mydoc.inPossessionOf && !mydoc.inPossessionOf.includes(glb_username))
+      {
+        console.log("LEND OUT !");
+        $("#detailOwners").addClass("detailsLendout");
+        $("#detailOwners").attr('data-before',`lend out to ${mydoc.inPossessionOf}`); //anything is the 'content' value
+      }
+
     }
+
+
 
     // change if borrow or handover button depending on itemownership and Possession:
     if(mydoc.owners.includes(glb_username) )
@@ -485,7 +528,7 @@ function updateSingleItemInCollection(id,setIntoFocus=true)
 
 }
 
-
+// in client_base
 function getSingleItem(id,callback,error=console.log)
 {
     // transform id into hyperlink in case no hyperlink was passed:

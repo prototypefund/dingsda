@@ -37,7 +37,11 @@
 
       #exampleConsole {
           margin-left: 20px;
-          color: darkgreen;
+          color: green;
+      }
+
+      .greyfont {
+        color: lightgrey !important
       }
 
       #loadData {
@@ -48,6 +52,11 @@
       #saveData {
         height: 30px;
         background-color: rgba(255,205,205,1)
+      }
+
+      .invisible {
+        opacity: 0;
+        pointer-events: none;
       }
 
     </style>
@@ -73,28 +82,144 @@
 <!-- CARNET ATA EXPORT PARTS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.0/jspdf.debug.js"></script>
 <script src="./carnet.js" type="text/javascript"></script>
+<script src="./dotize.js" type="text/javascript"></script>
 
 <script>
 // this part is the frontend script part:
-  let getAllItemsURL = "https://dingsda.org:3000/api/v1/machinaex/"
+
+  const API_BASE_URL = "https://dingsda.org:3000/api/v1/";
+  const UI_URL = "https://dingsda.org/two/";
+
+  let glb_username = "jan";
+
+  function loadAllItems(){
+
+    console.log("loading all items");
+    return new Promise(function(resolve, reject) {
+
+      $.ajax({
+        type: "GET",
+        url: API_BASE_URL + glb_username+"/_all_docs",
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        success: function(r){
+          promiseArray = [];
+          if (r.rows)
+          {
+            r.rows.forEach(function(row){
+              //console.log(row);
+              if (row.id && !row.id.includes("-containerOf")
+                  && !row.id.includes("&") && !row.id.includes("_design"))
+              {
+                  promiseArray.push(new Promise(
+                      function(reso,reje){
+                        getSingleItem(row.id,function(item){reso(item)})
+                      }
+                    )
+                  )
+              }
+
+            })
+            resolve(Promise.all(promiseArray))
+          }
+        },
+        error: function(err){reject(err)},
+        contentType:"application/json"
+      });
+
+    });
+
+
+  }
+
+  /**
+  returns promise that resolves after all DB updates have been processed
+  */
+  function saveAllItems(){ // continue here
+
+      console.log("saving!");
+
+      let promiseArray = [];
+
+      for (i in dataObject)
+      {
+        let promise = new Promise(function(reso,reje) {
+          if (dataObject[i]._id && dataObject[i]._id !== "")
+          {
+            let j = i; // scope shizzle
+            let item = JSON.parse(JSON.stringify(dataObject[j]))
+            setTimeout(function(){
+              item = convertItemToItemWithArrays(item);
+              updateOverwrite(item,function(res){
+                console.log(res);
+                console.log(j);
+                if (res.ok)
+                {
+                  dataObject[j]._rev = res.rev
+                }
+                reso(res)
+              },function(res){ // in case we have an conflict error, try again once in a second:
+                /*
+                FIXME: This is NOT an optiomal solution. But we will stick with it
+                until we have a state machine option build into dingsdas API at server.js
+                */
+
+                if(res.status && res.status.toString().startsWith("409")) { console.log("conflict"); }
+                else if(res.status &&  res.status.toString().startsWith("500")) { console.log("server error"); }
+                else if(res.status && res.status.toString().startsWith("4")) { console.log("other error"); }
+
+                setTimeout(
+                  function(){
+                    updateOverwrite(item,function(res){
+                        console.log(res);
+                        console.log(j);
+                        if (res.ok)
+                        {
+                          dataObject[j]._rev = res.rev
+                        }
+                        reso(res)
+                      },
+                      function(err){
+                        if(err.status && err.status.toString().startsWith("409")) { console.log("conflict"); }
+                        else if(err.status && err.status.toString().startsWith("500")) { console.log("server error"); }
+                        else if(err.status && err.status.toString().startsWith("4")) { console.log("other error"); }
+                        alert("item with _id: "+item._id+"\n("+item.name+")\ncould not be updated.");
+                        console.log(res);
+                        reje("err")
+                      }
+                      )
+                }
+                  ,1000)
+              });
+            },0)
+          }
+          else if (dataObject[i].name && dataObject[i].location !== undefined)
+          {
+            dataObject[i] = addOwners2DocIfNoOwners(dataObject[i]);
+            addNewItemFromTable(dataObject[i],i,function(){ reso("aha") })
+          }
+          else {
+            reso("nothing")
+          }
+        }) // micro promises
+      promiseArray.push(promise)
+      } // end for loop
+
+    console.log(promiseArray);
+    return new Promise(function(resolve, reject) {
+
+      Promise.all(promiseArray)
+        .then(()=>{resolve("done")})
+        .catch((err) => {reject("could not finish saveAllItems()")})
+
+    }) // end main promise
+
+  }
 
   document.getElementById("loadData").addEventListener("click",function(){
-    $.ajax({
-      type: "POST",
-      url: getAllItemsURL,
-      data: JSON.stringify({
-              "data":[{
-                "type":"findItems",
-                "doc":{_id:""}
-              }]
-            }),
-      xhrFields: { withCredentials: true }, // to make AuthCookie ok
-      success: function(result){
-         filltable(result.docs)
-      },
-      error: function(err){throw err},
-      contentType:"application/json"
-    });
+    loadAllItems().then(function(res){
+      console.log(res);
+      filltable(res,true);
+    })
   })
 
   $("#autosave").change(function(){
@@ -108,71 +233,41 @@
   })
 
   $("#saveData").click(function(){
-    console.log("saving!");
-    $("#saveData").hide();
-    for (i in dataObject)
-    {
-      if (dataObject[i]._id !== undefined && dataObject[i]._id !== "")
-      {
-        let j = i; // scope shizzle
-        let item = JSON.parse(JSON.stringify(dataObject[j]))
-        setTimeout(function(){
-          item = convertItemToItemWithArrays(item);
-          updateit(item,function(res){
-            console.log(res);
-            console.log(j);
-            if (res.ok)
-            {
-              dataObject[j]._rev = res.rev
-            }
-            else {
-              if(res.status.toString().startsWith("409")) { console.log("conflict"); }
-              else if(res.status.toString().startsWith("500")) { console.log("server error"); }
-              else if(res.status.toString().startsWith("4")) { console.log("other error"); }
-              alert("item with _id: "+item._id+"\n("+item.name+")\ncould not be updated.");
-              console.log(res);
-            }
-          });
-        },0)
-      }
-      else if (dataObject[i].name !== undefined && dataObject[i].location !== undefined)
-      {
-        dataObject[i] = addOwners2DocIfNoOwners(dataObject[i]);
-        addNewItemFromTable(dataObject[i],i)
-      }
 
-    }
-    setTimeout(function(){
+    $(exampleConsole).removeClass("greyfont")
+    exampleConsole.innerText ='saving all items to database....';
+
+    $("#saveData").addClass("invisible")
+
+    saveAllItems()
+    .then(function(){
+
+      $(exampleConsole).addClass("greyfont")
+      exampleConsole.innerText ='all up to date';
+      console.log("items saved");
       console.log("reloading table");
-      $.ajax({
-        type: "POST",
-        url: getAllItemsURL,
-        data: JSON.stringify({
-                "data":[{
-                  "type":"findItems",
-                  "doc":{_id:""}
-                }]
-              }),
-        xhrFields: { withCredentials: true }, // to make AuthCookie ok
-        success: function(result){
 
-           filltable(result.docs)
-           $("#saveData").show()
-        },
-        error: function(err){throw err},
-        contentType:"application/json"
-      });
-    },5000)
+      loadAllItems()
+      .then(function(res){
+
+        filltable(res);
+        $("#saveData").removeClass("invisible")
+
+      })
+    })
 
   })
 
+
+
 </script>
+
+
+
+
+
 <script type="text/javascript">
 
-  const API_BASE_URL = "https://dingsda.org:3000/api/v1/";
-  const UI_URL = "https://dingsda.org/two/";
-
-  let glb_username = "machinaex";
 
   //let dataObject = testdocs;
   let dataObject = [];
@@ -261,6 +356,17 @@
             }, 0);
           }
         },
+        "export_carnet_xls": { // Own custom option
+          name: 'export as Carnet.xls',
+          callback: function(inp,test) { // Callback for specific option
+            setTimeout(function() {
+              console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+              // here get all selected rows._id s and then build carnet from it
+              let carnetArrayNumbered = getCarnetFromRows(hot.getSelected())
+              renderCarnetATAexcel(carnetArrayNumbered); //DOES IT WORK???
+            }, 0);
+          }
+        },
         "export_verwendungsnachweis_csv": { // Own custom option
           name: 'export as Verwendungsnachweis.csv',
           callback: function(inp,test) { // Callback for specific option
@@ -318,13 +424,20 @@
       if (!autosave.checked) {
         return;
       }
+      // timeouts purely cosmetic...
       clearTimeout(autosaveNotification);
       var autosaveNotification = setTimeout(function() {
-            exampleConsole.innerText ='Changes will be autosaved';
+            $(exampleConsole).removeClass("greyfont")
+            exampleConsole.innerText ='Changes will be autosaved...';
             console.log("Changes will be autosaved");
             saveChangesToServer(change)
-          }, 1000);
-
+            .then(function(){
+              setTimeout(function(){
+                $(exampleConsole).addClass("greyfont")
+                exampleConsole.innerText ='all up to date';
+              },500)
+            })
+          }, 100);
     },
     beforeRemoveRow: function(start,count){
       console.log(start);
@@ -357,7 +470,6 @@
           )
         }
       })
-      // to do: then: DELETE THOSE ITEMS
     }
 
   });
@@ -450,6 +562,34 @@
     renderCSV(header,array,"carnetATA.csv")
   }
 
+  function renderCarnetATAexcel(array)
+  {
+    let header = ["count","description","no","weight","price","origin"]
+    console.log(objToArray(array));
+    array = objToArray(array);
+    array.unshift(header)
+    renderAndDownloadExcel(array)
+  }
+
+
+  /**
+  only flat objects. so need to dotize first.
+  */
+  function objToArray(input,dotizeObjects=false){
+    let output = input.map(function(obj) {
+
+      if(dotizeObjects){
+        obj = dotize.convert(obj)
+      }
+
+      return Object.keys(obj).sort().map(function(key) {
+      return obj[key];
+    });
+    });
+    return output
+  }
+
+
   function renderCSV(header,array,filename="download.csv",inputIsArrayOfArrays=false)
   {
     let output = "";
@@ -506,44 +646,56 @@ if _id provided. Adds as new item if not, updates if provided.
 */
   function saveChangesToServer(change)
   {
-    console.log(change);
-    console.log("saving to server from changes");
-    let updatedRowNums = [];
-    for (i in change)
-    {
-      //console.log(change[i]);
-      addToArrayIfNotExist(updatedRowNums,change[i][0])
-    }
-    console.log("updateing rows: "+updatedRowNums);
-    // now update all the items on their own:
-    for (num of updatedRowNums){
-      console.log(`updating row #${num}`);
-      let item2Upd = JSON.parse(JSON.stringify(dataObject[num]));
-      if (!item2Upd._id || item2Upd._id === undefined || item2Upd._id === ""){
-        console.log("adding new ITEM");
-        item2Upd = addOwners2DocIfNoOwners(item2Upd);
-        addNewItemFromTable(item2Upd,num)
+    return new Promise(function(resolve, reject) {
+
+
+      console.log(change);
+      console.log("saving to server from changes");
+      let updatedRowNums = [];
+      for (i in change)
+      {
+        //console.log(change[i]);
+        addToArrayIfNotExist(updatedRowNums,change[i][0])
       }
-      else{
-        item2Upd = convertItemToItemWithArrays(item2Upd);
-        console.log(item2Upd);
-        updateit(item2Upd,function(res){
-          console.log(res);
-          if (res.ok)
-          {
-            dataObject[num]._rev = res.rev
-          }
-          else {
-            if(res.status.toString().startsWith("409")) { console.log("conflict"); }
-            else if(res.status.toString().startsWith("500")) { console.log("server error"); }
-            else if(res.status.toString().startsWith("4")) { console.log("other error"); }
-            alert("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.");
+      console.log("updateing rows: "+updatedRowNums);
+      // now update all the items on their own:
+      let updPromises = [];
+
+      for (num of updatedRowNums){
+        console.log(`updating row #${num}`);
+        let item2Upd = JSON.parse(JSON.stringify(dataObject[num]));
+        if (!item2Upd._id || item2Upd._id === undefined || item2Upd._id === ""){
+          console.log("adding new ITEM");
+          item2Upd = addOwners2DocIfNoOwners(item2Upd);
+
+          addNewItemFromTable(item2Upd,num,function(r){resolve(r)})
+        }
+        else{
+          item2Upd = convertItemToItemWithArrays(item2Upd);
+          console.log(item2Upd);
+          updateOverwrite(item2Upd,function(res){
             console.log(res);
-          }
-        });
+            if (res.ok)
+            {
+              dataObject[num]._rev = res.rev
+              resolve(res.rev)
+            }
+            else {
+              if(res.status.toString().startsWith("409")) { console.log("conflict"); }
+              else if(res.status.toString().startsWith("500")) { console.log("server error"); }
+              else if(res.status.toString().startsWith("4")) { console.log("other error"); }
+              alert("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.");
+              console.log(res);
+              reject("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.")
+            }
+          });
+        }
+
       }
 
-    }
+
+
+    })
 
   }
 
@@ -555,7 +707,7 @@ if _id provided. Adds as new item if not, updates if provided.
     return item2Upd
   }
 
-  function addNewItemFromTable(item2Upd,rowNum)
+  function addNewItemFromTable(item2Upd,rowNum,cb=console.log)
   {
     if (!(item2Upd.name && item2Upd.owners && item2Upd.location &&
         (item2Upd.location.address || item2Upd.location.latitude ||
@@ -580,6 +732,7 @@ if _id provided. Adds as new item if not, updates if provided.
         getSingleItem(res.id,function(res2){
           dataObject[rowNum] = res2;
           hot.render();
+          cb("done")
         }), function(err){
           throw err
         }
@@ -591,8 +744,14 @@ if _id provided. Adds as new item if not, updates if provided.
 
   }
 
-  function filltable(data){
-    dataObject = data;
+  function filltable(data,clearTable=true){
+    if(clearTable)
+    {
+      dataObject = data;
+    }
+    else {
+      dataObject = dataObject.concat(data)
+    }
     hot.loadData(dataObject); // fill it into table
   }
 
@@ -610,7 +769,6 @@ if _id provided. Adds as new item if not, updates if provided.
     }
     array.splice( newIndex, 0, array.splice( originalIndex, 1 )[0] );
   };
-
 
 
   function addit(obj,callback=console.log)
@@ -635,8 +793,9 @@ if _id provided. Adds as new item if not, updates if provided.
   }
 
 
-  function updateit(obj,callback=console.log)
+  function updateOverwrite(obj,callback=console.log,error=console.log)
   {
+    if (!obj._id){return error("no _id provided")}
     console.log("trying to fetch originalObject from DB");
     console.log(obj);
 
@@ -649,7 +808,11 @@ if _id provided. Adds as new item if not, updates if provided.
         console.log(res);
         //console.log("merging oldObj and formContents");
         let newObj = Object.assign({}, res, obj);
-        //newObj._rev = res._rev;
+        /*
+        in order to overwrite _rev in case in the time in between sb updated
+        that item (not optimal but okay).
+        */
+        newObj._rev = res._rev;
         console.log(newObj);
         //console.log("attempting update of object");
 
@@ -679,7 +842,7 @@ if _id provided. Adds as new item if not, updates if provided.
               callback(res)
             },
             xhrFields: { withCredentials: true }, // to make AuthCookie ok
-            error: callback,
+            error: error,
             contentType:"application/json"
           });
       },

@@ -1,3 +1,5 @@
+<!--<script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>-->
+
 <div data-role="page" id="barcode" data-dialog="true">
 
   <style>
@@ -42,6 +44,7 @@
   <!-- END HEADER -->
   <!-- CONTENT -->
 
+  <script type="text/javascript" src="assets/webrtc-adapter-latest.js"></script>
 
   <div role="main" class="ui-content" data-dialog="true">
 
@@ -92,14 +95,42 @@
 
 <script>
 
+/*
+the barcode page for the dingsda UI utilizes two different barcode reader libraries:
+
+- QuaggaJS (https://serratus.github.io/quaggaJS/) and
+- ZXing-js (https://github.com/zxing-js/library)
+
+Quagga is used for all cases in which Zxing-js does not work. At the time of this writing this is
+a) the Safari Browser on Desktop b) all iOS devices.
+
+this should change soon for it uses webrtc technology which is only slowly adapted by apple.
+
+- the third option is to use this within a phonegap packeaged "native" application:
+
+if this is the case phonegaps plugin phonegap_barcode_plugin () should be used.
+this works on iOS and Android with the exactly same API and would be long term our recommended
+approach outside of the browser.
+
+*/
+
+/**
+config for all things considered barcode:
+*/
 let barcode =
 {
-  api: "zxingjs",
-  targetinput : null
+  api: "zxingjs", // either quagga, zxingjs or phonegap
+  targetinput : null // the target input div to be filled after successful read
 }
 
 /* EAN DB response handler:
   ATM PROOF OF CONCEPT!!!
+  this uses the external file assets/barcodeCheck.js which talks to third party
+  APIs to check the barcode scanned. a Event containing extra product infos is
+  dispatched after the third party API responded. this is only a proof of concept
+  and will be rebuild and externalized into a proper js module later.
+  it also only is relevant for phonegap packed version of this app.
+
   TODO:
   - rename Event
   - swal asking if user wants to search for items EAN (first time)
@@ -111,6 +142,10 @@ let barcode =
 */
 document.addEventListener("newMessage", newMessageHandler, false);
 
+/**
+ END EAN DB response handler (proof of concept receiving messages from 3rd party
+ APIs via assets/barcodeCheck.js)
+*/
 function newMessageHandler(e)
 {
 
@@ -128,14 +163,25 @@ function newMessageHandler(e)
 
 }
 
-/// END EAN DB response handler
 
 
-// if iOS change api to quagga:
-if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i))
+////////////////////////////////////
+/////// ACTUAL BARCODE CODE ////////
+////////////////////////////////////
+
+let isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+// if iOS or safari change api to quagga:
+if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i) || isSafari)
 {
   barcode.api = "quagga";
-  $(".barcodebtn").hide() // hide all buttons till we fixed the issue with ios and quagga
+
+  if (window.navigator.standalone == true){
+    //alert("no barcode reader, sorry")
+    console.log("barcode scanner cannot be accessed because ios in standalone. consider phonegap or browser version");
+    $(".barcodebtn").hide() // hide all buttons till apple lets us use webrtc in standalone
+  }
+
 }
 // if browser is firefox, use quagga:
 if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
@@ -143,7 +189,7 @@ if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
 }
 // if running in phonegap and not as a homepage/in a browser, choose phonegap api:
 if ( document.URL.indexOf( 'http://' ) === -1 && document.URL.indexOf( 'https://' ) === -1 ) {
-    // running as PhoneGap application, so we want to use phonegap barcode api:
+  // running as PhoneGap application, so we want to use phonegap barcode api:
   barcode.api = "phonegap_barcode_plugin"
 }
 
@@ -180,9 +226,20 @@ $("#scan_cancel").click(function(){
 })
 
 
+/**
+cancels scan and changes back to last page visited
+*/
 function cancelscan(){
-  codeReader.reset();
-  codeReaderBC.reset();
+  if (codeReader)
+  {
+    codeReader.reset();
+  }
+  if (codeReaderBC){
+      codeReaderBC.reset();
+  }
+  if (barcode && barcode.api === "quagga"){
+    Quagga.stop();
+  }
   history.back()
 }
 
@@ -195,14 +252,21 @@ function scan(target=null) {
   barcode.targetinput = target; // this will be checked on "barcodeScanned" event
 
 
-  switch(barcode.api) {
+  switch(barcode.api) { //// CONTINUE HERE!!!!
     case "quagga":
       $.mobile.changePage("#barcode", {
          reloadPage: false
       });
       $("#bc_zxing").hide();
       $("#bc_quagga").show();
-      startQuaggaScan();
+      startQuaggaScan(
+
+        {
+          aspectRatio: {min: 1, max: 100},
+          facingMode: "environment"
+        }
+
+      );
       break;
     case "zxingjs":
       $.mobile.changePage("#barcode", {
@@ -210,8 +274,8 @@ function scan(target=null) {
       });
       $("#bc_zxing").show();
       $("#bc_quagga").hide();
-      startZxingJsScan()
-      startQuaggaScan();
+      startZxingJsScan();
+      //startQuaggaScan(); // quagga seems better at barcodes so it runs here in the background
       break;
     case "phonegap_barcode_plugin":
         $("#bc_zxing").hide();
@@ -224,7 +288,10 @@ function scan(target=null) {
   }
 }
 
-
+/**
+dispatches Event "barcodeScanned" after successful scan. This is used to unify the different
+barcode reader APIs provided by different libraries etc.
+*/
 function dispatchBarcodeEvent(barcode){
   let bc_event = new CustomEvent(
     "barcodeScanned",
@@ -282,11 +349,6 @@ function startPhoneGapScan(){
 
 
 </script>
-
-
-
-
-<script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
 
 <script>
 
@@ -392,7 +454,14 @@ function startZxingJsScan(){
 // to do: check config or mobile type if rather starting of barcode scanner
 //        app might be appropriate via appname:// thing like with zxing://
 
-function startQuaggaScan()
+function startQuaggaScan(constraints=
+    {
+      width: {min: 360, max: 1080 /*w*/},
+      height: {min: 240, max: window.innerHeight},
+      aspectRatio: {min: 1, max: 100},
+      facingMode: "environment"
+    }
+  )
 {
   let w = window.innerWidth;
   let h = window.innerHeight;
@@ -402,12 +471,7 @@ function startQuaggaScan()
         name : "Live",
         type : "LiveStream",
         target: document.querySelector('#barcodeviewport'),
-        constraints: {
-          width: {min: 360, max: 1080 /*w*/},
-					height: {min: 240, max: h},
-					aspectRatio: {min: 1, max: 100},
-          facingMode: "environment"
-        },
+        constraints: constraints,
         //singleChannel: true
       },
       locator: {

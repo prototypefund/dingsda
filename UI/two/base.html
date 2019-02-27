@@ -29,6 +29,8 @@
 
     {{>search}}
 
+    {{>table}}
+
     {{>barcode}}
 
 
@@ -46,6 +48,17 @@
   {
     login();
   }
+
+  let base = {
+    hashhistory:[]
+  }
+
+  /*
+  track all hash changes (page changes)
+  */
+  window.addEventListener("hashchange", function(){
+    base.hashhistory.unshift(window.location.hash);
+  }, false);
 
   $("#fliplocation").parent().click(function(e){
     if ($("#fliplocation").prop("checked"))
@@ -90,6 +103,10 @@ function login (){
           /*searchDB(collection.searchDB,collection.searchquery,function(inp){
               collection.searchhistory.unshift(inp.docs);
           });*/
+
+
+          //searchAndShow(0,0,0,console.log,glb_username);
+/* // commented out after new search with pagination
           searchAndDoStepsInBetweenPages(collection.searchDB,collection.searchquery,
             (r)=>{ // callback each loop
                 //drawItemCards(r.docs)
@@ -99,7 +116,7 @@ function login (){
               //callback(r.docs);
             }
           )
-
+*/
           $.mobile.pageContainer.pagecontainer("change", "#landing",
                      {allowSamePageTransition:true});
 
@@ -128,7 +145,7 @@ function login (){
     let {value: formValues} = swal({
     title: 'login',
     html:
-      'log into your dingsder account<br>'+
+      'log into your dingsda account<br>'+
       '<input id="swal-input1" class="swal2-input" placeholder="username">' +
       '<input id="swal-input2" class="swal2-input" placeholder="password" type="password">'+
       param.extra +
@@ -197,6 +214,24 @@ function login (){
   }
 
 
+  function showToast(msg="",time){
+    swal({html:""+msg,
+    toast:true, timer:time,showConfirmButton:false, position:"center",
+    customClass:"whiteletters"})
+  }
+
+  function updateNotificationsBatch(){
+    countNotificationsInDB(function(res){
+      $(".notifications_icon").addClass("anim_heartbeat");
+      setTimeout(function(){
+        $(".notifications_badge").html(res);
+        $(".notifications_icon").removeClass("anim_heartbeat");
+        $(".notifications_badge").addClass("anim_hop");
+        setTimeout(function(){$(".notifications_badge").removeClass("anim_hop")},650);
+      },300);
+    })
+  }
+
   function getPicAttachment(thingid,callback=console.log,err=console.log)
   {
 
@@ -217,24 +252,6 @@ function login (){
 
   }
 
-  function showToast(msg="",time){
-    swal({html:""+msg,
-    toast:true, timer:time,showConfirmButton:false, position:"center",
-    customClass:"whiteletters"})
-  }
-
-  function updateNotificationsBatch(){
-    countNotificationsInDB(function(res){
-      $(".notifications_icon").addClass("anim_heartbeat");
-      setTimeout(function(){
-        $(".notifications_badge").html(res);
-        $(".notifications_icon").removeClass("anim_heartbeat");
-        $(".notifications_badge").addClass("anim_hop");
-        setTimeout(function(){$(".notifications_badge").removeClass("anim_hop")},650);
-      },300);
-    })
-  }
-
 
   function countNotificationsInDB(callback=console.log){
 
@@ -248,36 +265,6 @@ function login (){
         //console.log(length);
         callback(length);
       })
-  /*
-    $.ajax({
-      type: "GET",
-      url: API_BASE_URL+glb_username+"/_all_docs",
-      success: function(notifications){
-        // get number of total notifications (items 2nd step down the object tree:)
-        let length = notifications.total_rows;
-        //console.log(length);
-        callback(length);
-      },
-      xhrFields: { withCredentials: true }, // to make AuthCookie ok
-      error: console.log
-      ,contentType:"application/json"
-    });
-*/
-    /*
-    getSingleItem("&notifications",function(notifications){
-      // get number of total notifications (items 2nd step down the object tree:)
-      let length = 0;
-      for (let i = 0; i < getObjectLength(notifications.pending); i++)
-      {
-        let obj = notifications.pending[Object.keys(notifications.pending)[i]]
-        length += getObjectLength(obj);
-        //console.log(obj);
-      }
-      //console.log(length);
-      callback(length);
-
-    })
-    */
 
   }
 
@@ -285,8 +272,7 @@ function login (){
    return Object.keys(obj).length
   }
 
-
-  </script>
+</script>
 
 
 

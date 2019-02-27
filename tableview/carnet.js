@@ -140,7 +140,7 @@ function makepdf(imgData, textdataInput, coverdata)
           if (item.no != undefined){doc.text(item.no, 7+offsetLeftPage[pageNo], linepos);}
 	        if (item.count != undefined){doc.text(item.count, 95+offsetLeftPage[pageNo], linepos); sumItems += parseInt(item.count)}
           if (item.weight != undefined){doc.text(item.weight, 110+offsetLeftPage[pageNo], linepos); item.weight = parseFloat(item.weight.split("kg")[0].split("g")[0]);if(Number.isNaN(item.weight)){item.weight = 0}; sumWeight = parseFloat((parseFloat(item.weight) + sumWeight).toFixed(3));}
-          if (item.price != undefined){doc.text(item.price, 129+offsetLeftPage[pageNo], linepos); item.price = parseFloat(item.price.split("EUR")[0].split("€")[0].split("USD")[0].split("$")[0]); console.log(item.price);if(Number.isNaN(item.price)){item.price = 0}; sumPrice = parseFloat((parseFloat(item.price) + sumPrice).toFixed(2));}
+          if (item.price != undefined){doc.text(item.price.replace("€","EUR"), 129+offsetLeftPage[pageNo], linepos); item.price = parseFloat(item.price.split("EUR")[0].split("€")[0].split("USD")[0].split("$")[0]); console.log(item.price);if(Number.isNaN(item.price)){item.price = 0}; sumPrice = parseFloat((parseFloat(item.price) + sumPrice).toFixed(2));}
           if (item.origin != undefined){doc.text(item.origin, 155+offsetLeftPage[pageNo], linepos);}
           if (item.description.length > charsPerLine)
           {

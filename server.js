@@ -9,6 +9,7 @@
 
     TODO: validate all docs on update/add etc via JSON SCHEMA
 */
+
 const config = require("./server_config.json"); // location of config.json
 
 const DBadminPW = config.DBadminPW; // couchDB password for the admin entry
@@ -574,6 +575,7 @@ function handover_announce(req,res)
               _id: "handover_await-"+req.targets[1],
               to: req.body.data.username,
               ref: req.targets[1],
+              refname: doc.name,
               type: "handover_await",
               time:{ from: req.body.data.from, till: req.body.data.till}
             }
@@ -592,6 +594,7 @@ function handover_announce(req,res)
               _id: "handover_confirm-"+req.targets[1],
               from: req.username,
               ref: req.targets[1],
+              refname: doc.name,
               type: "handover_confirm",
               isReturn: isReturn,
               time:{ from: req.body.data.from, till: req.body.data.till}
@@ -654,7 +657,7 @@ function handover_announce(req,res)
         }
         else {
           res.statusCode = 400;
-          return res.send('"error: you dont have this thing"')
+          return res.send('"error: you don\'t have this thing"')
         }
       })
       .catch((err)=>{
@@ -1615,7 +1618,6 @@ function update(req,res)
 
             // after all is done: update items inside THIS item:
             copyGeoDataFromContainerToAllItemsInside(req, newObj._id)
-
 
             /// and add pic attachment  to DB if provided >>>>>
             if (req.body.data.pic !== undefined && req.body.data.pic !== "")

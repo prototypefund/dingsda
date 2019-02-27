@@ -40,13 +40,17 @@
   transform: translate(16px,3px);
 }
 
+.notifications_badge {
+  transform: translate(19px,4px);
+}
+
 .collection_badge{
   background-color: rgba(225,50,255,1);
-  transform: translate(18px,3px);
+  transform: translate(23px,4px);
 }
 
 .borrowedthings {
-  transform: translate(-3px,3px);
+  transform: translate(-6px,4px);
 }
 
 .anim_heartbeat {

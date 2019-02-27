@@ -211,12 +211,12 @@ and combines them to mango queries for further processing
   })
 
 
-  function makeSearch(){
+  function makeSearch(db="public"){
     let searchTerm = getSearchTerms();
     let searchLocation = getSearchLocationAndKm();
     if(searchLocation)
     {
-      searchAndShow(searchLocation[0],searchLocation[1],searchLocation[2],console.log,"public",
+      searchAndShow(searchLocation[0],searchLocation[1],searchLocation[2],console.log,db,
                             searchTerm)
     }
     else {
@@ -348,7 +348,16 @@ and combines them to mango queries for further processing
          setNewCollectionSearchHistory(result.docs); // and start new history
          $("#loadingGif").show();
          $("#itemList .item").parent().remove();
-         drawItemCards(result.docs,false,scrollEndListenerSearch)
+         if (collection.searchDB === glb_username)
+         { // if looking at users own collection: include borrowed items
+          drawItemCards(result.docs,true,scrollEndListenerSearch)
+         }
+         else {
+           drawItemCards(result.docs,false,scrollEndListenerSearch)
+         }
+         $("#no_items_left").html("  loading ...");
+         $("#no_items_left").addClass("typing");
+         $("#no_items_left").appendTo("#itemList");
        }
        else { // if this is a follow up query using a bookmark:
          collection.searchhistory[0].concat(result.docs)
@@ -358,14 +367,22 @@ and combines them to mango queries for further processing
            // renderItemCards and add them instead of deleting the last ones but with no new scrollend:
            drawItemCards(result.docs,false,null,true)
            $("#scrollend").remove();
-           $("#no_items_left").appendTo("#itemList");
-           $("#no_items_left").show();
+           setTimeout(function(){
+             $("#no_items_left").html(" ... no more items");
+             $("#no_items_left").appendTo("#itemList");
+             $("#no_items_left").removeClass("typing");
+             $("#no_items_left").show();
+           },1000)
+
          }
          else {
            console.log("AND ANOTHER ONE....");
            $("#loadingGif").show();
            // renderItemCards and add them instead of deleting the last ones:
            drawItemCards(result.docs,false,scrollEndListenerSearch,true)
+           $("#no_items_left").html("  loading ...");
+           $("#no_items_left").addClass("typing");
+           $("#no_items_left").appendTo("#itemList");
 
            setTimeout(function(){
              // then call eventhandler again in case scrollend is still in view (e.g. because too little items):
@@ -384,12 +401,20 @@ and combines them to mango queries for further processing
         collection.bookmark = null;
         return;
       }
-      searchByKm(lat,long,km,cb,db,searchTerm,bookmark)
+      if (db !== glb_username)
+      {
+        searchByKm(lat,long,km,cb,db,searchTerm,bookmark)
+      }
+      else
+      {
+        searchUserDB(cb,searchTerm,bookmark)
+      }
+
   }
 
   function scrollEndListenerSearch()
   {
-      if (isInView("#scrollend"))
+      if (isInView("#scrollend") && window.location.hash.includes("#collection"))
       {
         $("#no_items_left").show()
         $("#scrollend").remove();
@@ -466,6 +491,57 @@ and combines them to mango queries for further processing
       error: console.log,
       contentType:"application/json"
     });
+
+  }
+
+
+  function searchUserDB(callback=console.log,searchTerm={"_id":{"$regex":""}},bookmark=null)
+  {
+    // build selector and exclude all items with -containerOf; Ampersand or config_one in _id:
+      let selector = {
+        "_id": {
+           "$not": {
+              "$regex": "-containerOf"
+           }
+        },
+        "$and": [
+           {
+              "_id":{
+                  "$not": {
+                     "$regex": "&|config_one"
+                  }
+                }
+           }
+        ]
+     }
+     // add original searchTerm to selector:
+     selector["$and"].push(searchTerm)
+
+     console.log("searching userDB");
+     console.log(glb_username);
+     console.log(selector);
+     console.log(bookmark);
+
+      $.ajax({
+        type: "POST",
+        url: API_BASE_URL,
+        data: JSON.stringify({
+              	"data":
+                [{
+              		"type":"search",
+                  "db": glb_username,
+              		"doc":selector,
+                  "bookmark":bookmark
+              	}]
+              }),
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        success: function(result){
+           callback(result)
+           //console.log(result);
+        },
+        error: console.log,
+        contentType:"application/json"
+     });
 
   }
 

@@ -1,7 +1,7 @@
 // uploadAttachment to couchDB with nano testscript
 
 
-const nanoAdmin = require('nano')('http://jan:apple@localhost:5984');
+const nanoAdmin = require('nano')('http://jan:demopassword@localhost:5984');
 const fs = require('fs');
 
 let db = nanoAdmin.use("userdb-6a616e");

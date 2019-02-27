@@ -41,6 +41,10 @@
         <span>MY COLLECTION</span>
       </a>
 
+      <a class="ui-btn btn_3rd" id="btn_table" class="btn_table" href="#table">
+        <span>TABLEVIEW (ALPHA VERSION)</span>
+      </a>
+
   </div>
   <!-- END CONTENT -->
 
@@ -66,7 +70,7 @@ function btn_collection_clicked(reload=false){
   if(collection)
   {
     console.log("collection clicked. username will be target");
-    collection.searchQuery = {_id:""};
+    collection.searchQuery = {"_id":{"$regex":""}};
     collection.searchDB = glb_username;
   }
   if(reload)
@@ -80,7 +84,9 @@ function btn_collection_clicked(reload=false){
  if (lastSearchWasForUserDB && $("#itemList li").length>0)
  {
   console.log("last search was for userdb. so wont fetch and wont draw");
+
   refreshCollection(console.log,false,false);
+
   collection.reloadOnNextClick = false
  }
  else // if last search was to a public or this is the first search: fetch and then render
@@ -91,6 +97,9 @@ function btn_collection_clicked(reload=false){
 
 }
 
+/**
+fetches the user's collection from DB and makes it render
+*/
 function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=false){
   //$("#loadingGif").show();
   setTimeout(function(){
@@ -98,6 +107,7 @@ function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=f
     {
       $("#loadingGif").show();
       $("#itemList .item").parent().remove();
+      /*
       searchAndDoStepsInBetweenPages(glb_username,{_id:""},
         (r)=>{ // callback each loop
           if (draw){
@@ -109,7 +119,8 @@ function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=f
           $("#loadingGif").hide();
           callback(r.docs);
         }
-      )
+      )*/
+      searchAndShow(0,0,0,callback,glb_username); // new SearchAPI
       /*
       searchDB(collection.searchDB,collection.searchquery,function(inp){
 
@@ -121,7 +132,8 @@ function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=f
         callback(inp.docs);
       });*/
     }
-    else {
+    else
+    {
       if (draw)
       {
         $("#itemList .item").parent().remove();
@@ -167,7 +179,7 @@ function getItemsInMyPossession(forceRender=false){
               collection.searchhistory[0].push(object);
             }
             $("#itemList").listview('refresh');
-            lazyload(); // init lazy load (see head.mustache)
+            lazyload(); // init lazy load of images (see head.mustache)
             window.scrollTo(0, 0);
           }
 

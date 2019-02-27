@@ -5,7 +5,9 @@
   <meta charset="utf-8">
   <title>dingsda user interface 2</title>
 
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <!-- atm out because media stream issues in ios standalone mode in barcode scanners-->
+  <!-- <meta name="apple-mobile-web-app-capable" content="yes" /> -->
+
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.json">
 
@@ -51,6 +53,10 @@
   <script src="assets/carnet.js"></script>
   <!-- END CARNET ATA EXPORT PARTS-->
 
+  <!-- BARCODE dependency -->
+  <script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
+  <!-- END BARCODE dependency -->
+
 </head>
 
   <body class="ui-mobile-viewport ui-overlay-a">
@@ -90,13 +96,13 @@
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -120,6 +126,10 @@
 
       <a class="ui-btn btn_3rd" id="btn_collection" class="btn_collection" href="#collection" onclick="btn_collection_clicked()">
         <span>MY COLLECTION</span>
+      </a>
+
+      <a class="ui-btn btn_3rd" id="btn_table" class="btn_table" href="#table">
+        <span>TABLEVIEW (ALPHA VERSION)</span>
       </a>
 
   </div>
@@ -207,7 +217,7 @@ function btn_collection_clicked(reload=false){
   if(collection)
   {
     console.log("collection clicked. username will be target");
-    collection.searchQuery = {_id:""};
+    collection.searchQuery = {"_id":{"$regex":""}};
     collection.searchDB = glb_username;
   }
   if(reload)
@@ -221,7 +231,9 @@ function btn_collection_clicked(reload=false){
  if (lastSearchWasForUserDB && $("#itemList li").length>0)
  {
   console.log("last search was for userdb. so wont fetch and wont draw");
+
   refreshCollection(console.log,false,false);
+
   collection.reloadOnNextClick = false
  }
  else // if last search was to a public or this is the first search: fetch and then render
@@ -232,6 +244,9 @@ function btn_collection_clicked(reload=false){
 
 }
 
+/**
+fetches the user's collection from DB and makes it render
+*/
 function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=false){
   //$("#loadingGif").show();
   setTimeout(function(){
@@ -239,6 +254,7 @@ function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=f
     {
       $("#loadingGif").show();
       $("#itemList .item").parent().remove();
+      /*
       searchAndDoStepsInBetweenPages(glb_username,{_id:""},
         (r)=>{ // callback each loop
           if (draw){
@@ -250,7 +266,8 @@ function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=f
           $("#loadingGif").hide();
           callback(r.docs);
         }
-      )
+      )*/
+      searchAndShow(0,0,0,callback,glb_username); // new SearchAPI
       /*
       searchDB(collection.searchDB,collection.searchquery,function(inp){
 
@@ -262,7 +279,8 @@ function refreshCollection(callback=console.log,draw=true, fetchDataFromServer=f
         callback(inp.docs);
       });*/
     }
-    else {
+    else
+    {
       if (draw)
       {
         $("#itemList .item").parent().remove();
@@ -308,7 +326,7 @@ function getItemsInMyPossession(forceRender=false){
               collection.searchhistory[0].push(object);
             }
             $("#itemList").listview('refresh');
-            lazyload(); // init lazy load (see head.mustache)
+            lazyload(); // init lazy load of images (see head.mustache)
             window.scrollTo(0, 0);
           }
 
@@ -471,13 +489,13 @@ if(collection)
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -594,13 +612,13 @@ if(collection)
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -613,7 +631,7 @@ if(collection)
 
   <!-- CONTENT -->
   <div role="main" class="ui-content">
-      <p>notifications from UI 2 dingsda </p>
+      <p><b>notifications</b></p>
       <ul data-role="listview" data-split-icon="gear" data-split-theme="d"></ul>
   </div>
   <!-- END CONTENT -->
@@ -666,37 +684,6 @@ function removeNotification(notification,e)
       //refreshCollection(console.log,true,true);
     }
   })
-  /*
-  $.ajax({
-    type: "GET",
-    url: API_BASE_URL+glb_username+"/&notifications",
-    xhrFields: { withCredentials: true }, // to make AuthCookie ok
-    error: console.log,
-    contentType:"application/json",
-    success: function(res){
-      delete res.pending.info[notification.ref]
-      let dataOut = {
-        "data":
-              [{
-                "type":"update",
-                "doc":res
-              }]
-      }
-      $.ajax({
-        type: "POST",
-        url: API_BASE_URL+glb_username+"/&notifications",
-        xhrFields: { withCredentials: true }, // to make AuthCookie ok
-        error: console.log,
-        data: JSON.stringify(dataOut),
-        contentType:"application/json",
-        success: function(res){
-          console.log(res);
-          updateNotificationsBatch();
-        }
-      });
-    }
-  });
-  */
 }
 
 function cancelHandover(notification,e)
@@ -752,6 +739,7 @@ function confirmHandover(notification, confirmed, e)
         updateNotificationsBatch();
         updateBorrowItemsBatch();
         refreshCollection(console.log,true,true);
+        getItemsInMyPossession();
         console.log(r)
       },
       xhrFields: { withCredentials: true }, // to make AuthCookie ok
@@ -786,22 +774,22 @@ function confirmHandover(notification, confirmed, e)
 
 function addNotification(noti)
 {
-  listitem = "";
+  let listitem = "";
   switch(noti.type) {
       case "handover_await":
         listitem = makeNotification({
-            text:"<br>awaiting handover confirmation from "+noti.to,
+            text:`<br>awaiting handover confirmation from ${noti.to} about ${noti.ref}`,
             cb_cancel:function(e){cancelHandover(noti,e);},
           })
         break;
       case "handover_confirm":
-        listitem = makeNotification({
-            text:"<br>did you receive "+noti.ref+" from "+noti.from+"?",
-            wording_cancel:"no",
-            wording_confirm:"yes, i did!",
-            cb_confirm:function(e){confirmHandover(noti,true,e);},
-            cb_cancel:function(e){confirmHandover(noti,false,e);}
-          })
+          listitem = makeNotification({
+              text:`<br>did you receive ${noti.refname} (${noti.ref}) from ${noti.from}?`,
+              wording_cancel:"no",
+              wording_confirm:"yes, i did!",
+              cb_confirm:function(e){confirmHandover(noti,true,e);},
+              cb_cancel:function(e){confirmHandover(noti,false,e);}
+            })
         break;
       case "info":
       listitem = makeNotification({
@@ -894,27 +882,6 @@ function getNotificationsFlat(callback=console.log)
     error: console.log,
     contentType:"application/json"
   });
-  /*
-  getSingleItem("&notifications",function(notifications){
-    // get number of total notifications (items 2nd step down the object tree:)
-    let items = [];
-    for (let i = 0; i < getObjectLength(notifications.pending); i++)
-    {
-      let obj = notifications.pending[Object.keys(notifications.pending)[i]]
-
-      for (item in obj){
-        let row = obj[item]
-        row.ref = item
-        row.type = Object.keys(notifications.pending)[i];
-        items.push(row);
-        //console.log(item + JSON.stringify(obj[item]));
-      }
-
-    }
-    callback(items);
-
-  })
-  */
 }
 
 </script>
@@ -1049,9 +1016,9 @@ function getNotificationsFlat(callback=console.log)
       font-style: oblique;
       z-index: 99;
       position: absolute;
-      color: lightblue;
+      color: blue;
       content: "  borrowed  ";
-      background: rgba(255,255,255,0.5);
+      background: rgba(255,255,255,0.7);
       left: 20px;
       bottom:10px;
       padding: 3px;
@@ -1149,6 +1116,24 @@ function getNotificationsFlat(callback=console.log)
       position: fixed;
     }
 
+    .typing {
+      white-space: nowrap;
+      overflow: hidden;
+      animation: typing 2.5s steps(30, end) infinite, blink-caret .75s step-end infinite;
+    }
+
+    /* typing effect */
+    @keyframes typing {
+      from { width: 0 }
+      to { width: 100% }
+    }
+
+    /* typewriter cursor */
+    @keyframes blink-caret {
+      from, to { border-color: transparent }
+      50% { border-color: orange; }
+    }
+
   </style>
 
   <!-- HEADER TEMPLATE-->
@@ -1160,13 +1145,13 @@ function getNotificationsFlat(callback=console.log)
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -1190,7 +1175,7 @@ function getNotificationsFlat(callback=console.log)
 
     <ul id="itemList" data-role="listview" data-filter="true" data-input="#filterinput">
 
-      <div id="no_items_left" style="color:pink">no more items...</li>
+      <div id="no_items_left" style="color:pink">loading ...</li>
 
     </ul>
 
@@ -1690,8 +1675,6 @@ function searchAndDoStepsInBetweenPages(
 
 /**
 sends HTTP request to dingsda API's find endpoint and passes response into callback
-
-@TODO: build in pagination if API returns bookmark
 */
 function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log,bookmark=null){
     console.log(`sending find Request to ${db}`);
@@ -1927,7 +1910,6 @@ function isInView(elem)
         text-transform: lowercase;
       }
 
-
       #detailTitle{
         font-size: 1.1em;
         background-color: rgba(255, 0, 76, 1);
@@ -2003,6 +1985,26 @@ function isInView(elem)
         display: none;
       }
 
+      #detailOwners::after{
+        font-size: 0.8em;
+        font-style: oblique;
+        z-index: 99;
+        position: absolute;
+        /*color: blue;*/
+        content: attr(data-before);
+        background: rgba(255,255,255,1);
+        right: 20px;
+        padding: 3px;
+      }
+
+      .detailsLendout::after{
+        color:red
+      }
+
+      .detailsBorrowed::after{
+        color:blue
+      }
+
 
     </style>
 
@@ -2016,13 +2018,13 @@ function isInView(elem)
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -2282,6 +2284,7 @@ function shiftItemFocus(shift=-1){
 }
 
 function showItemDetails(){
+
   let mydoc = itemDetails.itemInFocus;
   if (mydoc)
   {
@@ -2298,6 +2301,10 @@ function showItemDetails(){
     $("#detailTitle").html(mydoc.name);
     $("#detailOwners").html(mydoc.owners.toString());
 
+    $("#detailOwners").removeClass("detailsBorrowed");
+    $("#detailOwners").removeClass("detailsLendout");
+    $("#detailOwners").attr('data-before',''); //reset content value for #detailOwners:after (see below)
+
     // hide / show edit / move / delete buttons depending on edit/move rights:
     if (!mydoc.owners.includes(glb_username))
     {
@@ -2312,14 +2319,33 @@ function showItemDetails(){
           $(".moveSingleItem_btn").hide();
       }
 
+      // show name of user in possession of item in case it is ours but lent out:
+      if (mydoc.inPossessionOf && mydoc.inPossessionOf.includes(glb_username))
+      {
+        console.log("BORROWED !");
+        $("#detailOwners").addClass("detailsBorrowed");
+        $("#detailOwners").attr('data-before',`borrowed from ${mydoc.owners}`); //anything is the 'content' value
+      }
+
     }
     else {
       // full rights. show all buttons
       //$(".borrow_handover_btn").show(); // always the case so not needed here
-      $(".editSingleItem_btn").show();
+      $(".editSingleItem_btn").show(); 
       $(".moveSingleItem_btn").show();
       $(".deleteSingleItem_btn").show();
+
+      // show name of user this item is lend out to
+      if (mydoc.inPossessionOf && !mydoc.inPossessionOf.includes(glb_username))
+      {
+        console.log("LEND OUT !");
+        $("#detailOwners").addClass("detailsLendout");
+        $("#detailOwners").attr('data-before',`lend out to ${mydoc.inPossessionOf}`); //anything is the 'content' value
+      }
+
     }
+
+
 
     // change if borrow or handover button depending on itemownership and Possession:
     if(mydoc.owners.includes(glb_username) )
@@ -2394,7 +2420,7 @@ function updateSingleItemInCollection(id,setIntoFocus=true)
 
 }
 
-
+// in client_base
 function getSingleItem(id,callback,error=console.log)
 {
     // transform id into hyperlink in case no hyperlink was passed:
@@ -2583,13 +2609,13 @@ function getSingleItem(id,callback,error=console.log)
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -2610,7 +2636,7 @@ function getSingleItem(id,callback,error=console.log)
       <div class="ui-block-a" style="width:100%;height:33vh;background-color:black;
         display: flex;flex-direction: row;justify-content: center;">
         <label class="fileContainer ui-btn">
-          <input type="file" accept="image/jpeg" id="photo_upload" multiple data-role="none"/>
+          <input type="file" accept="image/*" id="photo_upload" multiple data-role="none"/>
         </label>
         <img id="addPhoto" src="" alt="big picture of item"></img>
       </div>
@@ -2736,14 +2762,25 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
     console.log("just loaded itemDetails");
     console.log(ui.prevPage);
 
+
     $("#details").appendTo("#addNew_detailsContainer");
     $("#addNew_detailsContainer").trigger("create");
     //$("#details").collapsible( "collapse" )
     $("#addNew_detailsContainer :input").attr("disabled", false);
 
-    clearForm();
+    if (base.hashhistory && base.hashhistory[1]
+      && !base.hashhistory[1].includes("#barcode"))
+    {
+      clearForm();
+      $("#addPhoto").attr("src", addNew.urlStandInImg);
+      
+      console.log("CLEARING FORM OF ADDNEW");
+    }
+    else {
+      console.log("NOT CLEARING ANYTHING");
+    }
 
-    $("#addPhoto").attr("src", addNew.urlStandInImg);
+
 
     $("#locationMoveable").appendTo("#locationEditor");
     $("#locationEditor").trigger("create");
@@ -3564,13 +3601,13 @@ function insideOfUpdated(res)
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -3701,7 +3738,7 @@ function updateItem(obj,picIncluded=false,callback=console.log)
         }
 
         // excluded picupdate. should have its own function, i think
-        
+
         // write into DB
         $.ajax({
           type: "POST",
@@ -3718,7 +3755,7 @@ function updateItem(obj,picIncluded=false,callback=console.log)
 
 }
 
-
+/* // exists already inside itemDetails.mustache
 function getSingleItem(id,callback,error=console.log)
 {
     // transform id into hyperlink in case no hyperlink was passed:
@@ -3737,6 +3774,7 @@ function getSingleItem(id,callback,error=console.log)
     });
 
 }
+*/
 
 </script>
 
@@ -3761,13 +3799,13 @@ function getSingleItem(id,callback,error=console.log)
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -3922,13 +3960,13 @@ function handoverItem(obj, callback=console.log)
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -4148,13 +4186,13 @@ $("#btn_send_item_request").click(function(){
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -4260,12 +4298,12 @@ and combines them to mango queries for further processing
   })
 
 
-  function makeSearch(){
+  function makeSearch(db="public"){
     let searchTerm = getSearchTerms();
     let searchLocation = getSearchLocationAndKm();
     if(searchLocation)
     {
-      searchAndShow(searchLocation[0],searchLocation[1],searchLocation[2],console.log,"public",
+      searchAndShow(searchLocation[0],searchLocation[1],searchLocation[2],console.log,db,
                             searchTerm)
     }
     else {
@@ -4397,7 +4435,16 @@ and combines them to mango queries for further processing
          setNewCollectionSearchHistory(result.docs); // and start new history
          $("#loadingGif").show();
          $("#itemList .item").parent().remove();
-         drawItemCards(result.docs,false,scrollEndListenerSearch)
+         if (collection.searchDB === glb_username)
+         { // if looking at users own collection: include borrowed items
+          drawItemCards(result.docs,true,scrollEndListenerSearch)
+         }
+         else {
+           drawItemCards(result.docs,false,scrollEndListenerSearch)
+         }
+         $("#no_items_left").html("  loading ...");
+         $("#no_items_left").addClass("typing");
+         $("#no_items_left").appendTo("#itemList");
        }
        else { // if this is a follow up query using a bookmark:
          collection.searchhistory[0].concat(result.docs)
@@ -4407,14 +4454,22 @@ and combines them to mango queries for further processing
            // renderItemCards and add them instead of deleting the last ones but with no new scrollend:
            drawItemCards(result.docs,false,null,true)
            $("#scrollend").remove();
-           $("#no_items_left").appendTo("#itemList");
-           $("#no_items_left").show();
+           setTimeout(function(){
+             $("#no_items_left").html(" ... no more items");
+             $("#no_items_left").appendTo("#itemList");
+             $("#no_items_left").removeClass("typing");
+             $("#no_items_left").show();
+           },1000)
+
          }
          else {
            console.log("AND ANOTHER ONE....");
            $("#loadingGif").show();
            // renderItemCards and add them instead of deleting the last ones:
            drawItemCards(result.docs,false,scrollEndListenerSearch,true)
+           $("#no_items_left").html("  loading ...");
+           $("#no_items_left").addClass("typing");
+           $("#no_items_left").appendTo("#itemList");
 
            setTimeout(function(){
              // then call eventhandler again in case scrollend is still in view (e.g. because too little items):
@@ -4433,12 +4488,20 @@ and combines them to mango queries for further processing
         collection.bookmark = null;
         return;
       }
-      searchByKm(lat,long,km,cb,db,searchTerm,bookmark)
+      if (db !== glb_username)
+      {
+        searchByKm(lat,long,km,cb,db,searchTerm,bookmark)
+      }
+      else
+      {
+        searchUserDB(cb,searchTerm,bookmark)
+      }
+
   }
 
   function scrollEndListenerSearch()
   {
-      if (isInView("#scrollend"))
+      if (isInView("#scrollend") && window.location.hash.includes("#collection"))
       {
         $("#no_items_left").show()
         $("#scrollend").remove();
@@ -4519,6 +4582,57 @@ and combines them to mango queries for further processing
   }
 
 
+  function searchUserDB(callback=console.log,searchTerm={"_id":{"$regex":""}},bookmark=null)
+  {
+    // build selector and exclude all items with -containerOf; Ampersand or config_one in _id:
+      let selector = {
+        "_id": {
+           "$not": {
+              "$regex": "-containerOf"
+           }
+        },
+        "$and": [
+           {
+              "_id":{
+                  "$not": {
+                     "$regex": "&|config_one"
+                  }
+                }
+           }
+        ]
+     }
+     // add original searchTerm to selector:
+     selector["$and"].push(searchTerm)
+
+     console.log("searching userDB");
+     console.log(glb_username);
+     console.log(selector);
+     console.log(bookmark);
+
+      $.ajax({
+        type: "POST",
+        url: API_BASE_URL,
+        data: JSON.stringify({
+              	"data":
+                [{
+              		"type":"search",
+                  "db": glb_username,
+              		"doc":selector,
+                  "bookmark":bookmark
+              	}]
+              }),
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        success: function(result){
+           callback(result)
+           //console.log(result);
+        },
+        error: console.log,
+        contentType:"application/json"
+     });
+
+  }
+
+
   /**
   helper function. calculates new geocoordinates (latitude, longitude) from
   input geoposition and the distances from it, provided in km
@@ -4568,6 +4682,1219 @@ and combines them to mango queries for further processing
 
 </script>
 
+
+<link rel="stylesheet" href="assets/handsontable.full.css">
+<style>
+
+  #table .ui-content{
+    overflow: scroll
+  }
+
+  .handsontable table {
+    font-size: 0.8em;
+  }
+  .handsontable th {
+    white-space: normal !important;*/
+    word-wrap: break-word;
+    vertical-align: middle;
+  }
+
+  input[type="checkbox"] {
+      display:none;
+  }
+  input[type="checkbox"] + label {
+      font-family: sans-serif;
+      font-size: 0.8em
+  }
+  input[type="checkbox"] + label span {
+      display:inline-block;
+      width:19px;
+      height:19px;
+      margin:-2px 2px 0 20px;
+      vertical-align:middle;
+      background:url(check_sheet.png) left top no-repeat;
+      cursor:pointer;
+      transform: scale(1.1,1.1);
+  }
+  input[type="checkbox"]:checked + label span {
+      background:url(check_sheet.png) -19px top no-repeat;
+  }
+
+  #exampleConsole {
+      margin-left: 20px;
+      color: green;
+  }
+
+  .greyfont {
+    color: lightgrey !important
+  }
+
+  #loadData {
+    max-width: 33vw;
+    background-color: rgba(225,225,255,1);
+    white-space: normal;
+    /*display: none*/
+  }
+
+  .tablebutton {
+    font-size: 1.5vh;
+    height: 5em;
+  }
+
+  #saveData {
+    max-width: 33vw;
+    background-color: rgba(255,205,205,1);
+    white-space: normal;
+    text-shadow: none
+  }
+
+  #autosave {
+    max-width: 20vw;
+    text-shadow: none
+  }
+
+  .invisible {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .buttonrow {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #tablemain .ui-checkbox .ui-btn{
+    /*height: 100%;*/
+    white-space: nowrap;
+  }
+
+  @media screen and (min-width:1092px)
+  {
+    .tablebutton {
+      height: 2.5em
+    }
+
+    #tablemain .ui-checkbox .ui-btn{
+      height: 0.7em;
+    }
+
+
+
+  }
+
+
+</style>
+
+<div data-role="page" id="table">
+
+  <!-- HEADER TEMPLATE -->
+
+<div data-role="header" data-position="fixed" class="header">
+  <div data-role="navbar" class="ui-state-persist">
+    <ul>
+    <li><a href="#config"><img id="config_icon" src="icons/gear.png" width=30px
+      alt="config icon"></img>
+    <span class="badge"></span></a></li>
+    <li><a onclick=showNotifications()><img class="notifications_icon"
+      src="icons/bell.png" width=30px alt="notifications icon">
+      <span class="notifications_badge badge">0</span></a></li>
+    <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
+      width=30px alt="start side icon">
+    <span class="badge"></span></a></li>
+    <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
+
+      <span class="badge borrowedthings">0</span>
+      <span class="badge collection_badge">0</span>
+    </a></li>
+
+    </ul>
+  </div>
+</div>
+  <!-- END HEADER -->
+
+  <!-- CONTENT -->
+  <div role="main" class="ui-content" id="tablemain">
+
+    <div class="buttonrow">
+      <button id="loadData" class="tablebutton">load data from server</button>
+      <button id="saveData" class="tablebutton">save data to server</button>
+      <input type="checkbox" id="autosave" class="tablebutton"/>
+      <label for="autosave"><span></span>autosave on</label>
+      <span id="exampleConsole"></span>
+    </div>
+
+    <br>
+    <div id="example"></div>
+
+  </div>
+  <!-- END CONTENT -->
+
+</div>
+
+<script src="assets/handsontable.full.js" type="text/javascript"></script>
+<script src="assets/xlsx.full.min.js" type="text/javascript"></script>
+<!--needed for xlsx dl-->
+<script src="assets/FileSaver.min.js" type="text/javascript"></script>
+<script src="assets/dotize.js" type="text/javascript"></script>
+
+<script>
+
+  let table = {
+  }
+
+  let dataObject = [];
+  let hot = hot_init();
+
+
+  $( document ).on("pageshow", "#table", function(e,ui) {
+    if (dataObject.length <= 1)
+    {
+      loadAllItems().then(function(res){
+        console.log(res);
+        filltable(res,true);
+      })
+    }
+    else {
+      hot = hot_init()
+    }
+
+  })
+
+  $( window ).resize(function() {
+    hot = hot_init()
+  });
+
+  document.getElementById("loadData").addEventListener("click",function(){
+    loadAllItems().then(function(res){
+      console.log(res);
+      filltable(res,true);
+    })
+  })
+
+  $("#autosave").change(function(){
+    if ($('#autosave:checkbox:checked').length > 0)
+    {
+      swal({
+        html:`Vorsicht!<br><br> Ab jetzt wird jede Änderung in der Tabelle
+        sofort hochgeladen.<br> Da machst du schnell was kaputt. Mach vorsichtig!`
+      })
+    }
+  })
+
+  $("#saveData").click(function(){
+
+    $(exampleConsole).removeClass("greyfont")
+    exampleConsole.innerText ='saving all items to database....';
+
+    $("#saveData").addClass("invisible")
+
+    saveAllItems()
+    .then(function(){
+
+      $(exampleConsole).addClass("greyfont")
+      exampleConsole.innerText ='all up to date';
+      console.log("items saved");
+      console.log("reloading table");
+
+      loadAllItems()
+      .then(function(res){
+
+        filltable(res);
+        $("#saveData").removeClass("invisible")
+
+      })
+    })
+
+  })
+
+
+  /**
+  */
+  function loadAllItems(){
+
+      console.log("loading all items");
+      return new Promise(function(resolve, reject) {
+
+        $.ajax({
+          type: "GET",
+          url: API_BASE_URL + glb_username+"/_all_docs",
+          xhrFields: { withCredentials: true }, // to make AuthCookie ok
+          success: function(r){
+            promiseArray = [];
+            if (r.rows)
+            {
+              r.rows.forEach(function(row){
+                //console.log(row);
+                if (row.id && !row.id.includes("-containerOf")
+                    && !row.id.includes("&") && !row.id.includes("_design"))
+                {
+                    promiseArray.push(new Promise(
+                        function(reso,reje){
+                          getSingleItem(row.id,function(item){reso(item)})
+                        }
+                      )
+                    )
+                }
+
+              })
+              resolve(Promise.all(promiseArray))
+            }
+          },
+          error: function(err){reject(err)},
+          contentType:"application/json"
+        });
+
+      });
+  }
+
+  /**
+  returns promise that resolves after all DB updates have been processed
+  */
+  function saveAllItems(){ // continue here
+
+        console.log("saving!");
+
+        let promiseArray = [];
+
+        for (i in dataObject)
+        {
+          let promise = new Promise(function(reso,reje) {
+            if (dataObject[i]._id && dataObject[i]._id !== "")
+            {
+              let j = i; // scope shizzle
+              let item = JSON.parse(JSON.stringify(dataObject[j]))
+              setTimeout(function(){
+                item = convertItemToItemWithArrays(item);
+                updateOverwrite(item,function(res){
+                  console.log(res);
+                  console.log(j);
+                  if (res.ok)
+                  {
+                    dataObject[j]._rev = res.rev
+                  }
+                  reso(res)
+                },function(res){ // in case we have an conflict error, try again once in a second:
+                  /*
+                  FIXME: This is NOT an optiomal solution. But we will stick with it
+                  until we have a state machine option build into dingsdas API at server.js
+                  */
+
+                  if(res.status && res.status.toString().startsWith("409")) { console.log("conflict"); }
+                  else if(res.status &&  res.status.toString().startsWith("500")) { console.log("server error"); }
+                  else if(res.status && res.status.toString().startsWith("4")) { console.log("other error"); }
+
+                  setTimeout(
+                    function(){
+                      updateOverwrite(item,function(res){
+                          console.log(res);
+                          console.log(j);
+                          if (res.ok)
+                          {
+                            dataObject[j]._rev = res.rev
+                          }
+                          reso(res)
+                        },
+                        function(err){
+                          if(err.status && err.status.toString().startsWith("409")) { console.log("conflict"); }
+                          else if(err.status && err.status.toString().startsWith("500")) { console.log("server error"); }
+                          else if(err.status && err.status.toString().startsWith("4")) { console.log("other error"); }
+                          alert("item with _id: "+item._id+"\n("+item.name+")\ncould not be updated.");
+                          console.log(res);
+                          reje("err")
+                        }
+                        )
+                  }
+                    ,1000)
+                });
+              },0)
+            }
+            else if (dataObject[i].name && dataObject[i].location !== undefined)
+            {
+              dataObject[i] = addOwners2DocIfNoOwners(dataObject[i]);
+              addNewItemFromTable(dataObject[i],i,function(){ reso("aha") })
+            }
+            else {
+              reso("nothing")
+            }
+          }) // micro promises
+        promiseArray.push(promise)
+        } // end for loop
+
+      console.log(promiseArray);
+      return new Promise(function(resolve, reject) {
+
+        Promise.all(promiseArray)
+          .then(()=>{resolve("done")})
+          .catch((err) => {reject("could not finish saveAllItems()")})
+
+      }) // end main promise
+
+  }
+
+
+    function hot_init() {
+      let container = document.getElementById('example');
+      return new Handsontable(container, {
+        /*beforeRender*/
+        beforeInit: function(){
+          console.log("init hot");
+            for (doc of dataObject)
+            {
+              if (!doc.owners){return}
+              delete doc._attachments;
+              doc.owners = doc.owners.toString();
+              if (doc.other && doc.other.tags){
+                doc.other.tags = doc.other.tags.toString();
+              }
+              //doc.other.visibility = doc.other.visibility.toString();
+            }
+        },
+        data: dataObject,
+        height:function(){
+          let screenheight = window.innerHeight
+            || document.documentElement.clientHeight
+            || document.body.clientHeight;
+          let size = screenheight*0.65;
+          if(!isOnMobile()){
+            //console.log("!!!!! DESKTOP !!!!!!");
+            size = screenheight*0.75;
+          }
+          //console.log(size);
+          return size
+        },
+        columns: [{
+                    data: "_id",
+                    width: 50,
+                    wordWrap:false
+                  }, {
+                    data: "name",
+                  }, {
+                    data: "other.description",
+                    width: 200,
+                  }, {
+                    data: "other.count",
+                    width: 60
+                  }, {
+                    data: "other.weight",
+                    width: 60
+                  }, {
+                    data: "other.value",
+                    width: 60
+                  },{
+                    data: "other.tags",
+                    width: 120
+                  },{
+                    data: "location.description",
+                    width: 80,
+                    wordWrap:false
+                  }, {
+                    data: "location.address",
+                    width: 200,
+                    wordWrap:false
+                  }, {
+                    data: "location.latitude",
+                    width: 50,
+                    wordWrap:false
+                  }, {
+                    data: "location.longitude",
+                    width: 50,
+                    wordWrap:false
+                  },{
+                    data: "location.insideOf",
+                    wordWrap:false,
+                    width: 120
+                  }, {
+                    data: "other.madein",
+                    width: 60
+                  }],
+        colHeaders: ["ID","Name","Description","Number of pieces","Weight","Price",
+          "tags / keywords","Location .description","Location .address",
+          "Location .latitude","Location .longitude","InsideOf item with ID",
+          "Country of origin"],
+        rowHeaders: true,
+        minSpareRows: 1,
+        autoWrapRow: true,
+        manualRowResize: true,
+        manualColumnResize: true,
+        contextMenu:{
+          items:{
+            "export_carnet_csv": { // Own custom option
+              name: 'export as Carnet.csv',
+              callback: function(inp,test) { // Callback for specific option
+                setTimeout(function() {
+                  console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+                  // here get all selected rows._id s and then build carnet from it
+                  let carnetArrayNumbered = getCarnetFromRows(hot.getSelected())
+                  renderCarnetATAcsv(carnetArrayNumbered); //works
+                }, 0);
+              }
+            },
+            "export_carnet_xls": { // Own custom option
+              name: 'export as Carnet.xls',
+              callback: function(inp,test) { // Callback for specific option
+                setTimeout(function() {
+                  console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+                  // here get all selected rows._id s and then build carnet from it
+                  let carnetArrayNumbered = getCarnetFromRows(hot.getSelected())
+                  renderCarnetATAexcel(carnetArrayNumbered); //DOES IT WORK???
+                }, 0);
+              }
+            },
+            "export_carnet_pdf": { // Own custom option
+              name: 'export as Carnet.pdf',
+              callback: function(inp,test) { // Callback for specific option
+                setTimeout(function() {
+                  console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+                  // here get all selected rows._id s and then build carnet from it
+                  let carnetArrayNumbered = getCarnetFromRows(hot.getSelected())
+                  renderCarnetATApdf(carnetArrayNumbered) // works
+                }, 0);
+              }
+            },
+            "sep1": {name: '---------'},
+            "export_verwendungsnachweis_csv": { // Own custom option
+              name: 'export as Verwendungsnachweis.csv',
+              callback: function(inp,test) { // Callback for specific option
+                setTimeout(function() {
+                  console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+                  let array = getVerwendungsNachweisArray(hot.getSelected());
+                  for (i in array)
+                  {
+                    array[i]=Object.values(array[i])
+                    console.log(array[i]);
+                  }
+                  console.log(array);
+                  renderCSV(["Datum","BelegNr","Empfänger*in/Einzahler*in",
+                    "Warenbezeichnung inkl. Seriennummer","Einkaufspreis EUR",],
+                    array,"Verwendungsnachweis.csv",true)
+                }, 0);
+              }
+            },
+            "export_verwendungsnachweis_xls": { // Own custom option
+              name: 'export as Verwendungsnachweis.xls',
+              callback: function(inp,test) { // Callback for specific option
+                setTimeout(function() {
+                  console.log(hot.getSelected()); // Fire alert after menu close (with timeout)
+                  let array = getVerwendungsNachweisArray(hot.getSelected());
+                  for (i in array)
+                  {
+                    array[i]=Object.values(array[i])
+                    console.log(array[i]);
+                  }
+                  console.log(objToArray(array));
+                  array = objToArray(array);
+                  array.unshift(["Datum","BelegNr","Empfänger*in/Einzahler*in",
+                    "Warenbezeichnung inkl. Seriennummer","Einkaufspreis EUR",])
+                  renderAndDownloadExcel(array,[10,7,10,40,10])
+                }, 0);
+              }
+            },
+            "sep2": {name: '---------'},
+            "export_table_xls": { // Own custom option       // CONTINUE HERE !!!!!!!!!!!!!!!!!!!
+              name: 'export complete table as xls',
+              callback: function(inp,test) { // Callback for specific option
+                setTimeout(function() {
+
+                  console.log(hot.getSourceData());
+                  let array = JSON.parse(JSON.stringify(hot.getSourceData()));
+                  for (i in array)
+                  {
+                    array[i]=dotize.convert(array[i])
+                    console.log(array[i]);
+                  }
+                  //console.log(objToArray(array,true));
+                  array = objToArray(array,true); // make into array of arrays
+                  console.log(array);
+                  renderAndDownloadExcel(array,[1,1,30,10,10,10,10,10,10,10,30,10,10,10,10])
+                }, 0);
+              }
+            },
+            "sep22":{name: '---------'},
+            "row_above":{},
+            "row_below":{},
+            "remove_row":{},
+            "sep3": {name: '---------'},
+            "alignment":{},
+            "make_read_only":{},
+          }
+        },
+        cells: function (row, col, prop)
+        {
+          let cellProperties = {}
+
+          if ( ["_id","id","containerOf","hyperlink"].includes(prop) )
+          {
+            cellProperties.readOnly = true;
+          }
+          return cellProperties;
+        },
+        afterChange: function (change, source) {
+          let autosave = document.getElementById("autosave");
+          let exampleConsole = document.getElementById("exampleConsole");
+          if (source === 'loadData') {
+            return; //don't save this change
+          }
+          if (!autosave.checked) {
+            return;
+          }
+          // timeouts purely cosmetic...
+          clearTimeout(autosaveNotification);
+          var autosaveNotification = setTimeout(function() {
+                $(exampleConsole).removeClass("greyfont")
+                exampleConsole.innerText ='Changes will be autosaved...';
+                console.log("Changes will be autosaved");
+                saveChangesToServer(change)
+                .then(function(){
+                  setTimeout(function(){
+                    $(exampleConsole).addClass("greyfont")
+                    exampleConsole.innerText ='all up to date';
+                  },500)
+                })
+              }, 100);
+        },
+        beforeRemoveRow: function(start,count){
+          console.log(start);
+          console.log(count);
+          // get items:
+          let items = [];
+          for (let i=start; i < start+count; i++)
+          {
+            items.push(dataObject[i])
+          }
+          console.log(items);
+
+          swal({
+              title:"DELETE ROW(S)?",
+              html:`Willst du die gerade entfernte(n)
+                items auch auf dem Server löschen?`,
+                showCancelButton: true,
+                focusConfirm: false,
+
+          }).then((result) => {
+            if (result.value) {
+              // TO DO: delete ITEMS via dingsda API!!!
+              for (var i = 0; i < items.length; i++) {
+                removeit(items[i]._id)
+              }
+              Swal(
+                'Deleted!',
+                'items wurden gelöscht.',
+                'success'
+              )
+            }
+          })
+        }
+
+      });
+    }
+
+    /**
+    */
+    function getAllMarkedRows(chosen)
+    {
+      let data = []
+      for (var i in chosen)
+      {
+        let rows = chosen[i];
+        rows = [rows[0],rows[2]];
+        rows.sort(function(a, b){return a-b}); // sort array
+        //console.log(rows);
+        for (var j = rows[0]; j <= rows[1]; j++)
+        {
+          //console.log(dataObject[j]._id);
+          addToArrayIfNotExist(data,j)
+        }
+      }
+      console.log(data);
+      return data
+    }
+
+    /**
+    */
+    function getVerwendungsNachweisArray(chosen)
+    {
+      let rows = getAllMarkedRows(chosen)
+
+      let nachweisArray = []
+      // prepare data for Carnet export:
+      for (i of rows)
+      {
+        // default rimini to exist as emtpy object if undefined:
+        dataObject[i].other.rimini = dataObject[i].other.rimini || {};
+        console.log(dataObject[i]);
+        let item = {}
+        Object.assign(item, {
+          receiptDate:dataObject[i].other.rimini.receiptDate,
+          receiptNo:dataObject[i].other.rimini.receiptNo,
+          boughtAt:dataObject[i].other.rimini.boughtAt,
+          description : dataObject[i].name,
+          price: dataObject[i].other.rimini.priceNew,
+        });
+        if (item.receiptDate === undefined){ item.receiptDate = "";}
+        if (item.receiptNo === undefined){ item.receiptNo = "";}
+        if (item.boughtAt === undefined){ item.boughtAt = "";}
+        if (item.description === undefined){ item.description = " ";}
+        if (item.price === undefined){ item.price = "";}
+        nachweisArray.push(item);
+      }
+      console.log(nachweisArray);
+      return nachweisArray;
+    }
+
+    /**
+    */
+    function getCarnetFromRows(chosen)
+    {
+      let rows = getAllMarkedRows(chosen)
+
+      let carnetArray = []
+      // prepare data for Carnet export:
+      for (i of rows)
+      {
+        console.log(dataObject[i]);
+        let item = {}
+        Object.assign(item, {
+          description:dataObject[i].name,
+          count : dataObject[i].other.count,
+          origin : dataObject[i].other.madein,
+          price : dataObject[i].other.value,
+          weight : dataObject[i].other.weight,
+        });
+        if (item.count === undefined){ item.count = "1";}
+        if (item.origin === undefined){ item.origin = "";}
+        if (item.price === undefined){ item.price = "";}
+        if (item.weight === undefined){ item.weight = "";}
+        carnetArray.push(item);
+      }
+      console.log(carnetArray);
+      let carnetArrayNumbered = numberItems(carnetArray);
+      console.log(carnetArrayNumbered);
+
+      return carnetArrayNumbered;
+    }
+
+    /**
+    renders CarnetATA from tableview as CSV using renderCSV()
+    */
+    function renderCarnetATAcsv(array)
+    {
+      let header = ["no","description","count","weight","price","origin"]
+      renderCSV(header,array,"carnetATA.csv")
+    }
+
+    /**
+    */
+    function renderCarnetATAexcel(array)
+    {
+      let header = ["count","description","no","origin","price","weight"]
+      console.log(objToArray(array));
+      array = objToArray(array);
+      array.unshift(header)
+      renderAndDownloadExcel(array,[5,30,3,8,8,8])
+    }
+
+
+    /**
+    only flat objects. so need to dotize first.
+    */
+    function objToArray(input,fillEmptyFields=false,dotizeObjects=false){
+
+      let output;
+
+      if (fillEmptyFields){
+        // first: get all keys used in this array of objects
+        let keys = []
+        input.forEach(function(obj) {
+          // add keys to collection of keys
+          Object.keys(obj).forEach((key)=>{
+            addToArrayIfNotExist(keys,key)
+          });
+          //console.log(keys);
+          // second: assign every key as header line of an array of arrays:
+          output = [keys]
+          console.log(output);
+        })
+        /* third: iterate throug input array of objects and fill the columns
+        of the output array of array accordingly:*/
+        let rows = input.map(function(obj){
+            //console.log(obj);
+            out = output[0].map((key)=>{
+              //console.log(key);
+              return obj[key]
+            })
+            console.log(out);
+            return out
+          })
+        console.log(rows);
+        output = output.concat(rows)
+        return output;
+
+      }
+      else {
+
+        output = input.map(function(obj) {
+
+          if(dotizeObjects)
+          {
+            obj = dotize.convert(obj)
+          }
+
+          return Object.keys(obj).sort().map(function(key) {
+            return obj[key];
+          });
+        });
+
+        return output
+      }
+
+    }
+
+
+    /**
+    */
+    function renderCSV(header,array,filename="download.csv",inputIsArrayOfArrays=false)
+    {
+      let output = "";
+      output += header + "\n";
+      if (!inputIsArrayOfArrays)
+      {
+        for (i in array){
+          for (j in header)
+          {
+            output += array[i][header[j]]+","
+          }
+          output = output.slice(0,-1)
+          output += "\n"
+        }
+      }
+      else {
+        for (i in array){
+          for (j in array[i])
+          {
+            output += array[i][j]+","
+          }
+          output = output.slice(0,-1)
+          output += "\n"
+        }
+      }
+
+      console.log(output);
+      var a         = document.createElement('a');
+      a.download    = filename;
+      a.href        = 'data:attachment/csv,' +  encodeURIComponent(output);
+      a.target      = '_blank';
+
+      document.body.appendChild(a);
+      a.click();
+    }
+
+    /**
+    */
+    function addOwners2DocIfNoOwners(doc)
+    {
+      if (!doc.owners)
+      {
+          doc.owners = [glb_username]
+      }
+      return doc
+    }
+
+
+
+    /**
+    saves changes in table row by row to the database. <br>
+    uses from handsontable change event to find rows that have been updated, checks
+    if _id provided. Adds as new item if not, updates if provided.
+
+    @param {object} change - change object from handsontable
+    */
+    function saveChangesToServer(change)
+    {
+      return new Promise(function(resolve, reject) {
+
+
+        console.log(change);
+        console.log("saving to server from changes");
+        let updatedRowNums = [];
+        for (i in change)
+        {
+          //console.log(change[i]);
+          addToArrayIfNotExist(updatedRowNums,change[i][0])
+        }
+        console.log("updateing rows: "+updatedRowNums);
+        // now update all the items on their own:
+        let updPromises = [];
+
+        for (num of updatedRowNums){
+          console.log(`updating row #${num}`);
+          let item2Upd = JSON.parse(JSON.stringify(dataObject[num]));
+          if (!item2Upd._id || item2Upd._id === undefined || item2Upd._id === ""){
+            console.log("adding new ITEM");
+            item2Upd = addOwners2DocIfNoOwners(item2Upd);
+
+            addNewItemFromTable(item2Upd,num,function(r){resolve(r)})
+          }
+          else{
+            item2Upd = convertItemToItemWithArrays(item2Upd);
+            console.log(item2Upd);
+            updateOverwrite(item2Upd,function(res){
+              console.log(res);
+              if (res.ok)
+              {
+                dataObject[num]._rev = res.rev
+                resolve(res.rev)
+              }
+              else {
+                if(res.status.toString().startsWith("409")) { console.log("conflict"); }
+                else if(res.status.toString().startsWith("500")) { console.log("server error"); }
+                else if(res.status.toString().startsWith("4")) { console.log("other error"); }
+                alert("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.");
+                console.log(res);
+                reject("item with _id: "+item2Upd._id+"\n("+item2Upd.name+")\ncould not be updated.")
+              }
+            });
+          }
+
+        }
+
+
+
+      })
+
+    }
+
+    /**
+    helper function for tableview. Splits some fields of an object and turns
+    lists of strings with commas into arrays of strings by splitting the strings
+    at the commas
+    */
+    function convertItemToItemWithArrays(item2Upd)
+    {
+      if (item2Upd.owners && !Array.isArray(item2Upd.owners)){ item2Upd.owners = item2Upd.owners.replace(' ', '').split(",") }
+      if (item2Upd.other && item2Upd.other.tags && !Array.isArray(item2Upd.other.tags)){item2Upd.other.tags = item2Upd.other.tags.split(",");}
+      //if (!Array.isArray(item2Upd.visibility)){ item2Upd.visibility = item2Upd.visibility.replace(' ', '').split(",") }
+      return item2Upd
+    }
+
+    /**
+    */
+    function addNewItemFromTable(item2Upd,rowNum,cb=console.log)
+    {
+      if (!(item2Upd.name && item2Upd.owners && item2Upd.location &&
+          (item2Upd.location.address || item2Upd.location.latitude ||
+          item2Upd.location.description)))
+      {
+        console.log("not adding cause sth missing");
+        return
+      }
+      console.log("adding it");
+      if (item2Upd.other){
+        item2Upd.other.visibility = ["friends"];
+      }
+      else {
+        item2Upd.other = { visibility : ["friends"] }
+      }
+
+      //return
+      addit(item2Upd,function(res){
+        console.log(res);
+        if (res.ok)
+        {
+          getSingleItem(res.id,function(res2){
+            dataObject[rowNum] = res2;
+            hot.render();
+            cb("done")
+          }), function(err){
+            throw err
+          }
+        }
+        else {
+          throw res
+        }
+      })
+
+    }
+
+    /**
+    */
+    function filltable(data,clearTable=true){
+      if(clearTable)
+      {
+        dataObject = data;
+      }
+      else {
+        dataObject = dataObject.concat(data)
+      }
+      hot.loadData(dataObject); // fill it into table
+    }
+
+    /**
+    */
+    function addToArrayIfNotExist(array,item){
+      array.indexOf(item) === -1 ? array.push(item) : null/*console.log("item already exists")*/;
+      return array;
+    }
+
+    /**
+    */
+    function moveInsideArray( array, originalIndex, newIndex ) {
+      if ( newIndex >= array.length ) {
+          var i = newIndex - array.length + 1;
+          while (i--) {
+              array.push( undefined );
+          }
+      }
+      array.splice( newIndex, 0, array.splice( originalIndex, 1 )[0] );
+    };
+
+/* // exists inside addNew.mustache
+    function addit(obj,callback=console.log)
+    {
+      let data = {
+                "data":[{
+                  "type":"addItems",
+                  "doc":obj,
+                }]
+              };
+
+      console.log("attempting to add item to dingsda");
+      postAPI({
+          path:glb_username,
+          data:data,
+           callback: function(result){
+            callback(result)
+          }
+
+      });
+
+    }
+*/
+
+    /**
+    */
+    function updateOverwrite(obj,callback=console.log,error=console.log)
+    {
+      if (!obj._id){return error("no _id provided")}
+      console.log("trying to fetch originalObject from DB");
+      console.log(obj);
+
+      let path = API_BASE_URL+glb_username+"/"+obj._id;
+      if (obj.hyperlink !== undefined && obj.hyperlink != "")
+      { path = obj.hyperlink }
+
+      getSingleItem(path, function(res){
+          console.log("old and new obj:");
+          console.log(res);
+          //console.log("merging oldObj and formContents");
+          let newObj = Object.assign({}, res, obj);
+          /*
+          in order to overwrite _rev in case in the time in between sb updated
+          that item (not optimal but okay).
+          */
+          newObj._rev = res._rev;
+          console.log(newObj);
+          //console.log("attempting update of object");
+
+          let newdata = {
+              "data":[{
+                "type":"update",
+                "doc":newObj,
+                //pic:document.getElementById("preview_photo").src
+                //"doc":{_id:"33","other.visibility":["friends"]}
+              }]
+            }
+            let reloadAfterUpdate = false;
+            // photo upload:
+            /*if (document.getElementById("addPhoto").src.startsWith("data:image/jpeg;base64") )
+            {
+              console.log("PIC added to newdata!!!");
+              newdata.data[0].pic = document.getElementById("addPhoto").src;
+
+            }*/
+            //console.log(newdata);
+            // write into DB
+            $.ajax({
+              type: "POST",
+              url: path,
+              data: JSON.stringify(newdata),
+              success: function(res){
+                callback(res)
+              },
+              xhrFields: { withCredentials: true }, // to make AuthCookie ok
+              error: error,
+              contentType:"application/json"
+            });
+        },
+        function(err){callback(err)}
+      )
+
+    }
+/* exists already inside addNew.mustache
+    function postAPI({path="", data =null, callback=console.log,
+                      error=function(err)
+                      {;
+                      console.log(err.responseText);
+                      callback(err)
+                    }})
+    {
+
+      $.ajax({
+        type: "POST",
+        url: API_BASE_URL+path,
+        data: JSON.stringify(data),
+        success: callback,
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        error: error
+        ,contentType:"application/json"
+      });
+
+    }
+*/
+/* //exists already inside itemDetails.mustache
+    function getSingleItem(id,callback,error=console.log)
+    {
+        // transform id into hyperlink in case no hyperlink was passed:
+        if (!id.startsWith("https")){
+          id = API_BASE_URL+glb_username+"/"+id;
+        }
+        console.log("fetching single Item: "+id);
+        // get item json from DB
+        $.ajax({
+          type: "GET",
+          url: id,
+          success: callback,
+          xhrFields: { withCredentials: true }, // to make AuthCookie ok
+          error: error,
+          contentType:"application/json"
+        });
+
+    }
+*/
+/** // exists inside collection.mustache
+    function removeit(id, callbackdel=console.log)
+    {
+      console.log("removeit function triggered!!!");
+      if (id == "" || id == undefined)
+      {
+        return
+      }
+
+      console.log("trying to fetch originalObject from DB");
+
+      getAPI({
+        path:glb_username+"/"+id,
+        data:{
+          "data":[{
+            "type":"fetch"
+          }]
+        },
+        callback: function(res){
+
+          console.log(res);
+          console.log("attempting DELETE of object");
+
+          let deletedata = {
+              "data":[{
+                "type":"deleteItems",
+                "doc":res,
+              }]
+            }
+
+          postAPI({
+              path:glb_username+"/"+id,
+              data:deletedata,
+                callback: function(result){
+                callbackdel(result)
+                console.log("DELETED "+id+" successfully");
+                console.log(result);
+              },
+              error: function(err){
+                console.log("error in deleteit delete");
+                callbackdel(err)
+              }
+
+          });
+        },
+        error: function(err){
+          console.log("error in deleteit prefetch");
+          callbackdel(err)
+        }
+      })
+
+    }
+*/
+/* exists inside addNew.mustache
+    function getAPI({path="", data=null, callback=console.log, error=function(err)
+                      {console.log(err.responseText)}})
+    {
+
+      $.ajax({
+        type: "GET",
+        url: API_BASE_URL+path,
+        data: data,
+        success: callback,
+        xhrFields: { withCredentials: true }, // to make AuthCookie ok
+        error: error
+        //,dataType: "application/json"
+        ,contentType:"application/json"
+      });
+
+    }
+*/
+
+    /**
+    */
+    function renderAndDownloadExcel( ws_data = [['empty','data']],
+          columnwidths = [10,10,10,10,10,10,10,10,10,10,10,10,10,10,10]
+         )
+    {
+      let wb = XLSX.utils.book_new();
+      wb.SheetNames.push("1");
+      let ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+      // sets the width of the cols
+      let wscols = [];
+      for (i in columnwidths)
+      {
+        wscols.push({wch:columnwidths[i]})
+      }
+      ws['!cols'] = wscols;
+
+      wb.Sheets["1"] = ws;
+      let out = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
+
+      saveAs(new Blob([makeSpreadSheetBuffer(out)],{type:"application/octet-stream"}), 'test.xlsx');
+    }
+
+    /**
+    */
+    function makeSpreadSheetBuffer(inp)
+    {
+        let buffer = new ArrayBuffer(inp.length);
+        let UintArray = new Uint8Array(buffer);
+        for (var i = 0; i < inp.length; i++) UintArray[i] = inp.charCodeAt(i) & 0xFF;
+        return buffer;
+    }
+
+    /**
+    helper function. checking if running on desktop browser or mobile device
+    */
+    function isOnMobile() {
+
+      let isMobile = false;
+      (function(a){if(/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a)||/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i
+      .test(a.substr(0,4))) check = true;})(navigator.userAgent||navigator.vendor||window.opera);
+      return isMobile;
+    }
+
+
+</script>
+
+<!--<script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>-->
+
 <div data-role="page" id="barcode" data-dialog="true">
 
   <style>
@@ -4616,13 +5943,13 @@ and combines them to mango queries for further processing
       alt="config icon"></img>
     <span class="badge"></span></a></li>
     <li><a onclick=showNotifications()><img class="notifications_icon"
-      src="icons/friends.png" width=30px alt="notifications icon">
+      src="icons/bell.png" width=30px alt="notifications icon">
       <span class="notifications_badge badge">0</span></a></li>
     <li><a href="#landing"><img id="location_icon" src="icons/dingsda.png"
       width=30px alt="start side icon">
     <span class="badge"></span></a></li>
     <li><a href="#collection" class="btn_collection" onclick="btn_collection_clicked();">
-      <img class="collection_icon" src="icons/box.png" width=30px alt="my collection icon">
+      <img class="collection_icon" src="icons/box2.png" width=30px alt="my collection icon">
 
       <span class="badge borrowedthings">0</span>
       <span class="badge collection_badge">0</span>
@@ -4635,6 +5962,7 @@ and combines them to mango queries for further processing
   <!-- END HEADER -->
   <!-- CONTENT -->
 
+  <script type="text/javascript" src="assets/webrtc-adapter-latest.js"></script>
 
   <div role="main" class="ui-content" data-dialog="true">
 
@@ -4685,14 +6013,42 @@ and combines them to mango queries for further processing
 
 <script>
 
+/*
+the barcode page for the dingsda UI utilizes two different barcode reader libraries:
+
+- QuaggaJS (https://serratus.github.io/quaggaJS/) and
+- ZXing-js (https://github.com/zxing-js/library)
+
+Quagga is used for all cases in which Zxing-js does not work. At the time of this writing this is
+a) the Safari Browser on Desktop b) all iOS devices.
+
+this should change soon for it uses webrtc technology which is only slowly adapted by apple.
+
+- the third option is to use this within a phonegap packeaged "native" application:
+
+if this is the case phonegaps plugin phonegap_barcode_plugin () should be used.
+this works on iOS and Android with the exactly same API and would be long term our recommended
+approach outside of the browser.
+
+*/
+
+/**
+config for all things considered barcode:
+*/
 let barcode =
 {
-  api: "zxingjs",
-  targetinput : null
+  api: "zxingjs", // either quagga, zxingjs or phonegap
+  targetinput : null // the target input div to be filled after successful read
 }
 
 /* EAN DB response handler:
   ATM PROOF OF CONCEPT!!!
+  this uses the external file assets/barcodeCheck.js which talks to third party
+  APIs to check the barcode scanned. a Event containing extra product infos is
+  dispatched after the third party API responded. this is only a proof of concept
+  and will be rebuild and externalized into a proper js module later.
+  it also only is relevant for phonegap packed version of this app.
+
   TODO:
   - rename Event
   - swal asking if user wants to search for items EAN (first time)
@@ -4704,6 +6060,10 @@ let barcode =
 */
 document.addEventListener("newMessage", newMessageHandler, false);
 
+/**
+ END EAN DB response handler (proof of concept receiving messages from 3rd party
+ APIs via assets/barcodeCheck.js)
+*/
 function newMessageHandler(e)
 {
 
@@ -4721,14 +6081,25 @@ function newMessageHandler(e)
 
 }
 
-/// END EAN DB response handler
 
 
-// if iOS change api to quagga:
-if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i))
+////////////////////////////////////
+/////// ACTUAL BARCODE CODE ////////
+////////////////////////////////////
+
+let isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+// if iOS or safari change api to quagga:
+if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i) || isSafari)
 {
   barcode.api = "quagga";
-  $(".barcodebtn").hide() // hide all buttons till we fixed the issue with ios and quagga
+
+  if (window.navigator.standalone == true){
+    //alert("no barcode reader, sorry")
+    console.log("barcode scanner cannot be accessed because ios in standalone. consider phonegap or browser version");
+    $(".barcodebtn").hide() // hide all buttons till apple lets us use webrtc in standalone
+  }
+
 }
 // if browser is firefox, use quagga:
 if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
@@ -4736,7 +6107,7 @@ if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
 }
 // if running in phonegap and not as a homepage/in a browser, choose phonegap api:
 if ( document.URL.indexOf( 'http://' ) === -1 && document.URL.indexOf( 'https://' ) === -1 ) {
-    // running as PhoneGap application, so we want to use phonegap barcode api:
+  // running as PhoneGap application, so we want to use phonegap barcode api:
   barcode.api = "phonegap_barcode_plugin"
 }
 
@@ -4773,9 +6144,20 @@ $("#scan_cancel").click(function(){
 })
 
 
+/**
+cancels scan and changes back to last page visited
+*/
 function cancelscan(){
-  codeReader.reset();
-  codeReaderBC.reset();
+  if (codeReader)
+  {
+    codeReader.reset();
+  }
+  if (codeReaderBC){
+      codeReaderBC.reset();
+  }
+  if (barcode && barcode.api === "quagga"){
+    Quagga.stop();
+  }
   history.back()
 }
 
@@ -4788,14 +6170,21 @@ function scan(target=null) {
   barcode.targetinput = target; // this will be checked on "barcodeScanned" event
 
 
-  switch(barcode.api) {
+  switch(barcode.api) { //// CONTINUE HERE!!!!
     case "quagga":
       $.mobile.changePage("#barcode", {
          reloadPage: false
       });
       $("#bc_zxing").hide();
       $("#bc_quagga").show();
-      startQuaggaScan();
+      startQuaggaScan(
+
+        {
+          aspectRatio: {min: 1, max: 100},
+          facingMode: "environment"
+        }
+
+      );
       break;
     case "zxingjs":
       $.mobile.changePage("#barcode", {
@@ -4803,8 +6192,8 @@ function scan(target=null) {
       });
       $("#bc_zxing").show();
       $("#bc_quagga").hide();
-      startZxingJsScan()
-      startQuaggaScan();
+      startZxingJsScan();
+      //startQuaggaScan(); // quagga seems better at barcodes so it runs here in the background
       break;
     case "phonegap_barcode_plugin":
         $("#bc_zxing").hide();
@@ -4817,7 +6206,10 @@ function scan(target=null) {
   }
 }
 
-
+/**
+dispatches Event "barcodeScanned" after successful scan. This is used to unify the different
+barcode reader APIs provided by different libraries etc.
+*/
 function dispatchBarcodeEvent(barcode){
   let bc_event = new CustomEvent(
     "barcodeScanned",
@@ -4875,11 +6267,6 @@ function startPhoneGapScan(){
 
 
 </script>
-
-
-
-
-<script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
 
 <script>
 
@@ -4985,7 +6372,14 @@ function startZxingJsScan(){
 // to do: check config or mobile type if rather starting of barcode scanner
 //        app might be appropriate via appname:// thing like with zxing://
 
-function startQuaggaScan()
+function startQuaggaScan(constraints=
+    {
+      width: {min: 360, max: 1080 /*w*/},
+      height: {min: 240, max: window.innerHeight},
+      aspectRatio: {min: 1, max: 100},
+      facingMode: "environment"
+    }
+  )
 {
   let w = window.innerWidth;
   let h = window.innerHeight;
@@ -4995,12 +6389,7 @@ function startQuaggaScan()
         name : "Live",
         type : "LiveStream",
         target: document.querySelector('#barcodeviewport'),
-        constraints: {
-          width: {min: 360, max: 1080 /*w*/},
-					height: {min: 240, max: h},
-					aspectRatio: {min: 1, max: 100},
-          facingMode: "environment"
-        },
+        constraints: constraints,
         //singleChannel: true
       },
       locator: {
@@ -5105,6 +6494,17 @@ function stopBarcode()
     login();
   }
 
+  let base = {
+    hashhistory:[]
+  }
+
+  /*
+  track all hash changes (page changes)
+  */
+  window.addEventListener("hashchange", function(){
+    base.hashhistory.unshift(window.location.hash);
+  }, false);
+
   $("#fliplocation").parent().click(function(e){
     if ($("#fliplocation").prop("checked"))
     {
@@ -5148,6 +6548,10 @@ function login (){
           /*searchDB(collection.searchDB,collection.searchquery,function(inp){
               collection.searchhistory.unshift(inp.docs);
           });*/
+
+
+          //searchAndShow(0,0,0,console.log,glb_username);
+/* // commented out after new search with pagination
           searchAndDoStepsInBetweenPages(collection.searchDB,collection.searchquery,
             (r)=>{ // callback each loop
                 //drawItemCards(r.docs)
@@ -5157,7 +6561,7 @@ function login (){
               //callback(r.docs);
             }
           )
-
+*/
           $.mobile.pageContainer.pagecontainer("change", "#landing",
                      {allowSamePageTransition:true});
 
@@ -5186,7 +6590,7 @@ function login (){
     let {value: formValues} = swal({
     title: 'login',
     html:
-      'log into your dingsder account<br>'+
+      'log into your dingsda account<br>'+
       '<input id="swal-input1" class="swal2-input" placeholder="username">' +
       '<input id="swal-input2" class="swal2-input" placeholder="password" type="password">'+
       param.extra +
@@ -5255,6 +6659,24 @@ function login (){
   }
 
 
+  function showToast(msg="",time){
+    swal({html:""+msg,
+    toast:true, timer:time,showConfirmButton:false, position:"center",
+    customClass:"whiteletters"})
+  }
+
+  function updateNotificationsBatch(){
+    countNotificationsInDB(function(res){
+      $(".notifications_icon").addClass("anim_heartbeat");
+      setTimeout(function(){
+        $(".notifications_badge").html(res);
+        $(".notifications_icon").removeClass("anim_heartbeat");
+        $(".notifications_badge").addClass("anim_hop");
+        setTimeout(function(){$(".notifications_badge").removeClass("anim_hop")},650);
+      },300);
+    })
+  }
+
   function getPicAttachment(thingid,callback=console.log,err=console.log)
   {
 
@@ -5275,24 +6697,6 @@ function login (){
 
   }
 
-  function showToast(msg="",time){
-    swal({html:""+msg,
-    toast:true, timer:time,showConfirmButton:false, position:"center",
-    customClass:"whiteletters"})
-  }
-
-  function updateNotificationsBatch(){
-    countNotificationsInDB(function(res){
-      $(".notifications_icon").addClass("anim_heartbeat");
-      setTimeout(function(){
-        $(".notifications_badge").html(res);
-        $(".notifications_icon").removeClass("anim_heartbeat");
-        $(".notifications_badge").addClass("anim_hop");
-        setTimeout(function(){$(".notifications_badge").removeClass("anim_hop")},650);
-      },300);
-    })
-  }
-
 
   function countNotificationsInDB(callback=console.log){
 
@@ -5306,36 +6710,6 @@ function login (){
         //console.log(length);
         callback(length);
       })
-  /*
-    $.ajax({
-      type: "GET",
-      url: API_BASE_URL+glb_username+"/_all_docs",
-      success: function(notifications){
-        // get number of total notifications (items 2nd step down the object tree:)
-        let length = notifications.total_rows;
-        //console.log(length);
-        callback(length);
-      },
-      xhrFields: { withCredentials: true }, // to make AuthCookie ok
-      error: console.log
-      ,contentType:"application/json"
-    });
-*/
-    /*
-    getSingleItem("&notifications",function(notifications){
-      // get number of total notifications (items 2nd step down the object tree:)
-      let length = 0;
-      for (let i = 0; i < getObjectLength(notifications.pending); i++)
-      {
-        let obj = notifications.pending[Object.keys(notifications.pending)[i]]
-        length += getObjectLength(obj);
-        //console.log(obj);
-      }
-      //console.log(length);
-      callback(length);
-
-    })
-    */
 
   }
 
@@ -5343,8 +6717,7 @@ function login (){
    return Object.keys(obj).length
   }
 
-
-  </script>
+</script>
 
 
 

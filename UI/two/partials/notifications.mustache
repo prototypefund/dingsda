@@ -7,7 +7,7 @@
 
   <!-- CONTENT -->
   <div role="main" class="ui-content">
-      <p>notifications from {{name}}</p>
+      <p><b>notifications</b></p>
       <ul data-role="listview" data-split-icon="gear" data-split-theme="d"></ul>
   </div>
   <!-- END CONTENT -->
@@ -60,37 +60,6 @@ function removeNotification(notification,e)
       //refreshCollection(console.log,true,true);
     }
   })
-  /*
-  $.ajax({
-    type: "GET",
-    url: API_BASE_URL+glb_username+"/&notifications",
-    xhrFields: { withCredentials: true }, // to make AuthCookie ok
-    error: console.log,
-    contentType:"application/json",
-    success: function(res){
-      delete res.pending.info[notification.ref]
-      let dataOut = {
-        "data":
-              [{
-                "type":"update",
-                "doc":res
-              }]
-      }
-      $.ajax({
-        type: "POST",
-        url: API_BASE_URL+glb_username+"/&notifications",
-        xhrFields: { withCredentials: true }, // to make AuthCookie ok
-        error: console.log,
-        data: JSON.stringify(dataOut),
-        contentType:"application/json",
-        success: function(res){
-          console.log(res);
-          updateNotificationsBatch();
-        }
-      });
-    }
-  });
-  */
 }
 
 function cancelHandover(notification,e)
@@ -146,6 +115,7 @@ function confirmHandover(notification, confirmed, e)
         updateNotificationsBatch();
         updateBorrowItemsBatch();
         refreshCollection(console.log,true,true);
+        getItemsInMyPossession();
         console.log(r)
       },
       xhrFields: { withCredentials: true }, // to make AuthCookie ok
@@ -180,22 +150,22 @@ function confirmHandover(notification, confirmed, e)
 
 function addNotification(noti)
 {
-  listitem = "";
+  let listitem = "";
   switch(noti.type) {
       case "handover_await":
         listitem = makeNotification({
-            text:"<br>awaiting handover confirmation from "+noti.to,
+            text:`<br>awaiting handover confirmation from ${noti.to} about ${noti.ref}`,
             cb_cancel:function(e){cancelHandover(noti,e);},
           })
         break;
       case "handover_confirm":
-        listitem = makeNotification({
-            text:"<br>did you receive "+noti.ref+" from "+noti.from+"?",
-            wording_cancel:"no",
-            wording_confirm:"yes, i did!",
-            cb_confirm:function(e){confirmHandover(noti,true,e);},
-            cb_cancel:function(e){confirmHandover(noti,false,e);}
-          })
+          listitem = makeNotification({
+              text:`<br>did you receive ${noti.refname} (${noti.ref}) from ${noti.from}?`,
+              wording_cancel:"no",
+              wording_confirm:"yes, i did!",
+              cb_confirm:function(e){confirmHandover(noti,true,e);},
+              cb_cancel:function(e){confirmHandover(noti,false,e);}
+            })
         break;
       case "info":
       listitem = makeNotification({
@@ -288,27 +258,6 @@ function getNotificationsFlat(callback=console.log)
     error: console.log,
     contentType:"application/json"
   });
-  /*
-  getSingleItem("&notifications",function(notifications){
-    // get number of total notifications (items 2nd step down the object tree:)
-    let items = [];
-    for (let i = 0; i < getObjectLength(notifications.pending); i++)
-    {
-      let obj = notifications.pending[Object.keys(notifications.pending)[i]]
-
-      for (item in obj){
-        let row = obj[item]
-        row.ref = item
-        row.type = Object.keys(notifications.pending)[i];
-        items.push(row);
-        //console.log(item + JSON.stringify(obj[item]));
-      }
-
-    }
-    callback(items);
-
-  })
-  */
 }
 
 </script>

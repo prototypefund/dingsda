@@ -128,9 +128,9 @@
       font-style: oblique;
       z-index: 99;
       position: absolute;
-      color: lightblue;
+      color: blue;
       content: "  borrowed  ";
-      background: rgba(255,255,255,0.5);
+      background: rgba(255,255,255,0.7);
       left: 20px;
       bottom:10px;
       padding: 3px;
@@ -228,6 +228,24 @@
       position: fixed;
     }
 
+    .typing {
+      white-space: nowrap;
+      overflow: hidden;
+      animation: typing 2.5s steps(30, end) infinite, blink-caret .75s step-end infinite;
+    }
+
+    /* typing effect */
+    @keyframes typing {
+      from { width: 0 }
+      to { width: 100% }
+    }
+
+    /* typewriter cursor */
+    @keyframes blink-caret {
+      from, to { border-color: transparent }
+      50% { border-color: orange; }
+    }
+
   </style>
 
   <!-- HEADER TEMPLATE-->
@@ -247,7 +265,7 @@
 
     <ul id="itemList" data-role="listview" data-filter="true" data-input="#filterinput">
 
-      <div id="no_items_left" style="color:pink">no more items...</li>
+      <div id="no_items_left" style="color:pink">loading ...</li>
 
     </ul>
 
@@ -747,8 +765,6 @@ function searchAndDoStepsInBetweenPages(
 
 /**
 sends HTTP request to dingsda API's find endpoint and passes response into callback
-
-@TODO: build in pagination if API returns bookmark
 */
 function searchDB(db,searchTerm={_id:""},callback=console.log,err=console.log,bookmark=null){
     console.log(`sending find Request to ${db}`);
