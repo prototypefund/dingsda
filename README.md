@@ -28,6 +28,7 @@ the list of API endpoints and functions is found below at: [HTTP API REFERENCE](
 - not proper RESTful API because commands part of JSON payload instead of url endpoint. will be changed till v1.0.0, but atm not hightest priority (sorry, noob mistake)
 
 **dependencies:**
+
 - [nano (^7.1.0)](https://github.com/apache/couchdb-nano)
 - [https (^1.0.0)](https://www.npmjs.com/package/https)
 - [express (^4.16.4)](https://github.com/expressjs/express)
