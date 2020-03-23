@@ -62,7 +62,7 @@ $("#btn_handover_items").click(function(){
       handoverItem(value,function(res){
         if (!res.ok){
           console.log("item could not be announced for handover. probably already in process or race condition");
-          swal({html:"something went wrong.<br> did you spell the username correct?"});
+          swal({html:"Something went wrong.<br> Did you spell the username correctly?"});
         }
         else {
           updateNotificationsBatch();

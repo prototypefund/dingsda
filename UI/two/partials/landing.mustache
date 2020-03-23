@@ -8,6 +8,12 @@
     background-color: #abcecc !important;
   }
 
+  .btn_3rd .offlinemsg{
+    position: relative;
+    opacity: 0.7;
+    justify-content: center;
+  }
+
   .landing-content #btn_searchpage{
     background-color: #fff2cd !important;
   }
@@ -15,6 +21,16 @@
   .landing-content a[href="#addNew"]{
     background-color: #ff004c !important;
     color: #fff2cd !important;
+  }
+
+  .btn_thin{
+    height: 1.6vh;
+    background-color: rgba(255,255,255,0.9) !important;
+    width: 100%;
+    left: -1vw;
+    top: 5.5vh;
+    z-index: 99;
+    position: fixed;
   }
 
 </style>
@@ -27,22 +43,30 @@
   <!-- END HEADER -->
 
   <!-- CONTENT -->
-  <div role="main" class="ui-content landing-content">
+  <div role="main" class="ui-content landing-content offline">
 
-      <a class="ui-btn btn_3rd" href="#addNew" onclick="clearForm();">
+      <a class="ui-btn btn_thin offlinemsg" id="btn_login" onclick="btn_login_clicked();" hidden>
+        <span>YOU ARE OFFLINE. <u>LOGIN</u></span>
+      </a>
+
+      <a class="ui-btn btn_3rd" href="#addNew" onclick="btn_addpage_clicked();clearForm();">
         <span>ADD NEW ITEMS</span>
+        <p class="offlinemsg">(requires login)</p>
       </a>
 
       <a class="ui-btn btn_3rd" id="btn_searchpage" href="#search" onclick="btn_searchpage_clicked()">
-        <span>THINGS<br>OTHER PEOPLE<br>SHARE</span>
+        <span>FIND<br>&<br>BORROW</span>
+        <p class="offlinemsg"></p>
       </a>
 
       <a class="ui-btn btn_3rd" id="btn_collection" class="btn_collection" href="#collection" onclick="btn_collection_clicked()">
         <span>MY COLLECTION</span>
+        <p class="offlinemsg">(requires login)</p>
       </a>
 
       <a class="ui-btn btn_3rd" id="btn_table" class="btn_table" href="#table">
         <span>TABLEVIEW (ALPHA VERSION)</span>
+        <p class="offlinemsg">(requires login)</p>
       </a>
 
   </div>
@@ -63,7 +87,23 @@ $( document ).on( "pageshow", "#landing", function(e,ui) {
 
 })
 
+function btn_login_clicked(){
+  login(true);
+}
+
 function btn_collection_clicked(reload=false){
+
+  if (glb_username === undefined)
+  {
+    if (!isPhonegap)
+    {
+      return login(true);
+    }
+    else
+    {
+      return login(true);
+    }
+  }
 
   let lastSearchWasForUserDB = (collection.searchDB === glb_username && !collection.reloadOnNextClick);
 
@@ -176,7 +216,7 @@ function getItemsInMyPossession(forceRender=false){
             addItemCardClickListener();
             if (!itemAlreadyInSearchhistory)
             {
-              collection.searchhistory[0].push(object);
+              collection.searchhistory[0].unshift(object);
             }
             $("#itemList").listview('refresh');
             lazyload(); // init lazy load of images (see head.mustache)
@@ -224,7 +264,19 @@ function getItemsInMyPossession(forceRender=false){
 
 function btn_searchpage_clicked()
 {
-
+  /*
+  if (glb_username === undefined)
+  {
+    if (!isPhonegap)
+    {
+      login(true);
+    }
+    else
+    {
+      login(true);
+    }
+  }
+  */
 
 /*
 if(collection)
@@ -248,5 +300,20 @@ if(collection)
   }
 */
 }
+
+function btn_addpage_clicked(){
+  if (glb_username === undefined)
+  {
+    if (!isPhonegap)
+    {
+       login(true);
+    }
+    else
+    {
+      login(true);
+    }
+  }
+}
+
 
 </script>

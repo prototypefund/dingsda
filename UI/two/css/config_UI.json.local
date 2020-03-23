@@ -1,8 +1,8 @@
 {
   "name":"UI 2 dingsda ",
 
-  "googlemapsAPIkey":"xxxxxxxxxxxxx",
-  "publicVapidKey":"xxxxxxxxxxxxxxxx",
+  "googlemapsAPIkey":"AIzaSyAh_E5RUWU_48EPbSCkfIzwydNk1UEwZsQ",
+  "publicVapidKey":"BG2mYab2K0_YOXhKMOI_0XGeGBwfwqtotTR4l5-SjfvVwTGZqy5cUfphDYJ9FITMNp4AQkMBzHib6EC-h-hWMJ0",
 
   "API_BASE_URL":"http://localhost:3000/api/v1/",
   "UI_URL":"http://localhost:8080",

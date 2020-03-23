@@ -8,11 +8,19 @@
       border: 1px dotted lightgrey;
     }
 
+    .barcodebtn:active  {
+      border: 1px dotted grey;
+    }
+
     .back_btn {
       position: fixed;
       z-index: 99;
       right: 10px;
       margin-top: 5vh;
+    }
+
+    .back_btn:active {
+      opacity:0.7;
     }
 
     #addName{
@@ -101,6 +109,10 @@
       pointer-events: none;
     }
 
+    #addPhoto:active{
+      opacity:0.6
+    }
+
     .fileContainer {
         overflow: hidden;
         min-height: 30vh;
@@ -114,9 +126,9 @@
         display: block;
         font-size: 999px;
         filter: alpha(opacity=0);
+        opacity: 0;
         min-height: 23vh;
         min-width: 100%;
-        opacity: 0;
         position: absolute;
         right: 0;
         text-align: right;
@@ -168,8 +180,13 @@
 
       <div class="ui-block-a" style="width:100%;height:33vh;background-color:black;
         display: flex;flex-direction: row;justify-content: center;">
-        <label class="fileContainer ui-btn">
-          <input type="file" accept="image/*" id="photo_upload" multiple data-role="none"/>
+        <!-- for phonegap android APIs there must be two distinct inputs: one that is only a button (see js below) for camera plugin
+              and another one for fileupload -->
+        <label class="fileContainer ui-btn" style="color:white;">TAKE PHOTO
+          <input type="file" accept="image/*" capture="camera" id="photo_upload" multiple data-role="none"/>
+        </label>
+        <label class="fileContainer ui-btn">UPLOAD PICTURE
+          <input type="file" accept="image/*" id="pic_upload" multiple data-role="none"/>
         </label>
         <img id="addPhoto" src="" alt="big picture of item"></img>
       </div>
@@ -182,7 +199,7 @@
         <div class="ui-bar"
           style="font-style:italic; display:flex; flex-direction:row; padding: 0px;margin:0">
             <span style="padding-left: 0.8em;">by</span> <div id="addOwners"
-              placeholder="owners" contenteditable="true"></input>
+              placeholder="owners" contenteditable="false"></input>
         </div>
       </div>
 
@@ -239,7 +256,7 @@
                   <select name="visibility" class="mediumfont" id="other.visibility">
                     <option value="private">visible only to owners</option>
                     <option value="friends">visible to friends <span class="smallfont">(atm: like private)</span></option>
-                    <option value="friends2nd" disabled>visible to friends of friends</option>
+                    <option value="friends2nd" hidden>visible to friends of friends</option>
                     <option value="public" selected>visible to friends in spe (public)</option>
                   </select>
 
@@ -259,6 +276,10 @@
         </div>
 
       <div class="ui-block-a" style="width:100vw">
+      <div class="offlinemsg" style="opacity:0.6;z-index: 99;position: absolute;display:flex; justify-content:center;
+        width: 100%;height:13vh;background-color: lightgrey;"
+        onclick="btn_login_clicked();">
+         (login required)</div>
         <div id="btn_add_next" class="btn_request ui-btn" style="height:8vh">ADD / NEXT</div>
       </div>
 
@@ -295,6 +316,38 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
     console.log("just loaded itemDetails");
     console.log(ui.prevPage);
 
+    /*
+    if running inside phonegap framework: replace the input event handler and instead attach camera plugin:
+    */
+    if ( document.URL.indexOf( 'http://' ) === -1 && document.URL.indexOf( 'https://' ) === -1 ) {
+     document.getElementById("photo_upload").addEventListener("click", function(event){
+        event.preventDefault();
+
+
+        navigator.camera.getPicture(onSuccess, onFail, { quality: 10, // this quality is a bit... used to be 50
+            destinationType: Camera.DestinationType.DATA_URL
+        });
+
+        function onSuccess(imageData) {
+            let image = document.getElementById('addPhoto');
+            image.src = "data:image/jpeg;base64," + imageData;
+            //alert("done")
+            
+            resizeBase64image( image,
+              function(base64img){
+                console.log("resized pic. will add it to src");
+                document.getElementById("addPhoto").src = base64img;
+            });
+            
+        }
+
+        function onFail(message) {
+            console.log('Failed because: ' + message);
+        }
+        //alert("camera!!!!")
+      });
+    }
+
 
     $("#details").appendTo("#addNew_detailsContainer");
     $("#addNew_detailsContainer").trigger("create");
@@ -306,7 +359,7 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
     {
       clearForm();
       $("#addPhoto").attr("src", addNew.urlStandInImg);
-      
+
       console.log("CLEARING FORM OF ADDNEW");
     }
     else {
@@ -341,48 +394,12 @@ $( document ).on( "pageshow", "#addNew", function(e,ui) {
     }
 
     // bind easyAutocomplete to insideOf
-    var options = {
-      //url: "alldocs.json",
-
-      data: collection.searchhistory[0],
-
-      getValue: "name",
-
-      list: {
-        match: {
-          enabled: true
-        },
-        maxNumberOfElements: 8,
-        onSelectItemEvent: function() {
-    			var value = $("#insideOf").getSelectedItemData()._id;
-          console.log("doing "+ value);
-    			$("#insideOf").val(value).trigger("change");
-    		}
-      },
-
-      template: {
-        type: "custom",
-        method: function(value, item) {
-          console.log(value);
-          console.log(item);
-          return "<span class='flag flag-" + item + "' ></span>" + value;
-        }
-      },
-
-      /*theme: "round",*/
-
-      ajaxSettings: {
-        xhrFields: { withCredentials: true }, // to make AuthCookie ok
-      }
-
-    };
-    $("#insideOf").easyAutocomplete(options);
+    bindEasyAutocomplete(); // FIXME: atm useless at this point.
 
 
 })
 
 $(document).ready(function(){
-
 
 
   // init gmaps
@@ -392,6 +409,11 @@ $(document).ready(function(){
 
   $('#address').change(function(){
     $('.locationdescription').html($('#address').val())
+  })
+
+  // on change of location description: refreshmap to check if geolocation needs to be filled in
+  $("#description").change(()=>{
+    refreshMap(false)
   })
 
   $(".back_btn").click(function(){
@@ -410,6 +432,45 @@ $(document).ready(function(){
   }
 
 })
+
+function bindEasyAutocomplete(){
+  let options = {
+    //url: "alldocs.json",
+
+    data: collection.allDocs[0],
+
+    getValue: "name",
+
+    list: {
+      match: {
+        enabled: true
+      },
+      maxNumberOfElements: 8,
+      onSelectItemEvent: function() {
+        var value = $("#insideOf").getSelectedItemData()._id;
+        console.log("doing "+ value);
+        $("#insideOf").val(value).trigger("change");
+      }
+    },
+
+    template: {
+      type: "custom",
+      method: function(value, item) {
+        console.log(value);
+        console.log(item);
+        return "<span class='flag flag-" + item + "' ></span>" + value;
+      }
+    },
+
+    /*theme: "round",*/
+
+    ajaxSettings: {
+      xhrFields: { withCredentials: true }, // to make AuthCookie ok
+    }
+
+  };
+  $("#insideOf").easyAutocomplete(options);
+}
 
 function updateInsideOfFlipSwitch(on){
   if (on){
@@ -455,11 +516,43 @@ document.getElementById("photo_upload").addEventListener("change",
     });
 });
 
+document.getElementById("pic_upload").addEventListener("change",
+  function(){
+    console.log("got pic, will resize now:");
+    resizeBase64image(document.getElementById("pic_upload"),
+    function(base64img){
+      console.log("resized pic. will add it to src");
+      document.getElementById("addPhoto").src = base64img;
+    });
+});
 
-  function refreshMap()
+
+  function refreshMap(fetchAddress=true)
   {
     let latitude = $('#latitude').val();
     let longitude = $('#longitude').val();
+    let description = $('#description').val();
+    //console.log("+++++ LOCATION DESCRIPTION IS: ",description,"++++++")
+
+    if(description != "" && (latitude == "" || longitude == "" || (latitude =="0" && longitude == "0")) ) // if no latitude present but description: check google geocoding API for description
+    {
+      $.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURI(description)}&key={{googlemapsAPIkey}}`) 
+      .then((res)=>{
+            console.log(res)
+            if (res && res.status == "OK" && res.results && res.results[0])
+            {
+              console.log(res.results[0].geometry.location);
+              $('#latitude').val(res.results[0].geometry.location.lat);
+              $('#longitude').val(res.results[0].geometry.location.lng);
+              latitude = $('#latitude').val();
+              longitude = $('#longitude').val();
+              setTimeout((refreshMap(false),300))
+               // CONTINUE HERE ! 
+              // TODO: after fetching geolocation here: force user on add to provide lat and long with tipp of using a closeby address for data protection
+            }
+            
+      })
+    }
 
     if(latitude != "" && longitude != "")
     {
@@ -481,10 +574,15 @@ document.getElementById("photo_upload").addEventListener("change",
 
         let out = $("#map").locationpicker("map").location.formattedAddress;
         console.log(out);
-        $("#address").val(out);
+        
+        if (fetchAddress)
+        {
+          $("#address").val(out);
+        }
+        
         if($("#insideOf").val() == "" || $("#insideOf").val() == undefined)
         {
-          if($("#description").val() == "" || $("#description").val() == undefined)
+          if($("#description").val() == "" || $("#description").val() == undefined && fetchAddress)
           {
               $('.locationdescription').html($('#address').val())
           }
@@ -554,7 +652,7 @@ document.getElementById("photo_upload").addEventListener("change",
 
   function resizeBase64image(input, callback = console.log){
 
-    // TO DO: update preview_photo.oldsource after upload!!!
+    // TODO: update preview_photo.oldsource after upload!!!
 
     let canvas = document.createElement("canvas");
     let file = input.files[0];
@@ -641,7 +739,7 @@ function btn_add_update()
           console.log(res);
         }
       })
-
+ 
     }
     else
     {
@@ -650,7 +748,7 @@ function btn_add_update()
           $('#owners').val(glb_username);
           basicout.owners=[ glb_username ];
          }
-
+ 
       if (checkIfBasicDataProvided(basicout))
       {
           console.log("No ID provided.\nErgo: new item will be added")
@@ -660,12 +758,12 @@ function btn_add_update()
           addit(basicout, function(res){
             basicout._id = res.id;
 
-            //fillForm(basicout);
+            // fillForm(basicout);
 
             // if called from addNew: clearForm with the exeption
 
             clearFormsAfterAdd();
-
+ 
             //console.log(res);
             if(res.ok == true)
             {
@@ -675,9 +773,10 @@ function btn_add_update()
                 position:"center",customClass:"whiteletters"
               });
               updateItemBatch();
+              window.scrollTo(0, 0); // scroll up after add
             }
             else {
-              swal({text:"ADD ERROR", toast:true,customClass:"whiteletters"});
+              swal({text:"ADD ERROR",text:res.statusText,toast:true,customClass:"whiteletters"});
               console.log(res);
             }
 
@@ -687,18 +786,31 @@ function btn_add_update()
       else
       {
         let missing = ["name","location"];
+        console.log("++++++++",basicout.location)
         if (basicout.hasOwnProperty("name") &&  basicout.name != "")
         {
           missing.splice(missing.indexOf("name"),1)
         }
-        if (basicout.hasOwnProperty("location"))
+        if (basicout.hasOwnProperty("location") && !(basicout.location.latitude == "0" && basicout.location.longitude == "0") 
+              && basicout.location.latitude != "" && basicout.location.longitude != "" 
+              && !isNaN(basicout.location.latitude) && !isNaN(basicout.location.longitude)
+              && !basicout.location.insideOf
+            )
         {
             missing.splice(missing.indexOf("location"),1)
         }
 
+        let tipps = "";
+        let timer = 2500;
+        if (missing.includes("location"))
+        {
+          timer = false;
+          tipps = "<br>(latitude & longitude)<br><br><i>if you dont want to give your address, <br>choose a public location nearby.</i>"
+        }
+
         swal({
-            html:"please provide at least <br><b>"+missing+"</b>"
-            , toast:true, timer:2000,showConfirmButton:false, position:"center",
+            html:"please provide at least <br><b>"+missing+"</b>"+tipps
+            , toast:false, timer:timer,showConfirmButton:false, position:"center",
             customClass:"whiteletters"
         })
         console.log("The basic data requirements are not met. please provide at"
@@ -786,14 +898,13 @@ function clearFormsAfterAdd()
 
   // clear all inputs that start with other but other.tags to var output.other:
 
-  /*
   $('input[id^="other"]:not(#other\\.tags)').each(
     function(){
       // to do: do this split with dotize instead:
-      $(this).val("");
+      $(this).val(""); 
     }
   )
-  */
+  
 }
 
 
@@ -924,7 +1035,7 @@ function getAPI({path="", data=null, callback=console.log, error=function(err)
 
 function fillForm(object)
 {
-
+  console.log("filling form:");
   console.log(object);
 
   if(object.hyperlink !== undefined && object.hyperlink !== ""){
@@ -944,6 +1055,10 @@ function fillForm(object)
     //$('#other\\.borrowable').val(object.other.borrowable).change();
     //$('#other\\.borrowby').val(object.other.borrowby).change();
 
+    $('#detailDescription').html(object.other.description);
+    if (object.other.description === undefined){
+      $('#detailDescription').html("")
+    }
     $('#addDescription').val(object.other.description);
     $('#other\\.value').val(object.other.value);
     $('#other\\.weight').val(object.other.weight);
@@ -986,6 +1101,7 @@ function fillForm(object)
     $("#other\\.tags").tagsinput("removeAll");
     for (item in object.other.tags)
     {
+
         $('#other\\.tags').tagsinput('add', object.other.tags[item]);
     }
   }
@@ -1032,7 +1148,7 @@ function fillForm(object)
   ///////////////////////////////////////
   if(gmapsExists) // if the gmaps locationpicker module exists:
   {
-    refreshMap();
+    setTimeout(refreshMap,100);
   }
 
 };
@@ -1065,11 +1181,11 @@ function updateit(obj,callback=console.log)
         }
         //let reloadAfterUpdate = false;
         // photo upload:
+        console.log("aha")
         if (document.getElementById("addPhoto").src.startsWith("data:image/jpeg;base64") )
         {
           console.log("PIC added to newdata!!!");
           newdata.data[0].pic = document.getElementById("addPhoto").src;
-
         }
         //console.log(newdata);
         // write into DB

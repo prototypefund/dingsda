@@ -3,6 +3,25 @@
 
     <style>
 
+      .itemDetails_swipebtn {
+        z-index: 999;
+        position: absolute;
+        height: 4em;
+        width: 4vw;
+        background-image: url(./icons/arrowleft.png);
+        background-blend-mode: multiply;
+        background-repeat: no-repeat;
+        background-size: contain;
+        background-color: rgba(255,0,0,0.1);
+        margin-top: 2em;
+        opacity: 0.5;
+      }
+
+      #itemDetails_next{
+        right: 0;
+        background-image: url(./icons/arrowright.png);
+      }
+
       .more_menu{
         position: fixed;
         z-index: 99;
@@ -135,6 +154,25 @@
         color:blue
       }
 
+      .back_arrow_btn {
+        height: 25px;
+        width: 25px;
+        padding: 3px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0.9;
+        z-index: 99;
+        position: absolute;
+        top: 9.5vh;
+        left: 3.5vw;
+        border-radius: 50vh;
+        color: rgba(0,0,0,0.7);
+        font-family: Arial, Helvetica;
+        background-image: url(assets/images/leftarrow.png);
+        background-repeat: no-repeat;
+        background-size: contain;
+      }
 
     </style>
 
@@ -148,6 +186,10 @@
   <div role="main" class="ui-content" style="padding:0;">
 
     <div class="ui-grid-b" style="width:100%;margin-top:-20px;height:100%">
+
+      <div class="back_arrow_btn ui-btn">
+      
+      </div>
 
       <div class="more_menu">
         <div class="more_btn ui-btn">...</div>
@@ -180,7 +222,8 @@
       </div>
 
       <div class="ui-block-a" style="width:100%">
-
+      <div id="itemDetails_prev" class="itemDetails_swipebtn"></div>
+      <div id="itemDetails_next" class="itemDetails_swipebtn"></div>
         <div id=detailDescription class="ui-bar" style="height:18vh;overflow:scroll">
           description.
           <p>blablabla. Das ist so ein schönes Dingsbumms. wow. Ich bin sehr verwirrt.<br>
@@ -202,8 +245,12 @@
       </div>
 
       <div class="ui-block-a" style="width:100vw">
+        <div class="offlinemsg" style="opacity:0.6;z-index: 99;position: absolute;display:flex; justify-content:center;
+        width: 100%;height:11vh;background-color: lightgrey;"
+        onclick="btn_login_clicked();">
+         (login required)</div>
         <div class="borrow_handover_btn btn_request ui-btn" style="height:5vh">
-          BORROW
+          BORROW 
         </div>
       </div>
 
@@ -242,6 +289,10 @@ $( document ).on( "pageshow", "#itemDetails", function(e,ui) {
 
     $(".more_menu_btn_container").hide();
 
+})
+
+$(".back_arrow_btn").click(()=>{
+  window.history.back();
 })
 
 $(".borrow_handover_btn").click(function(){
@@ -355,25 +406,52 @@ $(".deleteSingleItem_btn").click(function(){
   })
 })
 
-$("#itemDetails").on( "swipeleft", function(e) {
-  console.log("SWIPELEFT: next item");
-  console.log(e);
-  shiftItemFocus();
-  showItemDetails();
-/*  $.mobile.pageContainer.pagecontainer("change", "#itemDetails",
-           {allowSamePageTransition:true,transition: "slidefade" }); */
- })
 
- $("#itemDetails").on( "swiperight", function(e) {
-   console.log("SWIPERIGHT: prev item");
-   shiftItemFocus(1);
-   showItemDetails(); // not necessary. just for the looks of loading before pageshow
-   /*$.mobile.pageContainer.pagecontainer("change", "#itemDetails",
-            {allowSamePageTransition:true,transition: "slidefade",reverse: true  });*/
+if (isOnMobile())
+{
+  $("#itemDetails_next").hide();
+  $("#itemDetails_prev").hide();
+
+  $("#itemDetails").on( "swipeleft", function(e) {
+    console.log("SWIPELEFT: next item");
+    console.log(e);
+    shiftItemFocus();
+    showItemDetails();
+  /*  $.mobile.pageContainer.pagecontainer("change", "#itemDetails",
+             {allowSamePageTransition:true,transition: "slidefade" }); */
+   })
+
+   $("#itemDetails").on( "swiperight", function(e) {
+     console.log("SWIPERIGHT: prev item");
+     shiftItemFocus(-1);
+     showItemDetails(); // not necessary. just for the looks of loading before pageshow
+     /*$.mobile.pageContainer.pagecontainer("change", "#itemDetails",
+              {allowSamePageTransition:true,transition: "slidefade",reverse: true  });*/
+    })
+}
+else { // IF IS ON DESKTOP:
+  $("#itemDetails_next").show();
+  $("#itemDetails_prev").show();
+
+  $("#itemDetails_next").on( "click", function(e) {
+    console.log("btn: next item");
+    console.log(e);
+    shiftItemFocus();
+    showItemDetails();
   })
 
+  $("#itemDetails_prev").on( "click", function(e) {
+    console.log("btn: prev item");
+    shiftItemFocus(-1);
+    showItemDetails(); // not necessary. just for the looks of loading before pageshow
+  })
+}
 
-function shiftItemFocus(shift=-1){
+
+
+
+function shiftItemFocus(shift=1){
+  if(!itemDetails.itemInFocus){return }
   //console.log(itemDetails.itemInFocus._id);
   let position = collection.searchhistory[0].findIndex(i => i._id === itemDetails.itemInFocus._id);
   console.log(position);
@@ -382,11 +460,22 @@ function shiftItemFocus(shift=-1){
     position = position +shift;
     itemDetails.itemInFocus = collection.searchhistory[0][position];
   }
+  else if ( $("#scrollend").length > 0 ) // if not yet all items loaded into collection (aka: bookmark present)
+  {
+    console.log("triggering scrollendlistenerSearch")
+    scrollEndListenerSearch(true,()=>{
+      console.log("+++ got next bookmark. shifting again +++")
+      //$.mobile.changePage("#itemDetails", {reloadPage: false});
+      shiftItemFocus(shift);
+      showItemDetails();
+      }); // CONTINUE HERE:  does this work?
+  }
   else if (position+shift < 0){
-    showToast(msg="no more items",1000);
+    //showToast(msg="no more items",1000);
      window.history.back();
   }
   else {
+    showToast(msg="no more items",1000);
      window.history.back();
   }
 }
@@ -418,12 +507,14 @@ function showItemDetails(){
     {
       $(".editSingleItem_btn").hide();
       $(".deleteSingleItem_btn").hide();
-      if (mydoc.inPossessionOf === undefined || mydoc.inPossessionOf.includes(glb_username))
+      if ( mydoc.inPossessionOf !== undefined && mydoc.inPossessionOf.includes(glb_username))
       {
+          console.log("showing move",mydoc);
           $(".moveSingleItem_btn").show();
       }
       else
       {
+          console.log("hiding move",mydoc);
           $(".moveSingleItem_btn").hide();
       }
 
@@ -432,28 +523,41 @@ function showItemDetails(){
       {
         console.log("BORROWED !");
         $("#detailOwners").addClass("detailsBorrowed");
-        $("#detailOwners").attr('data-before',`borrowed from ${mydoc.owners}`); //anything is the 'content' value
+        $("#detailOwners").attr('data-before',`borrowed from ${mydoc.owners}`);
       }
+
+      fillForm(mydoc);
 
     }
     else {
       // full rights. show all buttons
       //$(".borrow_handover_btn").show(); // always the case so not needed here
-      $(".editSingleItem_btn").show(); 
+      $(".editSingleItem_btn").show();
       $(".moveSingleItem_btn").show();
       $(".deleteSingleItem_btn").show();
 
-      // show name of user this item is lend out to
+      // show name of user this item is lent out to
       if (mydoc.inPossessionOf && !mydoc.inPossessionOf.includes(glb_username))
       {
-        console.log("LEND OUT !");
+        console.log("LENT OUT !");
         $("#detailOwners").addClass("detailsLendout");
-        $("#detailOwners").attr('data-before',`lend out to ${mydoc.inPossessionOf}`); //anything is the 'content' value
+        $("#detailOwners").attr('data-before',`lent out to ${mydoc.inPossessionOf}`);
+
       }
 
+    let detailLocaMini = mydoc.location.address ? mydoc.location.address : mydoc.location.description;
+    if (mydoc.location.insideOf)
+    {
+      detailLocaMini = '<a style="font-size:0.8em" href=\'javascript:getSingleItem("'+
+      mydoc.location.insideOf+
+      '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();});\'>'+
+      mydoc.location.insideOf+'</a>'
     }
+    $("#detailLocation").html(detailLocaMini);
+    $("#detailDescription").html(mydoc.other.description ? mydoc.other.description : "");
 
-
+    fillForm(mydoc);
+    }
 
     // change if borrow or handover button depending on itemownership and Possession:
     if(mydoc.owners.includes(glb_username) )
@@ -481,19 +585,6 @@ function showItemDetails(){
     else {
       $(".borrow_handover_btn").html("BORROW")
     }
-
-    let detailLocaMini = mydoc.location.address ? mydoc.location.address : mydoc.location.description;
-    if (mydoc.location.insideOf)
-    {
-      detailLocaMini = '<a style="font-size:0.8em" href=\'javascript:getSingleItem("'+
-      mydoc.location.insideOf+
-      '",function(res){clearForm();itemDetails.itemInFocus=res;showItemDetails();});\'>'+
-      mydoc.location.insideOf+'</a>'
-    }
-    $("#detailLocation").html(detailLocaMini);
-    $("#detailDescription").html(mydoc.other.description ? mydoc.other.description : "");
-
-    fillForm(mydoc);
   }
 }
 
@@ -531,8 +622,9 @@ function updateSingleItemInCollection(id,setIntoFocus=true)
 // in client_base
 function getSingleItem(id,callback,error=console.log)
 {
+    console.log(id)
     // transform id into hyperlink in case no hyperlink was passed:
-    if (!id.startsWith("https")){
+    if (!id.startsWith("https") && !id.startsWith("http")){
       id = API_BASE_URL+glb_username+"/"+id;
     }
     console.log("fetching single Item: "+id);
