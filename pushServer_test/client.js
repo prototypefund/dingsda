@@ -1,13 +1,24 @@
 // Hard-coded, replace with your public key
-const config = require("./../server_config.json")
-const publicVapidKey = config.publicVapidKey;
+//const config = require("./../server_config.json")
+//const publicVapidKey = config.publicVapidKey;
+const publicVapidKey = "BG2mYab2K0_YOXhKMOI_0XGeGBwfwqtotTR4l5-SjfvVwTGZqy5cUfphDYJ9FITMNp4AQkMBzHib6EC-h-hWMJ0"
 
-if ('serviceWorker' in navigator) {
-  console.log('Registering service worker');
+let glb_username = "jan" // just for testing. should later come from dingsda UI/two variable
 
-  run().catch(error => console.error(error));
+
+async function register4Push()
+{
+  glb_username = document.getElementById("name").value 
+  console.log("registering as "+glb_username);
+  
+
+  if ('serviceWorker' in navigator) {
+    console.log('Registering service worker');
+
+    run().catch(error => console.error(error)); // here there is ALWAYS an error the first time it happens. CONTINUE HERE: fix that!
+  }
+
 }
-
 let registration;
 
 async function run() {
@@ -28,8 +39,8 @@ async function run() {
       });
     console.log('Registered push');
 
-    console.log('Sending push');
-    await fetch('/subscribe', {
+    console.log('subscribing for push at push server');
+    await fetch('/subscribe?user='+glb_username, { // HERE THE USERNAME gets handed over
       method: 'POST',
       body: JSON.stringify(subscription),
       headers: {

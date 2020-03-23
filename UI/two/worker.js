@@ -20,7 +20,7 @@ self.addEventListener('push', ev => {
       return self.registration.showNotification(data.title, {
               body: data.body,
               tag: 'new_notifications', // makes all coming push msgs with same tag overwrite this one
-              //icon: 'images/example.png',
+              icon: 'https://dingsda.org/two/icons/dingsda.png',
               vibrate: [100, 50, 100],
               data: {
                 dateOfArrival: Date.now(),
@@ -37,7 +37,7 @@ self.addEventListener('notificationclick', function(event) {
   console.log("notification clicked!!!");
 
   // Do something as the result of the notification click
-  const examplePage = '/';
+  const examplePage = '/two';
   const urlToOpen = new URL(examplePage, self.location.origin).href; // here we define which page will be opened
 
   const promiseChain = clients.matchAll({

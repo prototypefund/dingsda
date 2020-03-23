@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-  <!-- fdff -->
+  <!--  -->
   {{>head}}
 
   <body class="ui-mobile-viewport ui-overlay-a">
 
      <img id="loadingGif" src="assets/images/ajax-loader.gif" alt="ladeanimation"></img>
 
+     
     {{>landing}}
 
     {{>maps}}
@@ -41,6 +42,9 @@
   // BASE JAVASCRIPT HERE
   const API_BASE_URL = "https://dingsda.org:3000/api/v1/";
   const UI_URL = "https://dingsda.org/two/";
+
+  // for webpush notifications with everybody but apple 
+  const publicVapidKey = "{{publicVapidKey}}"; // from config_ui.json
 
   let glb_username = undefined;
 
@@ -93,6 +97,17 @@ function login (){
         {
           glb_username = res.username;
           console.log("you are logged in already as "+ glb_username);
+          
+          registerServiceWorkers();
+          if (isPhonegap){ // registerPushId with server if possible
+            let registrationId = localStorage.getItem("registrationId");
+            if (registrationId && savePushRegistrationId)
+            {
+              //alert("trying to register push id with DB");
+              savePushRegistrationId(registrationId)
+            }
+          }
+
           swal({html:"logged in as <br><b>"+ glb_username+"</b>",
           toast:true, timer:1200,showConfirmButton:false, position:"center",
           customClass:"whiteletters"})
@@ -103,7 +118,6 @@ function login (){
           /*searchDB(collection.searchDB,collection.searchquery,function(inp){
               collection.searchhistory.unshift(inp.docs);
           });*/
-
 
           //searchAndShow(0,0,0,console.log,glb_username);
 /* // commented out after new search with pagination
@@ -117,6 +131,12 @@ function login (){
             }
           )
 */
+          // for the autocomplete functions we also pull all the docs:
+          searchAndDoStepsInBetweenPages(collection.searchDB,
+              collection.searchQuery,()=>{},
+              function(res){collection.allDocs.unshift(res)}
+          )
+
           $.mobile.pageContainer.pagecontainer("change", "#landing",
                      {allowSamePageTransition:true});
 
@@ -142,6 +162,11 @@ function login (){
 
   function loginPopUp(param={customClass:'animated jello', extra:""})
   {
+    let preurl = UI_URL;
+    if (isPhonegap){
+      //alert("phonegap alert!")
+      preurl = "";
+      }
     let {value: formValues} = swal({
     title: 'login',
     html:
@@ -149,7 +174,7 @@ function login (){
       '<input id="swal-input1" class="swal2-input" placeholder="username">' +
       '<input id="swal-input2" class="swal2-input" placeholder="password" type="password">'+
       param.extra +
-      '<br>don\'t have an account yet? <span class="registerlink">REGISTER!</span>',
+      '<br>don\'t have an account yet? <span class="registerlink"><a href="'+preurl+'register.html" target="_self">REGISTER!</a></span>',
     focusConfirm: true,
     allowEscapeKey: false,
     allowOutsideClick: false,
@@ -170,6 +195,9 @@ function login (){
           {
             console.log("successfully logged in as "+username);
             glb_username = username;
+
+            registerServiceWorkers();
+
             swal({html:"logged in as <br><b>"+ glb_username+"</b>",
             toast:true, timer:1200,showConfirmButton:false, position:"center",
             customClass:"whiteletters"})
@@ -208,10 +236,21 @@ function login (){
   $(".registerlink").click(function(){
     console.log("register!");
     logout();
-    registerPopUp()
+    swal.close();
+    //registerPopUp()
   });
 
   }
+
+
+  function registerServiceWorkers(){
+    if (!isPhonegap)
+    {
+      register4Push();  // register for webpush via service worker (only Browser and not Safari)
+    }
+    
+  }
+
 
 
   function showToast(msg="",time){
@@ -232,6 +271,7 @@ function login (){
     })
   }
 
+/* // ALREADY INSIDE #itemdetails
   function getPicAttachment(thingid,callback=console.log,err=console.log)
   {
 
@@ -251,7 +291,7 @@ function login (){
     });
 
   }
-
+*/
 
   function countNotificationsInDB(callback=console.log){
 
@@ -272,8 +312,123 @@ function login (){
    return Object.keys(obj).length
   }
 
+
+
+
+
+
+// TODO: put that into external file
+//////////////// WEB PUSH NOTIFICATIONS //////////////////
+
+async function register4Push()
+{
+  //glb_username = document.getElementById("name").value 
+  console.log("registering as "+glb_username);
+  
+
+  if ('serviceWorker' in navigator) {
+    console.log('Registering service worker');
+
+    await run()
+    .catch(error => console.error(error)); // here there is ALWAYS an error the first time it happens. CONTINUE HERE: fix that!
+  }
+
+}
+let registration;
+
+async function run() {
+  console.log('Registering service worker');
+  registration = await navigator.serviceWorker.
+    register('./worker.js', {scope: '/two/'});
+  console.log('Registered service worker');
+
+  requestBroadcast();
+
+  console.log('Registering push');
+  if (registration.pushManager)
+  {
+    const subscription = await registration.pushManager. // seems to not work in safari
+      subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+      });
+    console.log('Registered push');
+
+    console.log('subscribing for push at push server');
+    await fetch('https://dingsda.org:3000/subscribe?user='+glb_username, { // HERE THE USERNAME gets handed over
+      method: 'POST',
+      body: JSON.stringify(subscription),
+      headers: {
+        'content-type': 'application/json'
+      }
+    });
+    console.log('Sent push');
+  }
+  else {
+    console.log("pushManager not available in your Browser");
+  }
+
+}
+
+function registerBroadcastReceiver() {
+    navigator.serviceWorker.onmessage = function(event) {
+        console.log("Broadcasted from SW : ", event.data);
+
+        if (event.data.message.title === "test")
+        {
+          document.getElementById("main").append(event.data.message.body)
+          // here load notifications and update notifications!!!!!
+        }
+
+        var data = event.data;
+
+        if (data.command == "broadcastOnRequest") {
+            console.log("Broadcasted message from the ServiceWorker : ", data.message);
+        }
+    };
+}
+
+function requestBroadcast() {
+    console.log("Requesting for broadcast");
+    registerBroadcastReceiver();
+    if (navigator.serviceWorker.controller) {
+        console.log("Sending message to service worker");
+        navigator.serviceWorker.controller.postMessage({
+            "command": "broadcast"
+        });
+    } else {
+        console.log("No active ServiceWorker");
+    }
+}
+
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// check if is running in Browser or in Phonegap Framework:
+var isPhonegap = false;
+
+if ( document.URL.indexOf( 'http://' ) === -1 && document.URL.indexOf( 'https://' ) === -1 ) {
+  isPhonegap = true;
+}
+
+
 </script>
 
+
+{{>pgpush}}
 
 
 </html>

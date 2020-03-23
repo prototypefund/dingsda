@@ -84,7 +84,21 @@ $( document ).on( "pageshow", "#borrow", function(e,ui) {
     }
 })
 
-$("#btn_send_item_request").click(function(){
+$("#btn_send_item_request").click(async function(){
+
+let contact_details = localStorage.getItem(glb_username+".contact_details");
+if (contact_details){ contact_details = JSON.parse(contact_details)}
+
+if (await checkIfContactDetailsProvidedAndAskUserIfNot(contact_details)){
+  console.log("+++++ KILLING BORROW REQUEST ++++") // send user to config
+  return $.mobile.changePage("#config", {
+       reloadPage: false
+   });
+}
+else{
+  console.log("+++++ BORROW REQUEST ++++") 
+  //return
+}
 
   let dataOut = {
     "data":
@@ -93,7 +107,8 @@ $("#btn_send_item_request").click(function(){
             "ref":collection.bulk[0].name,
             "from":$("#from").val(),
             "till":$("#till").val(),
-            "contact_details":config.contact_details
+            //"contact_details":config.contact_details // changed to localStorage
+            "contact_details":contact_details
           }]
   }
   let dbOwner = collection.bulk[0].hyperlink.split("/");
@@ -119,6 +134,39 @@ $("#btn_send_item_request").click(function(){
   });
 
 })
+
+async function checkIfContactDetailsProvidedAndAskUserIfNot(contact_details)
+{
+  if (! (contact_details && (contact_details.email !== "" || contact_details.telnumber !== "" || contact_details.other !== "")) )
+  {
+  return swal({
+      title: 'No way to contact you!',
+      text: `You did not save any contact details on this device. \n
+      If you send a borrow request this way the owner of the thing you want to borrow will only receive your username. \n
+      Do you want to provide some contact info? `,
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      cancelButtonText: 'The owner knows who I am. Send now!',
+      confirmButtonText: 'Yes, show me where!'
+    }).then((res)=>{
+      if (res.value){
+        console.log(res.value)
+        return res.value;
+      }
+      else
+      {
+        console.log("user says its ok. going through...");
+        return null
+      }
+    })
+  }
+  else
+  {
+    return null
+  }
+}
 
 
 </script>

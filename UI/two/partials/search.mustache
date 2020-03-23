@@ -323,7 +323,7 @@ and combines them to mango queries for further processing
  }
 
   function searchAndShow(lat,long,km,callback=console.log,db=glb_username,
-                        searchTerm={"_id":{"$regex":""}},bookmark=null)
+                        searchTerm={"_id":{"$regex":""}},bookmark=null,goBackToCollection=true)
   {
       // save in collection global to find again for bookmark usage
       collection.searchQuery = searchTerm;
@@ -333,14 +333,18 @@ and combines them to mango queries for further processing
       collection.kilometers = km;
 
       let cb = function(result){
-        callback(result)
+        //callback(result); // CONTINUE HERE : TODO: move this lower! and add a parameter to not change to collection after!
         collection.bookmark = result.bookmark
         //if (collection.bookmark === "nil"){collection.bookmark = null}
 
-        // change page to show the searchResults:
-        $.mobile.changePage("#collection", {
-           reloadPage: false
-       });
+        if(goBackToCollection)
+        {
+          // change page to show the searchResults:
+          $.mobile.changePage("#collection", {
+            reloadPage: false
+        });
+        }
+
        console.log("BOOKMARK: " + bookmark);
        if (bookmark === null){ // if this is the first query
          // render without catching first:
@@ -350,17 +354,17 @@ and combines them to mango queries for further processing
          $("#itemList .item").parent().remove();
          if (collection.searchDB === glb_username)
          { // if looking at users own collection: include borrowed items
-          drawItemCards(result.docs,true,scrollEndListenerSearch)
+          drawItemCards(result.docs,true,scrollEndListenerSearch,true)
          }
          else {
-           drawItemCards(result.docs,false,scrollEndListenerSearch)
+           drawItemCards(result.docs,false,scrollEndListenerSearch,true)
          }
          $("#no_items_left").html("  loading ...");
          $("#no_items_left").addClass("typing");
          $("#no_items_left").appendTo("#itemList");
        }
        else { // if this is a follow up query using a bookmark:
-         collection.searchhistory[0].concat(result.docs)
+         collection.searchhistory[0] = collection.searchhistory[0].concat(result.docs)
          if (result.docs.length === 0) // was the last response empty?
          {
            console.log("END OF SEARCH ");
@@ -394,6 +398,8 @@ and combines them to mango queries for further processing
          }
 
        }
+       
+       callback(result);
 
       }
 
@@ -412,10 +418,11 @@ and combines them to mango queries for further processing
 
   }
 
-  function scrollEndListenerSearch()
+  function scrollEndListenerSearch(force=false,cb=console.log)
   {
-      if (isInView("#scrollend") && window.location.hash.includes("#collection"))
+      if ( (isInView("#scrollend") && window.location.hash.includes("#collection") ) || force === true )
       {
+        console.log("+++++", isInView("#scrollend"))
         $("#no_items_left").show()
         $("#scrollend").remove();
         document.removeEventListener("scroll",scrollEndListenerSearch);
@@ -423,7 +430,7 @@ and combines them to mango queries for further processing
 
         //load again with bookmark included and add instead of overwrite:
         searchAndShow(collection.latitude,collection.longitude,collection.kilometers,
-          console.log,collection.searchDB,collection.searchQuery,collection.bookmark)
+          cb,collection.searchDB,collection.searchQuery,collection.bookmark,false)
 
       }
   }

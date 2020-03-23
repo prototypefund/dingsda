@@ -1,0 +1,146 @@
+<script>
+
+// HELLO PHONEGAP / CORDOVA PUSH NOTIFICATIONS!!!
+
+// plugin used: phonegap-plugin-push
+// https://github.com/phonegap/phonegap-plugin-push
+// server side used atm: node packages "apn" and "node-fcm"
+// NICE TO HAVE: variant where all is server side fcm (see doc of plugin for that though)
+// needed certs and keys:
+// Firebase Cloud Messaging Identity and ID
+// APN certificate (app specific with package bundle name), APN .p8 key (research where i got that one), 
+//  provisining profile of dingsdaUI app has to include capabilites PushNotifications and have an cert associated with it
+//   
+
+document.addEventListener("deviceready",()=>{
+    console.log("device ready. will request push");
+    setupPush();
+})
+
+function setupPush() {
+
+    console.log('calling push init');
+    var push = PushNotification.init({
+        "android": {
+            "clearBadge": true, // clears badge on app open
+        },
+        "ios": {
+            "clearBadge": true, // clears badge on app open
+            "sound": true,
+            "vibration": true,
+            "badge": true
+        }
+    });
+    console.log('after init');
+
+    push.on('registration', function(data) {
+        console.log('registration event: ' + data.registrationId);
+        document.getElementById('token').innerHTML = data.registrationId; // works all the time
+
+
+        var oldRegId = localStorage.getItem('registrationId');
+        if (oldRegId !== data.registrationId) {
+            // Save new registration ID
+            localStorage.setItem('registrationId', data.registrationId); // TODO: make this user specific
+            // Post registrationId to your app server as the value has changed
+            //savePushRegistrationId(id); // here not usable for we dont know yet if logged in as user. so to be found inside of login success
+        }
+        
+    });
+
+    push.on('error', function(e) {
+        console.log("push error = " + e.message);
+    });
+
+    push.on('notification', function(data) {
+        console.log('notification event'); // does only get triggered after opening.
+        
+        console.log(JSON.stringify(data)); // TODO: do sth here with the push notification (see webpush actions for that?)
+        document.getElementById('lastpush').innerHTML = JSON.stringify(data); // works all the time
+
+        // if not foreground while notification received: change to notifications
+        if(data.additionalData && !data.additionalData.foreground) 
+        {
+            $.mobile.changePage("#notifications", {
+                reloadPage: false
+            });
+            showNotifications();
+        } // TODO: add here special cases (pop up etc on handover (QR CODE or sth) if that makes sense etc.)
+        else // only update notification badge:
+        {
+            updateNotificationsBatch();
+        }
+        // alert(JSON.stringify(data)); // works all the time
+        
+    });
+}
+
+
+///// NATIVE PUSH ///////
+
+function savePushRegistrationId(id){
+        //alert(id);
+        
+        let subscription = {
+                    "expirationTime": null, 
+                    "token": [
+                        id
+                    ]
+        }; 
+        console.log(JSON.stringify(subscription));
+
+        if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i)) // if is iOS:
+        {
+            subscription = {"apn":subscription} // pushtype apn
+        }
+        else
+        {
+            subscription = {"fcm":subscription} // pushtype fcm
+        }
+        console.log('Registering native push on server');
+        console.log(JSON.stringify(subscription));
+
+        console.log('subscribing for native push at push server'); // TODO: get url from config
+        //alert('https://dingsda.org:3000/subscribe?user='+glb_username);
+
+
+        //let query = {"data":[{"type":"getNotifications"}]}
+        $.ajax({
+          type: "POST",
+          url: 'https://dingsda.org:3000/subscribe?user='+glb_username,//API_BASE_URL+glb_username,
+          data: JSON.stringify(subscription),
+          success: function(r){
+            console.log(r);
+            callback(r);
+          },
+          xhrFields: { withCredentials: true }, // to make AuthCookie ok
+          error: console.log,
+          contentType:"application/json"
+        });
+        /*
+        $.ajax({
+            type: "POST",
+            url: 'https://dingsda.org:3000/subscribe?user='+glb_username,
+            data: JSON.stringify(data),
+            success: function(res){console.log(JSON.stringify(res))},
+            xhrFields: { withCredentials: true }, // to make AuthCookie ok
+            error: function(res){console.log(JSON.stringify(res))},
+            contentType:"application/json"
+        });
+        */
+
+        /*let subscriptionRequest = await fetch('https://dingsda.org:3000/subscribe?user='+glb_username, { // HERE THE USERNAME gets handed over
+        method: 'POST',
+        body: JSON.stringify(subscription),
+        headers: {
+            'content-type': 'application/json'
+        }
+        });*/
+        console.log('Sent push registration to server'); 
+        //alert(JSON.stringify(subscriptionRequest));
+        //return subscriptionRequest;
+        
+
+}
+
+</script>

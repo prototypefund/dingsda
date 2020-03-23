@@ -1,5 +1,6 @@
 {
   "name":"UI 2 dingsda ",
 
-  "googlemapsAPIkey":"xxxxxxxxxxxxx"
+  "googlemapsAPIkey":"xxxxxxxxxxxxx",
+  "publicVapidKey":"xxxxxxxxxxxxxxxx"
 }

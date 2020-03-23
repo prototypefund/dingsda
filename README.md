@@ -6,11 +6,7 @@ https://www.dingsda.org
 
 test web UI (optimized for mobile): https://www.dingsda.org/two
 
-![gefördert vom Bundesministerium für Bildung und Forschung](https://prototypefund.de/wp-content/uploads/2016/07/logo-bmbf.svg)
-![Open Knowledge Foundation](https://prototypefund.de/wp-content/uploads/2016/07/logo-okfn.svg)
-
-via: [Prototypefund.de](https://prototypefund.de/)
-
+at the moment: invite only. Feel welcome to contact philip(_Ã¤t_)machinaex(_dot_)de to get a test account.
 
 ## documentation ##
 

@@ -62,6 +62,38 @@ const options = {
 };
 
 
+/*
+PUSH NOTIFICATION STUFF / WEB PUSH
+*/
+
+// WEB PUSH STUFF
+const webpush = require('web-push');
+const publicVapidKey = config.publicVapidKey;
+const privateVapidKey = config.privateVapidkey;
+// Replace with your email
+webpush.setVapidDetails('mailto:'+config.emailAdmin, publicVapidKey, privateVapidKey);
+
+// APPLE PUSH STUFF (APN)
+const apn = require('apn'); // apple push notification 
+// initialize apn server
+var apnProvider = new apn.Provider(                     // TODO: into server_config.json!!!
+  {
+    token: {
+      key: "./AuthKey_3LVJH5LZ3B.p8",
+      keyId: "3LVJH5LZ3B",
+      teamId: "W847RUDC73"
+    },
+    production: true
+  }
+);
+
+// GOOGLE FIREBASE CLOUD MESSAGING (FCM)
+
+const gcm = require('node-gcm'); // google firebase cloud messages
+
+// Set up the sender with your GCM/FCM API key (declare this once for multiple messages)
+var FCMsender = new gcm.Sender('AAAAwKzMWzw:APA91bGUSHcmQ4udWo5Apa6qlQ0J86bzSdV19-_zQMENQA7IQV8NtGZN6fwdgF_FNlQB29mHnNTxUOJ7G4-dshCUGb0dvFR8Gw4lWmP8fWWjM3g9fAv5-yYSlag-aO23FSRC_Xozmy2x');
+// TODO: into server_config.json
 
 /*
 all nano operations are done by either NANO_ADMIN if requestLevel is instance (see README)
@@ -69,6 +101,11 @@ or several DBs or by a short term conncetion nanoUser if requestLevel is thing.
 we will use another nano Object. This is not needed but human error, ya know...
 */
 const NANO_ADMIN = require('nano')('http://admin:'+DBadminPW+'@'+DATABASEURL.split("://")[1]);
+
+
+
+// STDIN STUFF
+const readline = require('readline');
 
 
 /*///////////////////////////////////////
@@ -80,6 +117,9 @@ vvvvvvvvvvvvvvvvvvvvvvvvvv
 const app = express()
 
 app.use(cors({origin: function (origin, callback) {
+    console.log("inside EXPRESS CORS check");
+    console.log(origin); 
+    
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
@@ -144,6 +184,29 @@ EXPRESS SERVER END
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 ///////////////////////////////////////*/
 
+/// STDIN BY LINE to send control stuff into running programm using readline module
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  prompt: 'COMMAND> '
+});
+ 
+rl.prompt(); // opens prompt
+
+rl.on('line', (line) => {
+  eval(`
+  try{
+    eval(${line})
+  }
+  catch(err){
+    console.log(err)
+  }
+  `);
+  rl.prompt();
+}).on('close', () => {
+  console.log('Have a great day!');
+  process.exit(0);
+});
 
 
 
@@ -161,6 +224,8 @@ This means: all requests addressing only a single item/doc in the database<br>
 checks for requests HTTP verb ( GET / POST ) as well as the requests JSON payload
 and forwards request and response object to the different thinglevel document
 functions.
+
+
 
 @param {object} req - request object from express app
 @param {object} res - response object from express app
@@ -313,7 +378,7 @@ and forwards request and response object to the different functions.
 function instanceCommander(req,res)
 {
 
-  console.log("INSTANCE COMMANDER!!!!");
+  console.log("INSTANCE COMMANDER!!!!", req.url);
 
   if (req.method == "GET") // only Auth (which happens in the express middleware) endpoint
   {
@@ -325,6 +390,10 @@ function instanceCommander(req,res)
   }
   else if (req.method == "POST" && req.body.data !== undefined)
   {
+    
+    console.log(req.url);
+    console.log(req.params);
+    
     if (!Array.isArray(req.body.data) || (req.body.data.length == 1 && (req.body.data=req.body.data[0])))
     {
       switch(req.body.data.type.toLowerCase())
@@ -345,6 +414,10 @@ function instanceCommander(req,res)
   {
     res.set("Set-Cookie","AuthSession=; Version=1; Path=/; HttpOnly");
     return res.send("bye");
+  }
+  else
+  {
+    res.send(`did not find an endpoint on INSTANCE level for:  ${res.url}`) // added for debugging. unclear if we should get rid of this
   }
 
 }
@@ -402,7 +475,7 @@ function fetch(req,res)
                 target: DATABASEURL+"userdb-"+toHex(req.targets[0])+
                 "/"+req.targets[1]+"/"+req.targets[2],
                 auth:'admin:'+DBadminPW
-              });
+              },function(err){console.log("+++ PROXY ERROR +++:",err)});
 
              }
              else {
@@ -599,11 +672,12 @@ function handover_announce(req,res)
               isReturn: isReturn,
               time:{ from: req.body.data.from, till: req.body.data.till}
             };
-            console.log("handover_annoucne attempting to insert confirm into"+
+            console.log("handover_announcne attempting to insert confirm into"+
                         "notificationsDB of borrower");
             return dbBorrowerNotifications.insert(handoverConfirm)
             .then((ok) => {
-              res.send(ok)
+              res.send(ok);
+              sendPushToUser(req.body.data.username,"handover of "+doc.name+" to "+req.username+" confirmed")
             })
           })
 
@@ -859,7 +933,8 @@ function handover_deny(req,res)
     })
   })
   .then((insertRes)=>{
-    return res.send("ok: handover successfully cancelled")
+    sendPushToUser(req.body.data.from,"handover denied by "+ req.targets[0]);
+    return res.send("ok: handover successfully cancelled");
   })
 /*
   return db.get("&notifications").then((notifications) => {
@@ -1039,6 +1114,8 @@ function handover(req,res)
                       return deleteFromInMyPossession(dbOldPossessorInMyPossession, item.hyperlink)
                       .then(function(){
                         console.log("HANDOVER COMPLETE");
+                        sendPushToUser(req.targets[0],"handover with your involvement was announced!");
+                        sendPushToUser(oldPossessor,"handover with your involvement was announced!");
                         return res.send("ok: handover success")
                       })
                     }
@@ -1754,7 +1831,7 @@ includes infos from &config doc of user sending.
 @param {Object} res - response object from express app
 
 @returns {Object|string} sends response to client with either "ok" or error
-*/
+*/ 
 function borrow_request(req,res){
   console.log(req.username + " asks to borrow thing "+req.body.data.ref);
 
@@ -1775,7 +1852,10 @@ function borrow_request(req,res){
       ${req.body.data.from} till ${req.body.data.till} you can contact them via:
       ${contact}`}
   return dbNotifications.insert(newNoti).then(() =>{
-
+      
+      sendPushToUser(req.targets[0],
+      `user ${req.username} wants to borrow ${req.body.data.ref} from ${req.body.data.from} till ${req.body.data.till} you can contact them via: ${contact}`
+      );
       return res.send("ok");
 
   }).catch(function(err){
@@ -2578,7 +2658,21 @@ function validateReadRights(req, res, next){
       READ outside of users own private DB: check if permissions are ok for READ
       at least before responding at all:
     */
-    let urlAfterAPI = req.url.split(API_BASE_URL)[1].split("?")[0];
+    let urlAfterAPI = "";
+    console.log()
+    if (req.url.split(API_BASE_URL).length > 1)
+    {
+      if (req.url.includes("?"))
+      {
+        urlAfterAPI = req.url.split(API_BASE_URL)[1].split("?")[0];
+      }
+      else
+      {
+        urlAfterAPI = req.url.split(API_BASE_URL)[1];
+      }
+    }
+    
+    
 
     if (urlAfterAPI !== "" && urlAfterAPI !== undefined)
     {
@@ -2753,7 +2847,7 @@ function validateReadRights(req, res, next){
           }
         }
         else
-        {
+        { 
           // only 2ndary security. this should NEVER be the only verification:
           req.authenticated = false;
           res.statusCode = 401;
@@ -2816,13 +2910,15 @@ with request.
 */
 function verifyUserCredibility(req, res, next){
 
+      console.log("\nINSIDE verifyUserCredibility \n",req.url);
+
       //console.log(req.body);
       if (req.cookies.AuthSession !== undefined && req.cookies.AuthSession!=="")
       {
         //console.log("Cookie or Session Token provided.\nlets try to verify this session");
         verifyAuthToken(req,res,next); // will reject req if not valid
         //console.log(req);
-        console.log("cookie req!");
+        console.log("cookie req!","forwarding to verifyAuthToken!",req.url);
       }
       else if (req.body.username !== undefined && req.body.password !== undefined)
       {
@@ -2836,6 +2932,13 @@ function verifyUserCredibility(req, res, next){
       }
       else
       {
+        console.log(req.url, "verifyUserCred leads to check if /subscribe")
+          // REGISTER PUSH OR DENY ACCESS
+          if (req.url.includes("/subscribe"))
+          {
+            console.log("\n!!! /SUBSCRIBE !!!!\n")
+            return pushRegister(req,res)
+          }
         //console.log("neither password nor AuthSessionToken / cookie provided. ");
         // only 2ndary security. this should NEVER be the only verification:
         req.authenticated = false;
@@ -2943,6 +3046,7 @@ function getSessionAndAuthToken(req,res,next, username, password)
           }
           else
           {
+
               // only 2ndary security. this should NEVER be the only verification:
               req.authenticated = false;
               res.statusCode = 401;
@@ -2991,12 +3095,20 @@ function verifyAuthToken(req,res,next){
         {
             //let cookie = resDB.toJSON().headers["set-cookie"];
             //console.log(res);
-            console.log("valid AuthSessionToken!");
+            console.log("valid AuthSessionToken!",req.url);
             // only 2ndary security. this should NEVER be the only verification:
             req.authenticated = true;
             req.DBAuthToken = ["AuthSession="+req.cookies.AuthSession+
               "; Version=1; Path=/; HttpOnly"];
             req.username = body.userCtx.name;
+            
+            // REGISTER PUSH OR DENY ACCESS    // FIXME : TODO : this is also to be found in verifyUserCred (if no Auth Token). Should be one place only
+            if (req.url.includes("/subscribe"))
+            {
+              console.log("\n!!! /SUBSCRIBE !!!!\n")
+              return pushRegister(req,res)
+            }
+
             next();
             return
         }
@@ -3169,3 +3281,244 @@ function isNumber(n) {
 GENERAL HELPER FUNCTIONS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 /////////////////////////*/
+
+
+
+
+
+
+/*////////////////////////
+vvvvvvvvvvvvvvvvvvvvvvvvvv
+PUSH NOTIFICATIONS / WEB PUSH
+vvvvvvvvvvvvvvvvvvvvvvvvvv
+/////////////////////////*/
+
+
+/**
+ * the subscribe endpoint manages the first interaction/subscription of a user
+ * it gets the subscription parameters from the push service of the users browser
+ * and it takes the username send as url parameter to associate both and save them
+ * to the Database (TODO)
+ */
+function pushRegister(req,res){
+  const subscription = req.body;
+  console.log("inside pushRegister",JSON.stringify(req.body));
+  res.status(201).json({result:"trying to register push"});
+
+  //console.log(subscription);
+  //console.log(Object.keys(req));
+  //console.log(req.query);
+  if (req.query.user){
+    console.log(req.query.user); // username to register push with
+    console.log(subscription) // subscription object containing endpoint and keys
+    savePushSubscription(req.query.user,subscription) // write user creds into DB
+  }
+  else
+  {
+    console.log("req has no user")
+  }
+
+}
+
+/** 
+ * push endpoint for remote send of push.
+ * TODO: only ADMIN should be able to use this!!!
+ * this endpoint does the same as the webpush standalone module would do. it is not strictly needed,
+ * but we might be happy about it later if we want to trigger push notifications from http and not
+ * cli only
+*/
+function pushSend(req,res){
+
+  let pushmsg = req.body;
+  res.status(201).json({});
+  let msg = JSON.stringify(
+    {
+      title: pushmsg.title,
+      body: pushmsg.msgbody
+    }
+  );
+
+  console.log(pushmsg);
+
+  webpush.sendNotification(pushmsg, msg).catch(error => {
+      console.error(error.stack);
+  });
+
+}
+
+
+function sendPushWithCreds(creds,msg){
+  webpush.sendNotification(creds, JSON.stringify({title:"news from dingsda!",body:msg})).catch(error => {
+    console.error(error.stack);
+});
+}
+
+/**
+ * sends a push message to a single user defined by their username in DB "webpush"
+ * fetches Data from DB and uses data to address 
+ */
+function sendPushToUser(username,msg){
+
+// NATIVE PUSH ONLY:
+
+let adminDBNative = NANO_ADMIN.use('nativepush');
+
+let nativepushPromise = adminDBNative.get(username)
+  .then((res)=>{
+    console.log(res);
+    // APPLE PUSH NOTIFICATIONS (APN)
+    if (res.apn){ 
+      subscriptionDataAPN = res.apn; // get subscription data from userDoc for iOS apple push notification (APN)
+      console.log(`
+      sending APN: ${msg} to ${username} using: ${JSON.stringify(subscriptionDataAPN)}     
+      `);
+      
+      // sending APN to device 
+      let deviceToken = res.apn.token//"a7615952c399844e731e871b880ebc6b68edce4d1c9788beced9567a62d39e73";  // Philips iPhone dingsdaUI
+      // get this token from DB res
+      var note = new apn.Notification();
+
+      note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
+      note.badge = 1; // TODO: get number of notifications and set them here
+      note.sound = "ping.aiff";
+      note.alert = ""+msg;
+      note.payload = {'messageFrom': '💚 dingsdaUI 🔨'}; // TODO: check what payloads make sense
+      note.topic = "de.philipsteimel.dingsdaui"; // TODO: get from server_config.json
+
+      apnProvider.send(note, deviceToken).then( (result) => {
+          // see documentation for an explanation of result
+          console.log(JSON.stringify(result));
+        });
+
+
+    }
+
+    // FIREBASE CLOUS MESSAGES (FCM)
+    if (res.fcm){
+      subscriptionDataFCM = res.fcm; // get subscription data from userDoc for iOS apple push notification (APN)
+      console.log(`
+      sending FCM: ${msg} to ${username} using: ${JSON.stringify(subscriptionDataFCM)}     
+      `);
+      // actually sending the notification
+
+      // Prepare a message to be sent
+      let message = new gcm.Message({
+        data: { 
+            message: ''+msg, // TODO: get this from params
+            title: '💚 dingsda request 🔨',
+            count: 1, // TODO: get number of notifications and set them here
+        }
+      });
+
+      // Specify which registration IDs to deliver the message to
+      // TODO: get this from DB
+      let regTokens = res.fcm.token;
+
+      // Actually send the message
+      FCMsender.send(message, { registrationTokens: regTokens }, function (err, response) {
+      if (err) console.error(err);
+      else console.log(response);
+      });
+    }
+   
+  })
+  .catch((err)=>{
+  
+    if (err.reason && err.reason === "missing")
+    {
+      console.log("error. no such user subscribed with NATIVE PUSH NOTIFICATIONS (GOOGLES FCMs OR APPLES APNs");
+    }
+    else{
+      console.log("error fetching user subscription from DB Native Push:");
+      console.log(err);
+    }
+  })
+
+
+// WEBPUSH ONLY
+
+  let adminDB = NANO_ADMIN.use('webpush')
+  
+  return adminDB.get(username)
+  .then((res)=>{
+    console.log(res);
+    subscriptionData = res.webpush; // get subscription data from userDoc
+    console.log(`
+    sending: ${msg} to ${username} using: ${JSON.stringify(subscriptionData)}     
+    `);
+    sendPushWithCreds(subscriptionData,msg)
+  })
+  .catch((err)=>{
+  
+    if (err.reason && err.reason === "missing")
+    {
+      console.log("error. no such user subscribed");
+    }
+    else{
+      console.log("error fetching user subscription from DB:");
+      console.log(err);
+    } 
+  })
+
+}
+
+
+function savePushSubscription(username, subscription){
+
+  console.log("+++ PUSH SUBSCRIPTION +++")
+
+  let adminDB;
+  let target = "";
+
+  if (subscription.apn ) // IF pushtype is APN
+  {
+    console.log("push type: APN");
+    adminDB = NANO_ADMIN.use('nativepush');
+    target = 'apn';
+    subscription = subscription.apn;
+  }
+  else if (subscription.fcm) // IF pushtype is FCM:
+  {
+    console.log("push type: FCM");
+    adminDB = NANO_ADMIN.use('nativepush');
+    target = 'fcm';
+    subscription = subscription.fcm;
+  }
+  else // IF pushtype is WEBPUSH:
+  {
+    console.log("push type: WEBPUSH");
+    adminDB = NANO_ADMIN.use('webpush');
+    target = 'webpush';
+  }
+    return adminDB.get(username)
+    .then((res)=>{
+      console.log(res);
+      res[target] = subscription; // add subscription to config // TODO: add device token to list of tokens instead of overwriting
+      return adminDB.insert(res); // insert config again
+    })
+    .catch((err)=>{
+    
+      if (err.reason && err.reason === "missing" || err.reason === "deleted" )
+      {
+        console.log("no doc yet. will add, then redo...");
+        let doc = subscription; // FIXME: this should be empty object, shouldnt it?
+        doc._id = username;
+        adminDB.insert(doc).then(()=>{        
+          savePushSubscription(username,subscription);
+        })
+
+      }
+      else{
+        console.log("error saving push subscription:");
+        console.log(err);
+      }
+    })
+  
+}
+
+/*////////////////////////
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+PUSH NOTIFICATIONS / WEB PUSH
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+/////////////////////////*/
+

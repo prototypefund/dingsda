@@ -176,7 +176,7 @@ function getItemsInMyPossession(forceRender=false){
             addItemCardClickListener();
             if (!itemAlreadyInSearchhistory)
             {
-              collection.searchhistory[0].push(object);
+              collection.searchhistory[0].unshift(object);
             }
             $("#itemList").listview('refresh');
             lazyload(); // init lazy load of images (see head.mustache)
