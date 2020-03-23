@@ -89,7 +89,7 @@
     <button id="scan_cancel">cancel scan</button>
   </div>
 
-  <!-- END CONTENT -->
+  <!-- END CONTENT --> 
 
 </div>
 
@@ -126,10 +126,11 @@ let barcode =
 /* EAN DB response handler:
   ATM PROOF OF CONCEPT!!!
   this uses the external file assets/barcodeCheck.js which talks to third party
-  APIs to check the barcode scanned. a Event containing extra product infos is
+  APIs to check the barcode scanned. an Event containing extra product infos is
   dispatched after the third party API responded. this is only a proof of concept
-  and will be rebuild and externalized into a proper js module later.
-  it also only is relevant for phonegap packed version of this app.
+  and will be rebuild and externalized into a proper js module later (hopefully).
+  it also only is relevant for phonegap packed version of this app for most APIs do 
+  only allow file:// but not http://* as source in their CORS rules.
 
   TODO:
   - rename Event
@@ -137,51 +138,140 @@ let barcode =
   - set config variable addItems.fetchItemInfosFromDB to true
   - check on every successful scan if true
   - check on every time RETURN is pressed inside #addItems #other.barcode
-  - if false: do nothing.
-  - if true: fetch data and fill name
+  - 
 */
-document.addEventListener("newMessage", newMessageHandler, false);
 
-/**
- END EAN DB response handler (proof of concept receiving messages from 3rd party
- APIs via assets/barcodeCheck.js)
-*/
-function newMessageHandler(e)
+document.addEventListener("barcodeAPIresponseReceived", barcodeAPIresponseReceivedHandler, false);
+
+function barcodeAPIresponseReceivedHandler(e)
 {
 
   console.log(e.detail);
 
   if (e.detail.id != undefined)
   {
-    console.log(e);
-    let items = JSON.parse(e.detail.message).items;
-    console.log(items);
-    alert(JSON.stringify(items[0]));
-    $("#addName").val(items[0].title)
+    if(e.detail.id === "openlibrary")
+    {
+      console.log(e);
+
+      let details = e.detail.message.details;
+
+      let authors= "";
+      for (i in details.authors){
+        console.log(details.authors[i]);
+        authors = authors + details.authors[i].name+" ";
+      }
+
+      let mappedInput = {
+        title : "Book: "+details.title + " - " + authors,
+        description: details.description +
+          "\npublisher: "+ details.publishers,
+        photo: e.detail.message.thumbnail_url, // TODO: check if better photo available; make sure photo links can be used in DB
+      };
+      //alert(JSON.stringify(e.detail.message));
+
+      mapUPCresultsToForm(mappedInput);
+    }
+    else // TODO: filter ALL APIS not just openlibrary
+    {
+      console.log(e);
+      let items = JSON.parse(e.detail.message).items;
+      console.log(items);
+      //alert(JSON.stringify(items[0]));
+      // HERE UPC MAPPING AFTER BARCODE
+
+      let mappedInput = {
+        title : items[0].title + " - " + items[0].publisher,
+        description: items[0].description + " \n" + items[0].publisher + " \n" + items[0].images[0] + " \n" + items[0].offers[0].link,
+        photo: details.thumbnail_url,
+      };
+
+      mapUPCresultsToForm(mappedInput);
+      //$("#addName").val(items[0].title)
+
+    }
+
+
 
   }
 
 }
+ 
+function mapUPCresultsToForm(items){
+
+            // TODO: build a mapping function before (inside message handler?) to streamline APIs before reacting here
+
+  console.log(items)
+  //alert(items)
+
+  $("#addName").val(items.title);
+  $("#addDescription").val(items.description);
+  //$("#other\\.value").val(items.description);
+  if (items.photo){
+    console.log(items.photo + " provided as photo in API results.")
+    //alert(items.photo);
+    //$("#addPhoto").attr("src",items.photo) // CONTINUE HERE!!!!
+  }
+  //$("#other\\.tags").val(items[0].offers[0].price); // gotta happen through api function for tag visuals...
+/*
+    $("#addName").val(items[0].title + " - " + items[0].publisher);
+    $("#addDescription").val(items[0].description + " \n" + items[0].publisher + " \n" + items[0].images[0] + " \n" + items[0].offers[0].link);
+    $("#other\\.value").val(items[0].offers[0].price);
+    //$("#other\\.tags").val(items[0].offers[0].price); // gotta happen through api function for tag visuals...
+  
+*/
+
+  /*
+  let {value: formValues} = swal({
+    title: 'UPC EAN ISBN',
+    html:
+      'we found some data about your thing:<br>'+
+      `
+      what can we use to fill the form for you?<br>
+
+      <select id="swal-select" class="swal2-select">
+        <option>ignore</option>
+        <option>use all data</option>
+        <option>only title</option>
+        <option>only title + description</option>
+        <option>only weight + price</option>
+      </select>
+      `,
+    focusConfirm: true,
+    allowEscapeKey: false,
+    allowOutsideClick: false,
+    animation: true,
+    showLoaderOnConfirm: true,
+    customClass: 'animated shake',
+    preConfirm: () => {
+      let answer = document.getElementById('swal-select').value;
+      if (answer.includes("ignore")){
+
+      }
+      else if (answer.includes("use all")){
+        $("#addName").val(items[0].title + " - " + items[0].publisher);
+        $("#addDescription").val(items[0].description + " \n" + items[0].publisher + " \n" + items[0].images[0] + " \n" + items[0].offers[0].link);
+        $("#other\\.value").val(items[0].offers[0].price);
+        //$("#other\\.tags").val(items[0].offers[0].price); // gotta happen through api function for tag visuals...
+      }
+      else if 
+      {
+        alert(JSON.stringify(items));
+      }
+    }
+  })
+  */
+}
 
 
+/// END EAN DB response handler
 
-////////////////////////////////////
-/////// ACTUAL BARCODE CODE ////////
-////////////////////////////////////
 
-let isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-// if iOS or safari change api to quagga:
-if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i) || isSafari)
+// if iOS change api to quagga:
+if(navigator.userAgent.match(/(iPhone|iPod|iPad)/i))
 {
   barcode.api = "quagga";
-
-  if (window.navigator.standalone == true){
-    //alert("no barcode reader, sorry")
-    console.log("barcode scanner cannot be accessed because ios in standalone. consider phonegap or browser version");
-    $(".barcodebtn").hide() // hide all buttons till apple lets us use webrtc in standalone
-  }
-
+  //$(".barcodebtn").hide() // hide all buttons till we fixed the issue with ios and quagga
 }
 // if browser is firefox, use quagga:
 if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
@@ -189,7 +279,7 @@ if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
 }
 // if running in phonegap and not as a homepage/in a browser, choose phonegap api:
 if ( document.URL.indexOf( 'http://' ) === -1 && document.URL.indexOf( 'https://' ) === -1 ) {
-  // running as PhoneGap application, so we want to use phonegap barcode api:
+    // running as PhoneGap application, so we want to use phonegap barcode api:
   barcode.api = "phonegap_barcode_plugin"
 }
 
@@ -203,19 +293,40 @@ document.addEventListener("barcodeScanned",function(e){
   {
     if (barcode.api !== "phonegap_barcode_plugin") // phonegap plugin just returns on its own
     {
-      // go back to the last page (will work without reload because jquery uses hash navigation.)
       history.back();
     }
     setTimeout(function(){
           $(barcode.targetinput).val(e.detail.barcode);
-          barcode.targetinput = null;
           console.log("changing "+ barcode.targetinput+" to "+e.detail.barcode);
+          e.detail.barcode = e.detail.barcode + "" // make into string
+          barcode.targetinput = null;
 
           if (barcode.api.includes("phonegap_barcode_plugin")){
-            getUpcitemdb_com(e.detail.barcode)
+
+            if (e.detail.barcode.startsWith("978") || e.detail.barcode.startsWith("977") || e.detail.barcode.startsWith("979") )
+            {
+              console.log("ISBN database!");
+              getOpenLibraryOrg(e.detail.barcode);
+            }
+            else
+            {
+              console.log("UPC database!")
+              getUpcitemdb_com(e.detail.barcode);
+            }
+            
+          }
+          else // if NOT phonegap (webapp or other)
+          {
+
+            if (e.detail.barcode.startsWith("978") || e.detail.barcode.startsWith("977") || e.detail.barcode.startsWith("979") )
+            {
+              console.log("ISBN database!");
+              getOpenLibraryOrg(e.detail.barcode);
+            }
+
           }
 
-    },800)
+    },400)
 
   }
 
@@ -226,20 +337,9 @@ $("#scan_cancel").click(function(){
 })
 
 
-/**
-cancels scan and changes back to last page visited
-*/
 function cancelscan(){
-  if (codeReader)
-  {
-    codeReader.reset();
-  }
-  if (codeReaderBC){
-      codeReaderBC.reset();
-  }
-  if (barcode && barcode.api === "quagga"){
-    Quagga.stop();
-  }
+  codeReader.reset();
+  codeReaderBC.reset();
   history.back()
 }
 
@@ -252,21 +352,14 @@ function scan(target=null) {
   barcode.targetinput = target; // this will be checked on "barcodeScanned" event
 
 
-  switch(barcode.api) { //// CONTINUE HERE!!!!
+  switch(barcode.api) {
     case "quagga":
       $.mobile.changePage("#barcode", {
          reloadPage: false
       });
       $("#bc_zxing").hide();
       $("#bc_quagga").show();
-      startQuaggaScan(
-
-        {
-          aspectRatio: {min: 1, max: 100},
-          facingMode: "environment"
-        }
-
-      );
+      startQuaggaScan();
       break;
     case "zxingjs":
       $.mobile.changePage("#barcode", {
@@ -274,8 +367,8 @@ function scan(target=null) {
       });
       $("#bc_zxing").show();
       $("#bc_quagga").hide();
-      startZxingJsScan();
-      //startQuaggaScan(); // quagga seems better at barcodes so it runs here in the background
+      startZxingJsScan()
+      startQuaggaScan();
       break;
     case "phonegap_barcode_plugin":
         $("#bc_zxing").hide();
@@ -285,13 +378,10 @@ function scan(target=null) {
         break;
     default:
 
-  }
+  } 
 }
+ 
 
-/**
-dispatches Event "barcodeScanned" after successful scan. This is used to unify the different
-barcode reader APIs provided by different libraries etc.
-*/
 function dispatchBarcodeEvent(barcode){
   let bc_event = new CustomEvent(
     "barcodeScanned",
@@ -338,9 +428,9 @@ function startPhoneGapScan(){
           //saveHistory: true, // Android, save scan history (default false)
           prompt : "Place a barcode inside the scan area", // Android
           resultDisplayDuration: 500, // Android, display scanned text for X ms. 0 suppresses it entirely, default 1500
-          formats : "QR_CODE,EAN", // default: all but PDF_417 and RSS_EXPANDED
+          formats : "EAN_8,EAN_13,UPC_A,UPC_C,QR_CODE", // default: all but PDF_417 and RSS_EXPANDED
           orientation : "portrait", // Android only (portrait|landscape), default unset so it rotates with the device
-          disableAnimations : true, // iOS
+          disableAnimations : false, // iOS
           disableSuccessBeep: false // iOS and Android
       }
    );
@@ -349,6 +439,9 @@ function startPhoneGapScan(){
 
 
 </script>
+
+
+
 
 <script>
 

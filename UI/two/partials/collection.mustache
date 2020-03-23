@@ -223,6 +223,11 @@
       text-shadow: none;
     }
 
+    #no_items_left {
+      margin-left: 5vw;
+      margin-top: 1vh;
+    }
+
     .overfooter{
       bottom: -8px;
       position: fixed;
@@ -274,7 +279,7 @@
       <button id="btn_bulk_delete" class="btn_bulk_action ">DELETE ITEMS</button>
       <button id="btn_endChooseMenu">back</button>
       <button id="btn_mark_all" class="overfooter">(un)check all</button>
-      <button id="btn_bulk_carnet_pdf" class="overfooter">Carnet ATA PDF</button>
+      <button id="btn_bulk_carnet_pdf" class="overfooter">Carnet ATA PDF</button> <!-- bug: addUser does not add designdocs -->
       <div class="overfooter ui-grid-a" style="width:100%">
         <button id="btn_bulk_handover"
         class="btn_bulk_action ui-block-a">HANDOVER ITEMS</button>
@@ -298,6 +303,7 @@ var collection = {
     searchQuery : {_id:""},
     searchDB : "",
     searchhistory:[],
+    allDocs:[],
     chooseMode:false,
     bulk:[],
     bookmark: undefined,
@@ -366,7 +372,7 @@ $("#collection").swiperight(function(){window.history.back()});
 $("#filterinput").bind('keyup',function(e) {
           if (e.keyCode === 13)
           $("#filterinput").blur()
-     });
+});
 
 
 // attach my own filter function to search input:
@@ -499,6 +505,7 @@ function makeItemCard(object){
   name.appendChild(document.createTextNode(object.name));
 
   owners.appendChild(document.createTextNode(" by "+object.owners))
+  if (!object.location){object.location = { name: "address changed to protect owners. please login to see more" }}; // should only happen if search without login credentials
   let addresslabel = object.location.address !== ""
   && object.location.address !== undefined ? object.location.address : object.location.insideOf;
   if (addresslabel == undefined || addresslabel===""){addresslabel =object.location.description}
@@ -635,6 +642,7 @@ function addItemCardClickListener(){
   // listen for tapholds on listitems, change to listChoose mode & mark item tapped
     $(".itemInList").off("taphold");
     $(".itemInList").taphold(function(e){
+      if (!glb_username){return swal("the batch menu would appear now if you were logged in.")}
       console.log("item in list marked by taphold. Enterting listChooseMode:");
       //console.log(e.currentTarget);
       listChooseMode(e.currentTarget);
@@ -658,7 +666,7 @@ function listChooseMode(target){
     $(".chooseOverlay").hide();
     $(".chooseButtons").hide();
     collection.chooseMode=false;
-  }
+  } 
 }
 
 function countItemsInDB(callback=console.log){
@@ -669,11 +677,11 @@ function countItemsInDB(callback=console.log){
     success: function(result){
       /*
       divide by 2 because of every doc has a partner doc xxx-containerOf
-      minus 3 because there are (atm) 3 extra docs in every userdb:
-      &notifications and &inMyPossesion and &config
+      minus 4 because there are (atm) 4 extra docs in every userdb:
+      &notifications and &inMyPossesion and &config and _design/app
       (should change to only &config after the other two become databases)
       */
-       callback((result.doc_count-3)/2);
+       callback((result.doc_count-4)/2);
     },
     error: function(err){console.log(err);},
     contentType:"application/json"
@@ -681,8 +689,10 @@ function countItemsInDB(callback=console.log){
 }
 
 /**
-updates small batch in the header menu that indicates how many items are in users
+updates small patch in the header menu that indicates how many items are in users
 database.
+ignores every second item (because of inPossessionOf doc) and ignores blind documents in userDB
+()
 */
 function updateItemBatch(){
   updateBorrowItemsBatch();

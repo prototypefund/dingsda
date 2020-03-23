@@ -3,7 +3,9 @@ var keys =
 {
 	"https://api.upcitemdb.com/prod/trial/lookup": undefined,
 	"https://www.upcdatabase.com/xmlrpc":"3af1f7c10bc7f6a05d28faf2427a34f9edc1e2bf",
-	"https://api.upcdatabase.org/json/":"dd2309e67e4fe32964f63fc55f920bd7"
+	"https://api.upcdatabase.org/json/":"dd2309e67e4fe32964f63fc55f920bd7",
+	"https://opengtindb.org/":null,
+	"https://openlibrary.org/api/books?bibkeys=ISBN:{{ean}}&format=json":undefined,
 };
 
 
@@ -39,8 +41,11 @@ function httpGetAsync(theUrl, callback)
 
 function dispatchEvent(urlin, resp, idin=undefined)
 {
+	console.log("dispatching event");
+	
+
 	var event = new CustomEvent(
-		"newMessage",
+		"barcodeAPIresponseReceived",
 		{
 			detail: {
 				url: urlin,
@@ -54,9 +59,9 @@ function dispatchEvent(urlin, resp, idin=undefined)
 	document.dispatchEvent(event);
 }
 /* //this can be used outside of this script to listen to the events dispatched above
-document.addEventListener("newMessage", newMessageHandler, false);
+document.addEventListener("barcodeAPIresponseReceived", barcodeAPIresponseReceivedHandler, false);
 
-function newMessageHandler(e)
+function barcodeAPIresponseReceivedHandler(e)
 {
 	console.log(e.detail);
 	if (e.detail.id != undefined)
@@ -67,11 +72,34 @@ function newMessageHandler(e)
 }
 */
 
+function getOpenLibraryOrg(barcode)
+{
+
+	httpGetAsync(`https://openlibrary.org/api/books?bibkeys=ISBN:${barcode}&format=json&jscmd=details`,
+		function(resp)
+		{
+			try{
+				console.log(resp) 
+				resp = JSON.parse(resp);
+				resp = resp["ISBN:"+barcode]
+				dispatchEvent(`https://openlibrary.org/api/books?bibkeys=ISBN:${barcode}&format=json&jscmd=details`,resp,"openlibrary"); 
+			}
+			catch(err){
+				console.log("could not parse response:",err)
+			} 
+		}
+	);
+}
+
 function getUpcitemdb_com(barcode)
 {
+	//alert("inside UPCitemDB_com")
 	httpGetAsync("https://api.upcitemdb.com/prod/trial/lookup?upc="+barcode,
 		function(resp)
-		{ dispatchEvent("https://api.upcitemdb.com/prod/trial/lookup?upc=",resp,"upcitemdb"); }
+		{
+			//alert("got response!"+resp) 
+			dispatchEvent("https://api.upcitemdb.com/prod/trial/lookup?upc=",resp,"upcitemdb"); 
+		}
 	);
 }
 

@@ -1,9 +1,5 @@
 
 /*
-    BUG: !!!!!: atm only check for read rights is done if thingrequest.
-    for find() and handover_xxx() we have to do that on DBLevel as well as on instanceLevel!!!!!
-
-    TODO: have to exclude all private things on find() unless in own DB !!!!!
 
     TODO: issue with instance Level if / is missing at end of url. (try it!)
 
@@ -12,8 +8,19 @@
 
 const config = require("./server_config.json"); // location of config.json
 
+var HTTP;
+if (process.argv[2] && process.argv[2].toLowerCase() == "http") // is HTTP active?
+{
+  HTTP = true;
+}
+else
+{
+  HTTP = false;
+}
+
 const DBadminPW = config.DBadminPW; // couchDB password for the admin entry
 
+const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const express = require('express')
@@ -21,7 +28,7 @@ const request = require('request');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const uuidv5 = require('uuid/v5'); // npm install uuid
-const cors = require('cors')
+const cors = require('cors');
 const deepcopy = require('deepcopy');
 const util = require('util');
 
@@ -56,12 +63,49 @@ const MaxAge = 360000; // MaxAge for all Cookies from CouchDB (tbd: get this fro
 /*
 SSL Stuff
 */
-const options = {
-  key: fs.readFileSync(config.SSLkey),
-  cert: fs.readFileSync(config.SSLcert)
-};
+var options;
+if (!HTTP)
+{
+    options = {
+    key: fs.readFileSync(config.SSLkey),
+    cert: fs.readFileSync(config.SSLcert)
+  };
+}
 
 
+
+/*
+PUSH NOTIFICATION STUFF / WEB PUSH
+*/
+
+// WEB PUSH STUFF
+const webpush = require('web-push');
+const publicVapidKey = config.publicVapidKey;
+const privateVapidKey = config.privateVapidkey;
+// Replace with your email
+webpush.setVapidDetails('mailto:'+config.emailAdmin, publicVapidKey, privateVapidKey);
+
+// APPLE PUSH STUFF (APN)
+const apn = require('apn'); // apple push notification 
+// initialize apn server
+var apnProvider = new apn.Provider(                     // TODO: into server_config.json!!!
+  {
+    token: {
+      key: "./AuthKey_3LVJH5LZ3B.p8",
+      keyId: "3LVJH5LZ3B",
+      teamId: "W847RUDC73"
+    },
+    production: true
+  }
+);
+
+// GOOGLE FIREBASE CLOUD MESSAGING (FCM)
+
+const gcm = require('node-gcm'); // google firebase cloud messages
+
+// Set up the sender with your GCM/FCM API key (declare this once for multiple messages)
+var FCMsender = new gcm.Sender('AAAAwKzMWzw:APA91bGUSHcmQ4udWo5Apa6qlQ0J86bzSdV19-_zQMENQA7IQV8NtGZN6fwdgF_FNlQB29mHnNTxUOJ7G4-dshCUGb0dvFR8Gw4lWmP8fWWjM3g9fAv5-yYSlag-aO23FSRC_Xozmy2x');
+// TODO: into server_config.json
 
 /*
 all nano operations are done by either NANO_ADMIN if requestLevel is instance (see README)
@@ -69,6 +113,11 @@ or several DBs or by a short term conncetion nanoUser if requestLevel is thing.
 we will use another nano Object. This is not needed but human error, ya know...
 */
 const NANO_ADMIN = require('nano')('http://admin:'+DBadminPW+'@'+DATABASEURL.split("://")[1]);
+
+
+
+// STDIN STUFF
+const readline = require('readline');
 
 
 /*///////////////////////////////////////
@@ -80,6 +129,9 @@ vvvvvvvvvvvvvvvvvvvvvvvvvv
 const app = express()
 
 app.use(cors({origin: function (origin, callback) {
+    console.log("inside EXPRESS CORS check");
+    console.log(origin); 
+    
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
@@ -109,7 +161,7 @@ more about API entry levels: see README
 */
 app.all(API_BASE_URL+"*", (req,  res) => {
 
-  console.log("legal HTTP command");
+  console.log("legal HTTP command",", req.targets: ",req.targets);
 
   if (req.targets != undefined)
   {
@@ -135,8 +187,8 @@ app.all(API_BASE_URL+"*", (req,  res) => {
 })
 
 
-https.createServer(options, app)
-.listen(API_PORT,()=>console.log('DINGSDA API listening on port '+ API_PORT));
+//https.createServer(options, app) // moved down
+//.listen(API_PORT,()=>console.log('DINGSDA API listening on port '+ API_PORT));
 
 /*///////////////////////////////////////
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -144,6 +196,29 @@ EXPRESS SERVER END
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 ///////////////////////////////////////*/
 
+/// STDIN BY LINE to send control stuff into running programm using readline module
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  prompt: 'COMMAND> '
+});
+ 
+rl.prompt(); // opens prompt
+
+rl.on('line', (line) => {
+  eval(`
+  try{
+    eval(${line})
+  }
+  catch(err){
+    console.log(err)
+  }
+  `);
+  rl.prompt();
+}).on('close', () => {
+  console.log('Have a great day!');
+  process.exit(0);
+});
 
 
 
@@ -161,6 +236,8 @@ This means: all requests addressing only a single item/doc in the database<br>
 checks for requests HTTP verb ( GET / POST ) as well as the requests JSON payload
 and forwards request and response object to the different thinglevel document
 functions.
+
+
 
 @param {object} req - request object from express app
 @param {object} res - response object from express app
@@ -233,7 +310,7 @@ function DBCommander(req,res)
     console.log(`DBCommander getting infos about ${req.username}`);
 
     NANO_ADMIN.db.get("userdb-"+toHex(req.username)).then((body) => {
-      res.send(body);
+      return res.send(body);
     })
   }
   else if (req.method == "POST" && req.body.data !== undefined)
@@ -243,6 +320,12 @@ function DBCommander(req,res)
     {
       console.log(req.body.data.type);
       switch(req.body.data.type.toLowerCase()) {
+          case "getuserdata":
+              getUserData(req,res);
+              break;
+          case "userdata":
+              changeUserData(req,res);
+              break;
           case "finditems":
               findItems(req,res);
               break;
@@ -313,7 +396,7 @@ and forwards request and response object to the different functions.
 function instanceCommander(req,res)
 {
 
-  console.log("INSTANCE COMMANDER!!!!");
+  console.log("INSTANCE COMMANDER!!!!", req.url);
 
   if (req.method == "GET") // only Auth (which happens in the express middleware) endpoint
   {
@@ -325,6 +408,10 @@ function instanceCommander(req,res)
   }
   else if (req.method == "POST" && req.body.data !== undefined)
   {
+    
+    console.log(req.url);
+    console.log(req.params);
+    
     if (!Array.isArray(req.body.data) || (req.body.data.length == 1 && (req.body.data=req.body.data[0])))
     {
       switch(req.body.data.type.toLowerCase())
@@ -345,6 +432,10 @@ function instanceCommander(req,res)
   {
     res.set("Set-Cookie","AuthSession=; Version=1; Path=/; HttpOnly");
     return res.send("bye");
+  }
+  else
+  {
+    res.send(`did not find an endpoint on INSTANCE level for:  ${res.url}`) // added for debugging. unclear if we should get rid of this
   }
 
 }
@@ -375,6 +466,8 @@ the attachment is added to the response payload instead of document
 */
 function fetch(req,res)
 {
+  console.log("FETCH!",req.method);
+  
    // testing with Admin Rights here, for should be already authenticated at this point:
    let nanoUser = NANO_ADMIN; let dbUser = nanoUser.db.use("userdb-"+toHex(req.targets[0]));
 
@@ -402,7 +495,7 @@ function fetch(req,res)
                 target: DATABASEURL+"userdb-"+toHex(req.targets[0])+
                 "/"+req.targets[1]+"/"+req.targets[2],
                 auth:'admin:'+DBadminPW
-              });
+              },function(err){console.log("+++ PROXY ERROR +++:",err)});
 
              }
              else {
@@ -599,11 +692,12 @@ function handover_announce(req,res)
               isReturn: isReturn,
               time:{ from: req.body.data.from, till: req.body.data.till}
             };
-            console.log("handover_annoucne attempting to insert confirm into"+
+            console.log("handover_announcne attempting to insert confirm into"+
                         "notificationsDB of borrower");
             return dbBorrowerNotifications.insert(handoverConfirm)
             .then((ok) => {
-              res.send(ok)
+              res.send(ok);
+              sendPushToUser(req.body.data.username,"handover of "+doc.name+" to "+req.username+" confirmed")
             })
           })
 
@@ -859,7 +953,8 @@ function handover_deny(req,res)
     })
   })
   .then((insertRes)=>{
-    return res.send("ok: handover successfully cancelled")
+    sendPushToUser(req.body.data.from,"handover denied by "+ req.targets[0]);
+    return res.send("ok: handover successfully cancelled");
   })
 /*
   return db.get("&notifications").then((notifications) => {
@@ -1039,6 +1134,8 @@ function handover(req,res)
                       return deleteFromInMyPossession(dbOldPossessorInMyPossession, item.hyperlink)
                       .then(function(){
                         console.log("HANDOVER COMPLETE");
+                        sendPushToUser(req.targets[0],"handover with your involvement was announced!");
+                        sendPushToUser(oldPossessor,"handover with your involvement was announced!");
                         return res.send("ok: handover success")
                       })
                     }
@@ -1742,6 +1839,100 @@ function copyGeoDataFromContainerToAllItemsInside(req, idContainer)
 ///////////////////////////////
 /////// DB LEVEL HELPER ///////
 
+
+
+/**
+database level function.<br>
+fetches user entry inside of instances _user DB. So technically a instance level function but
+authentication can be considered user level for user is allowed to read email etc from their user
+account.
+
+@param {Object} req - request object from express app
+@param {Object} res - response object from express app 
+
+@returns {Object|string} sends response to client with either "ok" or error
+*/ 
+function getUserData(req,res){
+  console.log(req.username + " reading their USERDATA "+req.body.data);
+
+  if (!req.targets[0]){return res.send("error. no user defined")}
+
+  NANO_ADMIN.db.use("_users").get('org.couchdb.user:'+(req.targets[0]))
+  .then((userdata)=>{
+    console.log("userdata: ",userdata),"sending email back to user";
+    return res.send(
+      { email: userdata.email , name: userdata.name }
+    );
+
+  })
+  .catch((err)=>{
+    console.log("userdata err:",err);
+    
+    return res.send("error while accessing userdata")
+  })
+
+ 
+}
+
+
+/**
+database level function.<br>
+updates user entry inside of instances _user DB. So technically a instance level function but
+authentication can be considered user level for user is allowed to write email etc into their user
+account.
+
+@TODO: more than email as field. check if email field and error handling
+
+@param {Object} req - request object from express app
+@param {Object} res - response object from express app 
+
+@returns {Object|string} sends response to client with either "ok" or error
+*/ 
+function changeUserData(req,res){
+  console.log(req.username + " updates their USERDATA "+req.body.data);
+
+  if (!req.targets[0]){return res.send("error. no user defined")}
+
+  NANO_ADMIN.db.use("_users").get('org.couchdb.user:'+(req.targets[0]))
+  .then((userdata)=>{
+    console.log("userdata: ",userdata);
+    console.log("req.body.data: ",req.body.data);
+    userdata.email = req.body.data.email;
+    console.log("userdata after email add: ",userdata);
+
+    NANO_ADMIN.db.use("_users").insert(userdata).then(()=>{
+      return res.send("ok. will try to update.");
+    })
+    .catch((err)=>{
+      return (err);
+    })
+
+  })
+  .catch((err)=>{
+    console.log("userdata err:",err);
+    
+    return res.send("error while accessing userdata")
+  })
+
+  
+  
+  /*
+  return dbNotifications.insert(userdata).then(() =>{
+      
+      sendPushToUser(req.targets[0],
+      `user ${req.username} wants to borrow ${req.body.data.ref} from ${req.body.data.from} till ${req.body.data.till} you can contact them via: ${contact}`
+      );
+      return res.send("ok");
+
+  }).catch(function(err){
+    res.statusCode = 500;
+    return res.send(err)
+  })
+  */
+ 
+}
+
+
 /**
 database level function.<br>
 writes a borrow request notification into target user (defined by request
@@ -1754,7 +1945,7 @@ includes infos from &config doc of user sending.
 @param {Object} res - response object from express app
 
 @returns {Object|string} sends response to client with either "ok" or error
-*/
+*/ 
 function borrow_request(req,res){
   console.log(req.username + " asks to borrow thing "+req.body.data.ref);
 
@@ -1775,7 +1966,10 @@ function borrow_request(req,res){
       ${req.body.data.from} till ${req.body.data.till} you can contact them via:
       ${contact}`}
   return dbNotifications.insert(newNoti).then(() =>{
-
+      
+      sendPushToUser(req.targets[0],
+      `user ${req.username} wants to borrow ${req.body.data.ref} from ${req.body.data.from} till ${req.body.data.till} you can contact them via: ${contact}`
+      );
       return res.send("ok");
 
   }).catch(function(err){
@@ -2145,9 +2339,11 @@ function addHyperlink2Doc(req,doc)
   let targets = urlAfterAPI.split("/");
   targets = targets.filter(String);
   console.log("adding hyperlink with username "+targets[0]+" to doc");
+  
 
   doc.hyperlink = INSTANCEURL.slice(0, -1)+":" + //INSTANCEURL minus slash
             API_PORT + API_BASE_URL + targets[0] + "/" + doc._id; // NEEDS TO COME FROM URL NOT USERNAME BUGGGGGGGGGGGG
+  console.log("adding hyperlink",doc.hyperlink);
   return doc
 }
 
@@ -2512,7 +2708,9 @@ function search(req,res)
 
   let q = {selector: req.body.data.doc};
   q.limit = 50;
-  q.fields = ["_id","name","location","other","owners","hyperlink","inPossessionOf","_rev","_attachments"];
+  q.fields = ["_id","name","other","owners","hyperlink","inPossessionOf","_rev","_attachments"];
+  if (req.authenticated){q.fields.push("location")}// if request came from authenticated user: add location
+  else {console.log("non authenticated search request. will hide location");}
   q.execution_stats = true; // maybe relevant later for easy pagination
   if (req.body.data.bookmark)
   {
@@ -2522,10 +2720,10 @@ function search(req,res)
       //console.log(doc);
       delete(doc.warning); // whats that?
       return res.send(doc)
-    }).catch(function(err){
+  }).catch(function(err){
       res.statusCode = 400;
       return res.send(err)
-    });
+  });
 
 }
 
@@ -2578,11 +2776,31 @@ function validateReadRights(req, res, next){
       READ outside of users own private DB: check if permissions are ok for READ
       at least before responding at all:
     */
-    let urlAfterAPI = req.url.split(API_BASE_URL)[1].split("?")[0];
+    if (req.url.includes("/recovery")){ console.log("read legal because recovery");return next()}
+
+    console.log("authenticated?:",req.authenticated, req.body.authenticated, "username: ",req.username);
+    
+    //if (req.url.includes("/public")){ console.log("read legal because public");return next()} // CONTINUE HERE TODO: check if search and non authenticated
+
+    let urlAfterAPI = "";
+    console.log()
+    if (req.url.split(API_BASE_URL).length > 1)
+    {
+      if (req.url.includes("?"))
+      {
+        urlAfterAPI = req.url.split(API_BASE_URL)[1].split("?")[0];
+      }
+      else
+      {
+        urlAfterAPI = req.url.split(API_BASE_URL)[1];
+      }
+    }
+    
+    
 
     if (urlAfterAPI !== "" && urlAfterAPI !== undefined)
     {
-      console.log(urlAfterAPI);
+      console.log("urlAfterAPI: ",urlAfterAPI);
       // targets[0]: targetDB or dingsda; targets[1]: targetItem or collection
       let targets = urlAfterAPI.split("/");
       targets = targets.filter(String); // should remove all empty Strings
@@ -2641,10 +2859,10 @@ function validateReadRights(req, res, next){
           next();
           return
         }
-        //  this is just an extra check against human error while coding!
-        // the req should not even arrive here if not authenticated.
+        //  this (the authenticated check) is just an extra check against human error while coding!
+        // the req should not even arrive here if not authenticated unless thinglevel
         // this shall be removed after testing
-        else if (req.authenticated)
+        else //if (req.authenticated ) 
         {
           console.log("user tries to read s/o elses data. we gotta check that!");
           // DB check as admin to check for READ permissions:
@@ -2691,7 +2909,7 @@ function validateReadRights(req, res, next){
                     ding.other.visibility.includes("private") ||
                     ding.other.visibility.includes("not") ||
                       ding.other.visibility === undefined  ) ){
-                  console.log("IT's PRIVATE, ASSHOLE!");
+                  console.log("IT's PRIVATE, ASSHOLE! ",", username: ",req.username);
                   res.statusCode = 404;
                   res.send('error: no such ding');
                 }
@@ -2752,13 +2970,15 @@ function validateReadRights(req, res, next){
             })
           }
         }
+        /*
         else
-        {
+        { 
           // only 2ndary security. this should NEVER be the only verification:
           req.authenticated = false;
           res.statusCode = 401;
           res.send('error: no valid auth');
         }
+        */
       }
       else {
         //  if requestDepth is only 0 or 1 the request handler will check anyhow
@@ -2816,26 +3036,54 @@ with request.
 */
 function verifyUserCredibility(req, res, next){
 
+      console.log("\nINSIDE verifyUserCredibility \n",req.url);
+      if (req.url.includes("/recovery") || req.url.includes("/public")){
+        console.log("credible because recovery");
+        
+        return next()
+      }
+    
       //console.log(req.body);
       if (req.cookies.AuthSession !== undefined && req.cookies.AuthSession!=="")
       {
         //console.log("Cookie or Session Token provided.\nlets try to verify this session");
         verifyAuthToken(req,res,next); // will reject req if not valid
         //console.log(req);
-        console.log("cookie req!");
+        console.log("cookie req!","forwarding to verifyAuthToken!",req.url);
       }
       else if (req.body.username !== undefined && req.body.password !== undefined)
       {
         console.log("No cookie but pw and username!\nlets try to login as "+ req.body.username);
         verifyByJsonPW(req,res,next);
       }
-      else if (req.method == "GET")
+      else if (req.method == "GET" && !req.url.includes("/subscribe") && !req.url.endsWith("/pic_small.jpg"))
       {
         //console.log("its a GETTER");
         verifyByUrlPW(req,res,next);
       }
       else
       {
+        console.log(req.url, "verifyUserCred leads to check if /subscribe or /search")
+          // REGISTER PUSH OR DENY ACCESS
+          if (req.url.includes("/subscribe"))
+          {
+            console.log("\n!!! /SUBSCRIBE !!!!\n")
+            return pushRegister(req,res)
+          }
+          
+          if (req.body && req.body.data && req.body.data[0].type == "search")
+          {
+            console.log("not authenticated search. search will be done but censored to not expose geodata");
+            req.authenticated = false;
+            return next();
+          }
+
+          if (req.url.endsWith("/pic_small.jpg")){ 
+            console.log("credible because only image");
+            req.authenticated = false;
+            return next();
+          } 
+      
         //console.log("neither password nor AuthSessionToken / cookie provided. ");
         // only 2ndary security. this should NEVER be the only verification:
         req.authenticated = false;
@@ -2943,6 +3191,7 @@ function getSessionAndAuthToken(req,res,next, username, password)
           }
           else
           {
+
               // only 2ndary security. this should NEVER be the only verification:
               req.authenticated = false;
               res.statusCode = 401;
@@ -2991,12 +3240,20 @@ function verifyAuthToken(req,res,next){
         {
             //let cookie = resDB.toJSON().headers["set-cookie"];
             //console.log(res);
-            console.log("valid AuthSessionToken!");
+            console.log("valid AuthSessionToken!",req.url);
             // only 2ndary security. this should NEVER be the only verification:
             req.authenticated = true;
             req.DBAuthToken = ["AuthSession="+req.cookies.AuthSession+
               "; Version=1; Path=/; HttpOnly"];
             req.username = body.userCtx.name;
+            
+            // REGISTER PUSH OR DENY ACCESS    // FIXME : TODO : this is also to be found in verifyUserCred (if no Auth Token). Should be one place only
+            if (req.url.includes("/subscribe"))
+            {
+              console.log("\n!!! /SUBSCRIBE !!!!\n")
+              return pushRegister(req,res)
+            }
+
             next();
             return
         }
@@ -3074,22 +3331,7 @@ GENERAL HELPER FUNCTIONS
 vvvvvvvvvvvvvvvvvvvvvvvvvv
 //////////////////////////*/
 
-/**
-helper function<br>
-<br>
-turns string to Hex value
 
-@param {string} s - string to be transformed
-*/
-function toHex(s) {
-    // utf8 to latin1
-    var s = unescape(encodeURIComponent(s))
-    var h = ''
-    for (let i = 0; i < s.length; i++) {
-        h += s.charCodeAt(i).toString(16)
-    }
-    return h
-}
 
 /**
 helper function<br>
@@ -3098,7 +3340,8 @@ turns Hex value to string
 
 @param {string} h - hex value to be turned to string
 */
-function fromHex(h) {
+function fromHex(h) 
+{
     var s = ''
     for (let i = 0; i < h.length; i+=2) {
         s += String.fromCharCode(parseInt(h.substr(i, 2), 16))
@@ -3144,7 +3387,8 @@ helper function
 @param {number} decimals - number of decimals to cut num to.
 @returns {string} trimmed float as string
 */
-function trimFloatStringToNDecimalPlaces(num,decimals=3){
+function trimFloatStringToNDecimalPlaces(num,decimals=3)
+{
   return num.slice(0, (num.indexOf("."))+(decimals+1));
 }
 
@@ -3169,3 +3413,654 @@ function isNumber(n) {
 GENERAL HELPER FUNCTIONS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 /////////////////////////*/
+
+
+
+
+
+
+/*////////////////////////
+vvvvvvvvvvvvvvvvvvvvvvvvvv
+PUSH NOTIFICATIONS / WEB PUSH
+vvvvvvvvvvvvvvvvvvvvvvvvvv
+/////////////////////////*/
+
+
+/**
+ * the subscribe endpoint manages the first interaction/subscription of a user
+ * it gets the subscription parameters from the push service of the users browser
+ * and it takes the username send as url parameter to associate both and save them
+ * to the Database (TODO)
+ */
+function pushRegister(req,res){
+  const subscription = req.body;
+  console.log("inside pushRegister",JSON.stringify(req.body));
+  res.status(201).json({result:"trying to register push"});
+
+  //console.log(subscription);
+  //console.log(Object.keys(req));
+  //console.log(req.query);
+  if (req.query.user){
+    console.log(req.query.user); // username to register push with
+    console.log(subscription) // subscription object containing endpoint and keys
+    savePushSubscription(req.query.user,subscription) // write user creds into DB
+  }
+  else
+  {
+    console.log("req has no user")
+  }
+
+}
+
+/** 
+ * push endpoint for remote send of push.
+ * TODO: only ADMIN should be able to use this!!!
+ * this endpoint does the same as the webpush standalone module would do. it is not strictly needed,
+ * but we might be happy about it later if we want to trigger push notifications from http and not
+ * cli only
+*/
+function pushSend(req,res){
+
+  let pushmsg = req.body;
+  res.status(201).json({});
+  let msg = JSON.stringify(
+    {
+      title: pushmsg.title,
+      body: pushmsg.msgbody
+    }
+  );
+
+  console.log(pushmsg);
+
+  webpush.sendNotification(pushmsg, msg).catch(error => {
+      console.error(error.stack);
+  });
+
+}
+
+
+function sendPushWithCreds(creds,msg){
+  webpush.sendNotification(creds, JSON.stringify({title:"news from dingsda!",body:msg})).catch(error => {
+    console.error(error.stack);
+});
+}
+
+/**
+ * sends a push message to a single user defined by their username in DB "webpush"
+ * fetches Data from DB and uses data to address 
+ */
+function sendPushToUser(username,msg){
+
+// NATIVE PUSH ONLY:
+
+let adminDBNative = NANO_ADMIN.use('nativepush');
+
+let nativepushPromise = adminDBNative.get(username)
+  .then((res)=>{
+    console.log(res);
+    // APPLE PUSH NOTIFICATIONS (APN)
+    if (res.apn){ 
+      subscriptionDataAPN = res.apn; // get subscription data from userDoc for iOS apple push notification (APN)
+      console.log(`
+      sending APN: ${msg} to ${username} using: ${JSON.stringify(subscriptionDataAPN)}     
+      `);
+      
+      // sending APN to device 
+      let deviceToken = res.apn.token//"a7615952c399844e731e871b880ebc6b68edce4d1c9788beced9567a62d39e73";  // Philips iPhone dingsdaUI
+      // get this token from DB res
+      var note = new apn.Notification();
+
+      note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
+      note.badge = 1; // TODO: get number of notifications and set them here
+      note.sound = "ping.aiff";
+      note.alert = ""+msg;
+      note.payload = {'messageFrom': '💚 dingsdaUI 🔨'}; // TODO: check what payloads make sense
+      note.topic = "de.philipsteimel.dingsdaui"; // TODO: get from server_config.json
+
+      apnProvider.send(note, deviceToken).then( (result) => {
+          // see documentation for an explanation of result
+          console.log(JSON.stringify(result));
+        });
+
+
+    }
+
+    // FIREBASE CLOUS MESSAGES (FCM)
+    if (res.fcm){
+      subscriptionDataFCM = res.fcm; // get subscription data from userDoc for iOS apple push notification (APN)
+      console.log(`
+      sending FCM: ${msg} to ${username} using: ${JSON.stringify(subscriptionDataFCM)}     
+      `);
+      // actually sending the notification
+
+      // Prepare a message to be sent
+      let message = new gcm.Message({
+        data: { 
+            message: ''+msg, // TODO: get this from params
+            title: '💚 dingsda request 🔨',
+            count: 1, // TODO: get number of notifications and set them here
+        }
+      });
+
+      // Specify which registration IDs to deliver the message to
+      // TODO: get this from DB
+      let regTokens = res.fcm.token;
+
+      // Actually send the message
+      FCMsender.send(message, { registrationTokens: regTokens }, function (err, response) {
+      if (err) console.error(err);
+      else console.log(response);
+      });
+    }
+   
+  })
+  .catch((err)=>{
+  
+    if (err.reason && err.reason === "missing")
+    {
+      console.log("error. no such user subscribed with NATIVE PUSH NOTIFICATIONS (GOOGLES FCMs OR APPLES APNs");
+    }
+    else{
+      console.log("error fetching user subscription from DB Native Push:");
+      console.log(err);
+    }
+  })
+
+
+// WEBPUSH ONLY
+
+  let adminDB = NANO_ADMIN.use('webpush')
+  
+  return adminDB.get(username)
+  .then((res)=>{
+    console.log(res);
+    subscriptionData = res.webpush; // get subscription data from userDoc
+    console.log(`
+    sending: ${msg} to ${username} using: ${JSON.stringify(subscriptionData)}     
+    `);
+    sendPushWithCreds(subscriptionData,msg)
+  })
+  .catch((err)=>{
+  
+    if (err.reason && err.reason === "missing")
+    {
+      console.log("error. no such user subscribed");
+    }
+    else{
+      console.log("error fetching user subscription from DB:");
+      console.log(err);
+    } 
+  })
+
+}
+
+
+function savePushSubscription(username, subscription){
+
+  console.log("+++ PUSH SUBSCRIPTION +++")
+
+  let adminDB;
+  let target = "";
+
+  if (subscription.apn ) // IF pushtype is APN
+  {
+    console.log("push type: APN");
+    adminDB = NANO_ADMIN.use('nativepush');
+    target = 'apn';
+    subscription = subscription.apn;
+  }
+  else if (subscription.fcm) // IF pushtype is FCM:
+  {
+    console.log("push type: FCM");
+    adminDB = NANO_ADMIN.use('nativepush');
+    target = 'fcm';
+    subscription = subscription.fcm;
+  }
+  else // IF pushtype is WEBPUSH:
+  {
+    console.log("push type: WEBPUSH");
+    adminDB = NANO_ADMIN.use('webpush');
+    target = 'webpush';
+  }
+    return adminDB.get(username)
+    .then((res)=>{
+      console.log(res);
+      res[target] = subscription; // add subscription to config // TODO: add device token to list of tokens instead of overwriting
+      return adminDB.insert(res); // insert config again
+    })
+    .catch((err)=>{
+    
+      if (err.reason && err.reason === "missing" || err.reason === "deleted" )
+      {
+        console.log("no doc yet. will add, then redo...");
+        let doc = subscription; // FIXME: this should be empty object, shouldnt it?
+        doc._id = username;
+        adminDB.insert(doc).then(()=>{        
+          savePushSubscription(username,subscription);
+        })
+
+      }
+      else{
+        console.log("error saving push subscription:");
+        console.log(err);
+      }
+    })
+  
+}
+
+/*////////////////////////
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+PUSH NOTIFICATIONS / WEB PUSH
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+/////////////////////////*/
+
+
+
+/*////////////////////////
+vvvvvvvvvvvvvvvvvvvvvvvvvv
+PASSWORD RECOVERY
+vvvvvvvvvvvvvvvvvvvvvvvvvv
+/////////////////////////*/
+
+/**
+ * DINGSDA.org Password Recovery Server
+ * 
+ * this is the first proof of concept for the dingsda thing sharing platforms
+ * password recovery tool
+ * it is supposed to run alongside the actual API and only manage the data
+*/
+
+const randomstring = require("randomstring");
+const nodemailer = require('nodemailer');
+
+/*
+email stuff
+*/
+const email = config.email;
+
+const MAXAGE_RECOVERY = 3600000; // 1h
+
+
+app.get("/recovery",async (req, res) => {
+    
+    console.log("RECOVERY MAIN SITE");
+
+    let website = makeWebsiteMain({url:"https://www.dingsda.org:3000/recoverycreate"})
+    res.send(website);
+
+})
+
+app.post("/recoverycreate/:username/:email",async (req, res) => {
+    
+    console.log("RECOVERY CREATE LINK REQUEST");
+    console.log(req.params);  
+    
+    let username = req.params["username"];
+    console.log(username);
+    
+    // check if user exists
+    let userdata = await NANO_ADMIN.use('_users').get("org.couchdb.user:"+username)
+        .catch((err)=>{`could not get userdata from Db: ${err}`})
+    if (!userdata){ return res.send("nope. user does not exist")}
+    //console.log(userdata);
+    // check if user email correct and known
+    if(!userdata.email){ return res.send("this user has no email in our database. please contact our admin")}
+    console.log(userdata.email);
+    
+    // create DB entry with random token
+    let token = randomstring.generate({length:96});
+    console.log(token);
+    await NANO_ADMIN.use('recovery').insert(
+        {
+            "_id": token,
+            "username": username,
+            "timestamp": Date.now()
+        }    
+    )
+    .catch((err)=>{`could not insert new recoverypage: ${err}`})
+    
+    // send email with token link to user
+    // UNCOMMENT TO ACTIVATE!
+    ///*
+    sendemail(
+        userdata.email,
+        "dingsda password recovery",
+        `Hi, we received a request to reset your password on dingsda.org. 
+        If this was you, please follow this link to reset your password. 
+        If not, ignore this email. 
+        https://dingsda.org:3000/recoverylinks/${token}
+        `,
+        `Hi, we received a request to reset your password on dingsda.org. 
+        If this was you, please follow this link to reset your password. 
+        If not, ignore this email.<br><br>
+        <a href="https://dingsda.org:3000/recoverylinks/${token}">https://dingsda.org:3000/recoverylinks/${token}</a>
+        `
+    ).catch(console.error);
+    //*/
+
+    res.send("you will receive a link to the email provided (if you exist)");
+
+})
+
+/**
+ * ENDPOINT /recoverylinks/{{singleUseToken}}
+ * 
+ * here the user can change their password ONCE by providing username and new pw
+ * the UI displayed here only consists of the return value of makeWebsite()
+ * this should send the user and pw to ENDPOINT /recoveryhelp
+ * 
+ * link to this endpoint (aka the singleUseToken) should have been created by ENDPOINT /recoveryCreate
+ */
+app.get("/recoverylinks/*",async (req, res) => {
+    
+    console.log("RECOVERY LINK clicked!");
+    console.log(req.params);  
+    
+    let recoveryToken = req.params["0"];
+    console.log(recoveryToken);
+    
+    // check if recoveryToken can be found within DB "recovery"
+    let recoveryData = await NANO_ADMIN.use('recovery').get(recoveryToken)
+        .catch((err)=>{`could not get recoverydata: ${err}`})
+    
+    if (
+        !recoveryData ||
+        !recoveryData.username
+    ){
+        return res.send("this link has no power here")
+    }
+    if (
+        !recoveryData.timestamp ||
+        recoveryData.timestamp + MAXAGE_RECOVERY < Date.now()
+    ){
+        console.log("expired!!!");        
+        // delete DB entry 
+        await NANO_ADMIN.use('recovery').destroy(recoveryToken,recoveryData._rev)
+        .catch((err)=>{return res.send("error while deleting old one")})
+        return res.send("this link expired")
+    }
+    
+    console.log(recoveryData.timestamp + MAXAGE_RECOVERY,Date.now());
+    
+    console.log(recoveryData);
+    
+    let website = makeWebsite({url:"https://www.dingsda.org:3000/recoverylinks",recoveryToken:recoveryToken})
+    res.send(website);
+
+})
+
+
+app.post("/recoverylinks/:recoveryToken/:username/:password",async (req, res) => {
+    
+    console.log("RECOVERY ATTEMPT");
+    
+    let recoveryToken = req.params["recoveryToken"];
+    let username = req.params["username"];
+    let password = req.params["password"];
+    console.log("/recoverhelp:",recoveryToken,username,password);
+    
+    // check if recoveryToken can be found within DB "recovery"
+    let recoveryData = await NANO_ADMIN.use('recovery').get(recoveryToken)
+        .catch((err)=>{`could not get recoverydata: ${err}`})
+    
+    if (
+        !recoveryData ||
+        !recoveryData.username
+    ){
+        return res.send("this link has no power here")
+    }
+    if ( recoveryData.username !== username){
+        return res.send("its not you! impostor!")
+    }
+    if (
+        !recoveryData.timestamp || recoveryData.timestamp + MAXAGE_RECOVERY < Date.now()
+    ){
+        console.log("expired!!!");
+        await NANO_ADMIN.use('recovery').destroy(recoveryToken,recoveryData._rev)
+        .catch((err)=>{return res.send("error while deleting old one")})        
+        return res.send("this link expired")
+    }
+    
+    // try to update pw as ADMIN
+    let userdata = await NANO_ADMIN.use('_users').get("org.couchdb.user:"+username)
+        .catch((err)=>{return res.send("error while fetching userdata")})
+    
+    if (userdata)
+    {
+        userdata.password = password;
+        await NANO_ADMIN.use('_users').insert(userdata)
+        .catch((err)=>{return res.send("error while updating userdata")})
+    }
+
+    // delete DB entry
+    await NANO_ADMIN.use('recovery').destroy(recoveryToken,recoveryData._rev)
+    .catch((err)=>{return res.send("error while deleting old one")})
+    res.send("successful. we will try to update your password")
+})
+
+
+app.all("*", (req,  res) => {
+
+    //console.log(req.body);    
+    res.send("this link has no power here")
+
+
+})
+
+/*
+http.createServer(app)
+.listen(API_PORT,()=>console.log('DINGSDA recovery API listening on port '+ API_PORT));
+*/
+/*
+https.createServer(options, app)
+.listen(API_PORT,()=>console.log('DINGSDA recovery API listening on SSL port '+ API_PORT));
+*/
+
+/*///////////////////////////////////////
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+EXPRESS SERVER END
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+///////////////////////////////////////*/
+
+
+/*/////////////////////////
+vvvvvvvvvvvvvvvvvvvvvvvvvv
+GENERAL HELPER FUNCTIONS
+vvvvvvvvvvvvvvvvvvvvvvvvvv
+//////////////////////////*/
+
+/**
+helper function<br>
+<br>
+turns string to Hex value
+
+@param {string} s - string to be transformed
+*/
+function toHex(s) {
+    // utf8 to latin1
+    var s = unescape(encodeURIComponent(s))
+    var h = ''
+    for (let i = 0; i < s.length; i++) {
+        h += s.charCodeAt(i).toString(16)
+    }
+    return h
+}
+ 
+
+
+function makeWebsite(options){
+    if (!options.passwordMinimalLength){options.passwordMinimalLength = 8}
+    return `
+    <html>
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <style>
+
+    body {display:flex;flex-direction:column; font-family: Arial;justify-content: center;}
+    h2 {font-size:2em; color: lightblue}
+    input{font-size:2em;}
+    button{font-size:2em; background-color:lightblue}
+
+    @media only screen and (max-width: 767px) {
+        body {display:flex;flex-direction:column; font-family: Arial;justify-content: center;}
+        h2 {font-size:1em; color: lightblue}
+        input{font-size:2em;}
+        button{font-size:2em; background-color:lightblue}
+    }
+    </style>
+    
+    <h2>DINGSDA PASSWORD RESET</h2><hr>
+    <input type="text" id="username" placeholder="username">
+    <br>
+    <input type="password" id="password" placeholder="new password">
+    <br>
+    <button id="send">SEND</button>
+
+    <br>
+    <br>
+    <span id="feedback"></span>
+    
+
+    <script>
+
+    document.getElementById("send").addEventListener("click",()=>{
+
+        let username = document.getElementById("username").value;
+        let password = document.getElementById("password").value;
+
+        if (!username || !password){
+            document.getElementById("feedback").innerHTML = "Please provide your username and a new password!";
+            return 
+        }
+        if (password.length < ${options.passwordMinimalLength}){
+            document.getElementById("feedback").innerHTML = "Password has to have at least ${options.passwordMinimalLength} characters";
+            return 
+        }
+
+        document.getElementById("send").disabled = true;
+        
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("feedback").innerHTML = this.responseText;
+            }
+        };
+        xhttp.onerror = function () {
+            document.getElementById("feedback").innerHTML = "something went wrong. please try again";
+        }
+        xhttp.open("POST", "${options.url}/${options.recoveryToken}/"+username+"/"+password, true);
+        xhttp.send();
+    })
+
+    </script>
+
+    </html>
+    `
+}
+
+function makeWebsiteMain(options){
+    return `
+    <html>
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <style>
+
+    body {display:flex;flex-direction:column; font-family: Arial;justify-content: center;}
+    h2 {font-size:2em; color: lightblue}
+    input{font-size:2em;}
+    button{font-size:2em; background-color:lightblue}
+
+    @media only screen and (max-width: 767px) {
+        body {display:flex;flex-direction:column; font-family: Arial;justify-content: center;}
+        h2 {font-size:1em; color: lightblue}
+        input{font-size:2em;}
+        button{font-size:2em; background-color:lightblue}
+    }
+    </style>
+    
+    <h2>YOU FORGOT YOUR PASSWORD?</h2><hr>
+    <a href="javascript:history.back()">back</a>
+    <br>
+    <input type="text" id="username" placeholder="username">
+    <br>
+    <input type="text" id="email" placeholder="email">
+    <br>
+    <button id="send">SEND</button>
+
+    <br>
+    <br>
+    <span id="feedback"></span>
+    
+
+    <script>
+
+    document.getElementById("send").addEventListener("click",()=>{
+
+        let username = document.getElementById("username").value;
+        let email = document.getElementById("email").value;
+
+        if (!username || !email){
+            document.getElementById("feedback").innerHTML = "Please provide your username and a new email!";
+            return 
+        }
+
+        document.getElementById("send").disabled = true;
+
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("feedback").innerHTML = this.responseText;
+                }
+        };
+        xhttp.open("POST", "${options.url}/"+username+"/"+email, true);
+        xhttp.send();
+    })
+
+    </script>
+
+    </html>
+    `
+}
+
+
+async function sendemail(to,subject,text,html) {
+
+    // create reusable transporter object using the default SMTP transport
+    let transporter = nodemailer.createTransport({
+        host: email.host,
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: email.auth.user, // generated ethereal user
+            pass: email.auth.pass // generated ethereal password
+        }
+    });
+
+    // send mail with defined transport object
+    let info = await transporter.sendMail({
+        from: `"dingsda password recovery" <${email.address}>`, // sender address
+        to: to,//'info@philipsteimel.de', // list of receivers
+        subject: subject,//'Hello ✔', // Subject line
+        text: text,//'Hello world?', // plain text body
+        html: html,//'<b>Hello world?</b>' // html body
+    });
+
+    console.log('Message sent: %s', info.messageId);
+    // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@example.com>
+
+}
+
+
+
+//////////////////////////////////////////
+
+if (HTTP){
+  http.createServer(app)
+.listen(API_PORT,()=>console.log('DINGSDA API listening on HTTP port '+ API_PORT));
+
+}
+else
+{
+  https.createServer(options, app)
+  .listen(API_PORT,()=>console.log('DINGSDA API listening on HTTPS port '+ API_PORT));
+  
+}
+

@@ -1,7 +1,7 @@
 <head>
   <meta charset="utf-8">
   <title>dingsda user interface 2</title>
-
+  <link rel="shortcut icon" href="./favicon.ico">
   <!-- atm out because media stream issues in ios standalone mode in barcode scanners-->
   <!-- <meta name="apple-mobile-web-app-capable" content="yes" /> -->
 
@@ -11,20 +11,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="assets/jquery.mobile-1.4.5.min.css">
 
+  {{>pghead}}
+  <script src="assets/barcodeCheck.js"></script>
   <!-- only for debug with phonegap/cordova -->
-  <!--<script src="http://192.168.178.128:8080/target/target-script-min.js#anonymous"></script>-->
+  <!--
+  <script src="http://192.168.43.66:8081/target/target-script-min.js#anonymous"></script>
+  -->
   <!-- ONLY IF PACKED WITH PHONEGAP / CORDOVA: -->
 
   <!--
-  <script src="cordova.js"></script>
+  <script src="cordova.js"></script> 
   -->
   <!-- for 3rd party barcode lookup via phonegap -->
   <!--
   <script src="assets/barcodeCheck.js"></script>
   -->
+  
 
   <!--<script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>-->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  <script src="assets/jquery.min.js"></script>
   <script src="assets/jquery.mobile-1.4.5.min.js"></script>
   <script src="assets/sweetalert2.js"></script>
   <script src="assets/bootstrap-tagsinput.js"></script>
@@ -53,5 +58,29 @@
   <!-- BARCODE dependency -->
   <script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
   <!-- END BARCODE dependency -->
+ 
+  <script type="text/javascript">
+      /**
+      helper function. checking if running on desktop browser or mobile device
+      */
+      function isOnMobile() {
+
+        let isMobile = false;  
+
+        if(navigator.userAgent.match(/Android/i)
+           || navigator.userAgent.match(/webOS/i)
+           || navigator.userAgent.match(/iPhone/i)
+           || navigator.userAgent.match(/iPad/i)
+           || navigator.userAgent.match(/iPod/i)
+           || navigator.userAgent.match(/BlackBerry/i)
+           || navigator.userAgent.match(/Windows Phone/i)
+           )
+          {
+            isMobile = true;
+          }
+
+        return isMobile;
+      }
+  </script>
 
 </head>

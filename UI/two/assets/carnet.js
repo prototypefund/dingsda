@@ -1,5 +1,7 @@
 // Default export is a4 paper, portrait, using milimeters for units
 
+// TODO: add list of characters that break the layout and replace them e.g. "–" => "-"
+
 console.log("carnet starting");
 
 ////////// PDF MAKING:
@@ -35,7 +37,9 @@ let sumPrice = 0;
 
 function makepdf(imgData, textdataInput, coverdata)
 {
-  let textdata  = JSON.parse(JSON.stringify(textdataInput));
+  // replace problematic chars and (stringifiy to create cloned object)
+  textdataInput = JSON.stringify(textdataInput).replace(/–/g,"-").replace(/–/g,"-");
+  let textdata  = JSON.parse(textdataInput);
 
   let doc = new jsPDF();
   //doc.addFont('Courier.ttf', 'Courier', 'normal');

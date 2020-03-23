@@ -3,7 +3,7 @@
   "description": "DINGSDA - share things not thoughts!",
   "display": "fullscreen",
   "orientation": "portrait",
-  "scope":"",
+  "scope":"/",
   "icons": [
     {
       "src": "icons/icon_512.png",

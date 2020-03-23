@@ -22,7 +22,7 @@
   <!-- HEADER TEMPLATE -->
   {{>header}}
   <!-- END HEADER -->
-
+ 
   <!-- CONTENT -->
   <div role="main" class="ui-content">
 
@@ -36,6 +36,12 @@
       <input id="contact_other" type="text" placeholder="other way to contact you" value="" />
       <br>
       <button id="btn_upd_contact_info">save</button>
+      <br>
+      <br>
+      <br>
+      <br>
+      <p id="token">pushtoken</p>
+      <p id="lastpush">pushtoken</p>
 
   </div>
   <!-- END CONTENT -->
@@ -43,7 +49,7 @@
 </div>
 
 <script>
-
+ 
   let config = {
     _id: "&config",
     contact_details: {}
@@ -51,18 +57,61 @@
 
   $( document ).on("pageshow", "#config", function(e,ui) {
     fetchConfig();
+
+/*
+    if (isPhonegap){ // registerPushId with server if possible
+            let registrationId = localStorage.getItem("registrationId");
+            if (registrationId && savePushRegistrationId)
+            {
+              //alert("trying to register push id with DB");
+              savePushRegistrationId(registrationId)
+            }
+          }
+*/
   })
 
   function fetchConfig(){
-    getSingleItem("&config",function(res){
+    getSingleItem("&config",function(res){ // old config via file. maybe to be used again in future for contact details?
       if (res._id){
         console.log(res);
         config = res;
-
-        // fillconfigForm:
+        // CONTINUE HERE :
+        // fillconfigForm: // TODO: decrypt sensitive data with password
+        /*
         $("#contact_email").val(config.contact_details.email);
         $("#contact_telnumber").val(config.contact_details.telnumber);
         $("#contact_other").val(config.contact_details.other);
+        */
+        let contact_details = localStorage.getItem(glb_username+".contact_details");
+        if (contact_details){ 
+          contact_details = JSON.parse(contact_details);
+          contact_details.email ? $("#contact_email").val(contact_details.email) : null;
+          contact_details.telnumber ? $("#contact_telnumber").val(contact_details.telnumber) : null;
+          contact_details.other ? $("#contact_other").val(contact_details.other) : null;
+          //$("#contact_telnumber").val(contact_details.telnumber);
+          //$("#contact_other").val(contact_details.other);
+        }
+
+        // fetch registered email from _userDB: // TODO: overly complicated with two files and localStorage. Simplifiy this! serverside and clientside
+
+        postAPI({
+          path:glb_username,
+          data:{
+                  "data":[{
+                    "type":"getuserdata"
+                  }]
+                },
+            callback: function(result){
+            console.log(result);
+            if (result.email)
+            {
+              console.log("+++++ has email ! ++++",result.email)
+              $("#contact_email").val(result.email);
+              contact_details.email = result.email;
+            }
+          }
+        });
+
       }
     })
   }
@@ -78,7 +127,14 @@
             console.log(res);
             showToast(res,500);
             // reload page();
-            window.location.href = UI_URL;
+            if (isPhonegap)
+            {
+              window.location.reload(true);
+            }
+            else
+            {
+              window.location.href = UI_URL;
+            }
           },
         error: function(err){
           console.log(err);
@@ -91,13 +147,39 @@
     logout();
   })
 
-
+// TODO: split config that is supposed to be saved on the dingsda server from localstorage userdata.
+// atm only locastorage data anyhow
   $("#btn_upd_contact_info").click(function(){
 
     config.contact_details.email = $("#contact_email").val();
     config.contact_details.telnumber = $("#contact_telnumber").val();
     config.contact_details.other = $("#contact_other").val();
 
+    if (!config.contact_details.email){
+      return swal({text:"you have to at least provide an email address"})
+    }
+
+    localStorage.setItem(glb_username+'.contact_details',JSON.stringify(config.contact_details));
+    swal({text:"SAVED SUCCESSFULLY", toast:true, timer:1200,
+          showConfirmButton:false, position:"center",customClass:"whiteletters"
+        }).then(function(){}) ;
+ 
+// save to users infos in database via USERDATA API ENDPOINT TODO:
+
+    postAPI({
+      path:glb_username,
+      data:{
+              "data":[{
+                "type":"userdata",
+                "email": config.contact_details.email
+              }]
+            },
+        callback: function(result){
+        console.log(result);
+      }
+    });
+
+/* // commented out until we add real config data that has to be saved on the server.
     updateit(config,function(res){
       console.log(res);
       if(res.ok == true)
@@ -112,7 +194,7 @@
       }
     })
 
-
+*/
   })
 
 </script>

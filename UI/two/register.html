@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>REGISTER FOR DINGSDA</title>
+
+    <!--<script src="https://www.google.com/recaptcha/api.js?render=6LeZ1pQUAAAAAN4IqukWcNATJ0emZV4MryEpzMoU"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+
+  </head>
+
+  <style>
+
+
+    button {
+      margin-top: 2em;
+      width: 100vw;
+      min-height: 12vh;
+      color: white;
+      background-color: darkcyan;
+      font-size: 2em;
+    }
+
+    body{
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .title{
+      margin-top: 5vh;
+      font-size: 1em;
+      text-align: center;
+    }
+
+    input {
+      font-size: 1.5em;
+      margin-top:0.5em;
+      min-width: 50vw;
+      max-width: 90vw;
+      text-align: center;
+      border: 1px solid grey;
+      border-radius: 10vw;
+      padding: 3px
+    }
+
+  </style>
+
+  <body>
+
+    <div class="title">
+      <h1>Register</h1>
+      with dingsda.org
+        <br>
+        and share your love
+      <br>(or at least your things!)
+    </div>
+    <br>
+    <a href="javascript:back_btn_clicked()">back to dingsda</a>
+    <br>
+
+    <input type="text" id="username" value="" placeholder="username">
+    <input type="email" id="email" value="" placeholder="email">
+    <br>
+    <input type="password" id="password" value="" placeholder="password">
+    <input type="password" id="password2" value="" placeholder="please repeat password">
+
+    <button type="button" id="btn_register">register</button>
+
+
+
+      <script type="text/javascript">
+
+        const API_BASE_URL = "http://dingsda.org:5000";
+        const UI_URL = "https://dingsda.org/two/";
+
+        // check if is running in Browser or in Phonegap Framework:
+        var isPhonegap = false;
+
+        if ( document.URL.indexOf( 'http://' ) === -1 && document.URL.indexOf( 'https://' ) === -1 ) {
+          isPhonegap = true;
+        }
+
+        //alert(document.URL);
+        //alert(isPhonegap);
+
+/*
+        grecaptcha.ready(function() {
+            grecaptcha.execute('6LeZ1pQUAAAAAN4IqukWcNATJ0emZV4MryEpzMoU', {action: 'homepage'}).then(function(token) {
+              console.log(token);
+            });
+            console.log("READY");
+        });
+*/
+        document.getElementById("btn_register").addEventListener("click",function(){
+          console.log("registering at dingsda.org");
+          validateInputs().then((res)=>{
+            //console.log(res);
+            register(res.username,res.password,res.email)
+          })
+          .catch((err)=>{
+            console.log(err);
+            alert("something went wrong: \n"+err.reason)
+          })
+        })
+
+        function validateInputs(){
+          console.log("validating inputs");
+          
+          output = new Promise(function(resolve, reject) {
+            let username =document.getElementById("username").value;
+            let password =document.getElementById("password").value;
+            let password2 =document.getElementById("password2").value;
+            let email = document.getElementById("email").value;
+
+            //resolve(username, password) // testing only
+
+            if (! (password === password2))
+            {
+              console.log(password + " : "+ password2);
+              reject({reason:"passwords didnt match"})
+            }
+
+            if (password.length < 8)
+            {
+              reject({reason:"password should have at least 8 characters"})
+            }
+
+            if (username.length < 4)
+            {
+              reject({reason:"username should have at least 4 letters"})
+            }
+
+            if (!email || !validateEmail(email))
+            {
+              reject({reason:"please provide a valid email address."})
+            }
+
+            resolve({username, password, email})
+
+          });
+
+          return output
+        }
+
+        function validateEmail(email) {
+            var re = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
+            return re.test(String(email).toLowerCase());
+        }
+
+        function register(username,pw,email){
+
+          console.log("inside register");
+          console.log(username);
+          console.log(pw);
+          //do ajax
+
+          let settings = {
+            "async": true,
+            "crossDomain": true,
+            "url": "https://dingsda.org:5000",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json",
+              "cache-control": "no-cache"
+            },
+            "processData": false,
+            "data":
+            JSON.stringify(
+              {
+                "data": [{
+                  "type":"addUser",
+                  "username":username,
+                  "password":pw,
+                  "email":email
+                }]
+              }
+            ),
+            error: function(err){
+              console.log(err);
+              if (err.responseJSON.error === "conflict")
+              {
+                alert("user with this name exists already")
+              }
+              else {
+                alert("something went wrong. sorry.....")
+              }
+            }
+          }
+
+
+          $.ajax(settings).done(function (response) { 
+            console.log(response);
+            if (response.ok){
+              document.body.innerHTML = "success. you will be forwarded to <a href='https://dingsda.org/two'>dingsda.org/two</a>";
+              if (isPhonegap)
+              {
+                window.location = "index.html"; // if phonegap just reload page else: forward to UI:
+              }
+              else
+              {
+                setTimeout(window.open("https://dingsda.org/two","_self"),1000)
+              }
+             
+            }
+            else {
+              alert("something went wrong: "+response)
+            }
+          });
+        /*  $.ajax({
+            crossdomain:true,
+            type: "POST",
+            url: API_BASE_URL,
+            xhrFields: { withCredentials: true }, // to make AuthCookie ok
+            data: JSON.stringify(
+              {
+                "data": [{
+                  "type":"addUser",
+                  "username":"Grace",
+                  "password":"forgivenessoverpermission"
+                }]
+              }
+            ),
+            success: function(res){
+              console.log(res);
+              // SUCCESS
+
+              }
+            ,
+            error: function(err){
+              console.log(err);
+              if (err.error === "conflict")
+              {
+                // ERROR}
+              }
+            },
+            contentType:"application/json"
+          });
+    */
+        }
+
+        function back_btn_clicked(){
+          history.back();
+        }
+
+
+      </script>
+
+
+  </body>
+
+
+
+
+</html>
